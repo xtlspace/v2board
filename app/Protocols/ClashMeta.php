@@ -237,6 +237,7 @@ class ClashMeta
         $array['port'] = $server['port'];
         $array['uuid'] = $uuid;
         $array['udp'] = true;
+		$array['mptcp'] = true;
 
         if (!empty($server['flow'])) {
             $array['flow'] = $server['flow'];
@@ -386,6 +387,8 @@ class ClashMeta
             'uuid' => $password,
             'password' => $password,
             'alpn' => ['h3'],
+			'heartbeat-interval' =>  '5000',
+			'request-timeout' =>  '4000',
             'disable-sni' => $server['disable_sni'] ? true : false,
             'reduce-rtt' => $server['zero_rtt_handshake'] ? true : false,
             'udp-relay-mode' => $server['udp_relay_mode'] ?? 'native',
@@ -408,6 +411,7 @@ class ClashMeta
             'password' => $password,
             'client-fingerprint' => 'chrome',
             'udp' => true,
+			'mptcp' => true,
             'alpn' => [
                 'h2',
                 'http/1.1',

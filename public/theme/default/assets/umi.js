@@ -1045,7 +1045,7 @@
                     href: "sing-box://import-remote-profile?url=" + encodeURIComponent(e) + "#" + window.settings.title
                 }), (Object(u["i"])() || Object(u["j"])()) && (t.push({
                     title: "Shadowrocket",
-                    href: "shadowrocket://add/sub://" + window.btoa(e + "&flag=shadowrocket").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "") + "?remark=" + window.settings.title
+                    href: "shadowrocket://add/sub://" + window.btoa(e + "&flag=shadowrocket").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "") + "?remark=" + window.settings.title + "&user=ILoveU-meta"
                 }),
                 t.push({
                     title: "QuantumultX",
@@ -1062,18 +1062,18 @@
                     href: "stash://install-config?url=" + encodeURIComponent(e) + "&name=" + window.settings.title
                 })),
                 Object(u["k"])() && t.push({
-                    title: "ClashX",
+                    title: "Clash",
                     href: "clash://install-config?url=" + encodeURIComponent(e) + "&name=" + window.settings.title
                 }),
                 Object(u["n"])() && (t.push({
-                    title: "ClashMeta",
+                    title: "Clash",
                     href: "clash://install-config?url=" + encodeURIComponent(e + "&flag=meta") + "&name=" + window.settings.title
                 })),
                 Object(u["g"])() && (t.push({
                     title: "NekoBox For Android",
                     href: "clash://install-config?url=" + encodeURIComponent(e + "&flag=meta") + "&name=" + window.settings.title
                 }) && t.push({
-                    title: "ClashMeta For Android",
+                    title: "Clash",
                     href: "clash://install-config?url=" + encodeURIComponent(e + "&flag=meta") + "&name=" + window.settings.title
                 }),
                 t.push({
