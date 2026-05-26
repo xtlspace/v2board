@@ -120,9 +120,11 @@ class TicketController extends Controller
         if ($ticket->status) {
             abort(500, __('The ticket is closed and cannot be replied'));
         }
+        /* 取消用户回复工单限制
         if ($request->user['id'] == $this->getLastMessage($ticket->id)->user_id) {
             abort(500, __('Please wait for the technical enginneer to reply'));
         }
+        */
         $ticketService = new TicketService();
         if (
 			!$ticketService->reply(
@@ -159,14 +161,15 @@ class TicketController extends Controller
             'data' => true
         ]);
     }
-
+    
+    /* 取消用户回复工单限制
     private function getLastMessage($ticketId)
     {
         return TicketMessage::where('ticket_id', $ticketId)
             ->orderBy('id', 'DESC')
             ->first();
     }
-
+    */
     public function withdraw(TicketWithdraw $request)
     {
         if ((int)config('v2board.withdraw_close_enable', 0)) {
