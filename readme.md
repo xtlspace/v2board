@@ -6,8 +6,8 @@
 
 按以下步骤进行面板代码文件迁移：
 
-    git remote set-url origin https://github.com/wyx2685/v2board  
-    git checkout master  
+    git remote set-url origin https://github.com/xtlspace/v2board  
+    git checkout xtls  
     ./update.sh  
 
 
