@@ -28,6 +28,7 @@
 - Redis
 - Laravel
 
+# 修改点
 ```
 vi app/Http/Controllers/V1/Client/ClientController.php
 #将流量和时间改为一条，并放在节点末尾
@@ -60,4 +61,9 @@ $array['mptcp'] = true;
 
 public/theme/default/assets/i18n/zh-CN.js
 #修改中文流量达量提示
+```
+# 增加命令
+```
+#清理过期订单
+php artisan clear:order
 ```
