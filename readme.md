@@ -1,7 +1,3 @@
-<img src="https://avatars.githubusercontent.com/u/56885001?s=200&v=4" alt="logo" width="130" height="130" align="right"/>
-
-[![](https://img.shields.io/badge/TgChat-@UnOfficialV2board讨论-blue.svg)](https://t.me/unofficialV2board)
-
 ## 本分支支持的后端
  - [修改版V2bX](https://github.com/wyx2685/V2bX)
  - [v2node](https://github.com/wyx2685/v2node)
@@ -32,19 +28,36 @@
 - Redis
 - Laravel
 
-## Demo
-[Demo_user](https://v2bdemo.v-50.me/)
-[Demo_admin](https://v2bdemo.v-50.me/admindashboard)
-邮箱和密码可随意输入
+```
+vi app/Http/Controllers/V1/Client/ClientController.php
+#将流量和时间改为一条，并放在节点末尾
+    private function setSubscribeInfoToServers(&$servers, $user)
+    {
+        if (!isset($servers[0])) return;
+        if (!(int)config('v2board.show_info_to_server_enable', 0)) return;
+        $useTraffic = $user['u'] + $user['d'];
+        $totalTraffic = $user['transfer_enable'];
+        $remainingTraffic = Helper::trafficConvert($totalTraffic - $useTraffic);
+        $expiredDate = $user['expired_at'] ? date('Y-m-d', $user['expired_at']) : '长期有效';
+        $userService = new UserService();
+        $resetDay = $userService->getResetDay($user);
+        array_push($servers, array_merge($servers[0], [
+            'name' => "到期时间：{$expiredDate}，剩余流量：{$remainingTraffic}",
+        ]));
 
-## Document
-[Click](https://v2board.com)
+    }
+}
 
-## Sponsors
-Thanks to the open source project license provided by [Jetbrains](https://www.jetbrains.com/)
+app/Http/Controllers/V1/Guest/PaymentController.php
+#关闭充值TG提醒
+注释掉这一行
+#$telegramService->sendMessageWithAdmin($message);
 
-## Community
-🔔Telegram Group: [@unofficialV2board](https://t.me/unofficialV2board)  
+app/Protocols/ClashVerge.php
+增加 mptcp 
 
-## How to Feedback
-Follow the template in the issue to submit your question correctly, and we will have someone follow up with you.
+$array['mptcp'] = true;
+
+public/theme/default/assets/i18n/zh-CN.js
+#修改中文流量达量提示
+```
