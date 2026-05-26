@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Log;
+use App\Models\MailLog;
 use App\Models\Plan;
 use App\Models\StatServer;
 use App\Models\StatUser;
@@ -48,5 +49,7 @@ class ResetLog extends Command
         StatUser::where('record_at', '<', strtotime('-2 month', time()))->delete();
         StatServer::where('record_at', '<', strtotime('-2 month', time()))->delete();
         Log::where('created_at', '<', strtotime('-1 month', time()))->delete();
+        MailLog::where('created_at', '<', strtotime('-1 month', time()))->delete();
+        DB::table('failed_jobs')->where('failed_at', '<', now()->subMonth())->delete();
     }
 }
