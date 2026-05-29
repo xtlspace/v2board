@@ -76,7 +76,7 @@ class ClashMeta
             }
         }
 
-        $config['proxies'] = array_merge($config['proxies'] ? $config['proxies'] : [], $proxy);
+		$config['proxies'] = array_merge($proxy, $config['proxies'] ?? []);
         foreach ($config['proxy-groups'] as $k => $v) {
             if (!is_array($config['proxy-groups'][$k]['proxies'])) $config['proxy-groups'][$k]['proxies'] = [];
             $isFilter = false;
