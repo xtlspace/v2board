@@ -102,7 +102,7 @@ class UserController extends Controller
                 abort(500, __('You have not used up your traffic, you cannot renew your subscription'));
             }
             $userService = new UserService();
-            $reset_day = $userService->getResetDay($user);
+	    $reset_day = $userService->getResetDay($user);
             if ($reset_day === null) {
                 abort(500, __('You do not allow to renew the subscription'));
             }

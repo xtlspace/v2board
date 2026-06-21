@@ -1045,7 +1045,7 @@
                     href: "sing-box://import-remote-profile?url=" + encodeURIComponent(e) + "#" + window.settings.title
                 }), (Object(u["i"])() || Object(u["j"])()) && (t.push({
                     title: "Shadowrocket",
-                    href: "shadowrocket://add/sub://" + window.btoa(e + "&flag=shadowrocket").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "") + "?remark=" + window.settings.title + "&user=ILoveU-meta"
+                    href: "shadowrocket://add/sub://" + window.btoa(e + "&flag=shadowrocket").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "") + "?remark=" + window.settings.title + "&user=ILoveU-Meta/Rocket"
                 }),
                 t.push({
                     title: "QuantumultX",

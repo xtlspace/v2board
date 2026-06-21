@@ -8,6 +8,7 @@ use Symfony\Component\Yaml\Yaml;
 class ClashMeta
 {
     public $flag = 'meta';
+    public $flags = ['clash', 'meta', 'verge', 'nyanpasu', 'stash', 'shadowrocket'];
     private $servers;
     private $user;
 
@@ -76,7 +77,8 @@ class ClashMeta
             }
         }
 
-		$config['proxies'] = array_merge($proxy, $config['proxies'] ?? []);
+	#$config['proxies'] = array_merge($config['proxies'] ? $config['proxies'] : [], $proxy);
+	$config['proxies'] = array_merge($proxy, $config['proxies'] ?? []);
         foreach ($config['proxy-groups'] as $k => $v) {
             if (!is_array($config['proxy-groups'][$k]['proxies'])) $config['proxy-groups'][$k]['proxies'] = [];
             $isFilter = false;
@@ -387,6 +389,7 @@ class ClashMeta
             'uuid' => $password,
             'password' => $password,
             'alpn' => ['h3'],
+            'fast-open' => true,
 			'heartbeat-interval' =>  '5000',
 			'request-timeout' =>  '4000',
             'disable-sni' => $server['disable_sni'] ? true : false,

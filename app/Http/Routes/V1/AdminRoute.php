@@ -171,6 +171,14 @@ class AdminRoute
             $router->get ('/theme/getThemes', 'V1\\Admin\\ThemeController@getThemes');
             $router->post('/theme/saveThemeConfig', 'V1\\Admin\\ThemeController@saveThemeConfig');
             $router->post('/theme/getThemeConfig', 'V1\\Admin\\ThemeController@getThemeConfig');
+            // Sub Log
+            $router->get ('/sub_log/fetch', 'V1\\Admin\\SubLogController@fetch');
+            $router->get ('/sub_log/getFilterOptions', 'V1\\Admin\\SubLogController@getFilterOptions');
+            $router->get ('/sub_log/getServers', 'V1\\Admin\\SubLogController@getServers');
+            $router->get ('/sub_log/getRules', 'V1\\Admin\\SubLogController@getRules');
+            $router->post('/sub_log/saveRule', 'V1\\Admin\\SubLogController@saveRule');
+            $router->post('/sub_log/dropRule', 'V1\\Admin\\SubLogController@dropRule');
+            $router->post('/sub_log/clearLogs', 'V1\\Admin\\SubLogController@clearLogs');
         });
     }
 }

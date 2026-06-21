@@ -54,3 +54,12 @@ Route::get('/' . config('v2board.secure_path', config('v2board.frontend_admin_pa
 if (!empty(config('v2board.subscribe_path'))) {
     Route::get(config('v2board.subscribe_path'), 'V1\\Client\\ClientController@subscribe')->middleware('client');
 }
+
+Route::get('/' . config('v2board.secure_path', config('v2board.frontend_admin_path', hash('crc32b', config('app.key')))) . '/sub_log', function () {
+    return view('admin.sub_log', [
+        'title' => config('v2board.app_name', 'V2Board'),
+        'version' => config('app.version'),
+        'secure_path' => config('v2board.secure_path', config('v2board.frontend_admin_path', hash('crc32b', config('app.key')))),
+        'logo' => config('v2board.logo')
+    ]);
+});

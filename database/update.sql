@@ -856,3 +856,27 @@ CREATE TABLE `v2_server_v2node` (
 
 ALTER TABLE `v2_server_route`
 CHANGE `action_value` `action_value` text NULL AFTER `action`;
+
+ALTER TABLE `v2_sub_log`
+ADD `ip_country` varchar(128) NULL DEFAULT NULL AFTER `ip`,
+ADD `ip_region` varchar(128) NULL DEFAULT NULL AFTER `ip_country`,
+ADD `ip_city` varchar(128) NULL DEFAULT NULL AFTER `ip_region`,
+ADD `ip_isp` varchar(128) NULL DEFAULT NULL AFTER `ip_city`;
+
+CREATE TABLE `v2_sub_rule` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `remark` varchar(255) NOT NULL,
+  `sort` int(11) NOT NULL DEFAULT '0',
+  `user_agent` varchar(255) DEFAULT NULL,
+  `ip_country` varchar(128) DEFAULT NULL,
+  `ip_region` varchar(128) DEFAULT NULL,
+  `ip_city` varchar(128) DEFAULT NULL,
+  `ip_isp` varchar(128) DEFAULT NULL,
+  `original_host` varchar(255) DEFAULT NULL,
+  `replace_host` varchar(255) NOT NULL,
+  `replace_port` int(11) DEFAULT NULL,
+  `enable` tinyint(1) NOT NULL DEFAULT '1',
+  `created_at` int(11) NOT NULL,
+  `updated_at` int(11) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
