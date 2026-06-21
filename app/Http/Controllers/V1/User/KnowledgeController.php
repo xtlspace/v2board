@@ -37,7 +37,8 @@ class KnowledgeController extends Controller
                 ),
                 $knowledge['body']
             );
-            $knowledge['body'] = str_replace('{{subscribeToken}}', $user['token'], $knowledge['body']);
+            $subscribePath = parse_url($subscribeUrl, PHP_URL_PATH) . (parse_url($subscribeUrl, PHP_URL_QUERY) ? '?' . parse_url($subscribeUrl, PHP_URL_QUERY) : '');
+            $knowledge['body'] = str_replace('{{subscribeToken}}', $subscribePath, $knowledge['body']);
             return response([
                 'data' => $knowledge
             ]);

@@ -21053,7 +21053,7 @@
                             className: "nav-main-link-icon si si-shuffle"
                         })
                     }, {
-                        title: "\u8ba2\u9605\u65e5\u5fd7\u7ba1\u7406",
+                        title: "\u8ba2\u9605\u89c4\u5219\u7ba1\u7406",
                         type: "href",
                         href: "/" + window.settings.secure_path + "/sub_log",
                         icon: o.a.createElement("i", {
