@@ -22295,6 +22295,13 @@
                     className: "form-group"
                 }, p.a.createElement("label", {
                     for: "example-text-input-alt"
+                }, "ID: "), p.a.createElement("a", {
+                    href: "/" + window.settings.secure_path + "/sub_log?user_id=" + t.id,
+                    target: "_blank"
+                }, t.id)), p.a.createElement("div", {
+                    className: "form-group"
+                }, p.a.createElement("label", {
+                    for: "example-text-input-alt"
                 }, "\u90ae\u7bb1"), p.a.createElement(u["a"], {
                     placeholder: "\u8bf7\u8f93\u5165\u90ae\u7bb1",
                     defaultValue: t.email,
@@ -26357,7 +26364,9 @@
         n("PArb")), l = (n("5Dmo"),
         n("3S7+")), c = (n("Pwec"),
         n("CtXQ")), u = n("wd/R"), h = n.n(u), f = (n("Y2fQ"),
-        n("NfUx")), d = n.n(f), p = n("CgOb"), m = n("X0q5");
+        n("NfUx")), d = n.n(f), p = n("CgOb"), m = n("X0q5"), k = (n("bbsP"),
+        n("/wGt")), T = (n("g9YV"),
+        n("wCAj")), S = n("v32e");
         class g extends o.a.Component {
             constructor() {
                 super(...arguments),
@@ -26390,6 +26399,18 @@
                     placement: "left"
                 }, o.a.createElement(c["a"], {
                     type: "user"
+                 }))), o.a.createElement(s["a"], {
+                    type: "vertical"
+                }), o.a.createElement(l["a"], {
+                    title: "\u4ed6\u7684\u8ba2\u5355",
+                    placement: "left"
+                }, o.a.createElement("a", {
+                    onClick: this.props.onOrderFilter,
+                    style: {
+                        cursor: "pointer"
+                    }
+                }, o.a.createElement(c["a"], {
+                    type: "shopping-cart"
                 }))), o.a.createElement(s["a"], {
                     type: "vertical"
                 }), o.a.createElement(m["a"], {
@@ -26438,7 +26459,15 @@
                 super(e),
                 this.state = {
                     message: void 0,
-                    submit: {}
+                    submit: {},
+                    orderModal: !1,
+                    orderRecords: [],
+                    orderLoading: !1,
+                    orderPagination: {
+                        page: 1,
+                        pageSize: 10,
+                        total: 0
+                    }
                 }
             }
             componentDidMount() {
@@ -26474,12 +26503,153 @@
                     }
                 })
             }
+            showOrderModal() {
+                var e = this.props.ticket.ticket;
+                if (!e) return;
+                this.setState({
+                    orderModal: !0,
+                    orderLoading: !0
+                });
+                var t = this;
+                fetch("/api/v1/xtls/order/fetch?filter[0][key]=user_id&filter[0][condition]=" + encodeURIComponent("=") + "&filter[0][value]=" + e.user_id + "&pageSize=10&current=1&total=1", {
+                    headers: {
+                        Authorization: localStorage.getItem("authorization") || ""
+                    }
+                }).then(function(n) {
+                    return n.json()
+                }).then(function(n) {
+                    if (n.data) {
+                        t.setState({
+                            orderRecords: n.data,
+                            orderLoading: !1,
+                            orderPagination: {
+                                page: 1,
+                                pageSize: 10,
+                                total: n.total
+                            }
+                        })
+                    } else {
+                        t.setState({
+                            orderLoading: !1
+                        })
+                    }
+                }).catch(function() {
+                    t.setState({
+                        orderLoading: !1
+                    })
+                })
+            }
+            onOrderPageChange(e) {
+                var t = this.props.ticket.ticket;
+                if (!t) return;
+                this.setState({
+                    orderLoading: !0
+                });
+                var n = this;
+                fetch("/api/v1/xtls/order/fetch?filter[0][key]=user_id&filter[0][condition]=" + encodeURIComponent("=") + "&filter[0][value]=" + t.user_id + "&pageSize=" + e.pageSize + "&current=" + e.current + "&total=1", {
+                    headers: {
+                        Authorization: localStorage.getItem("authorization") || ""
+                    }
+                }).then(function(t) {
+                    return t.json()
+                }).then(function(t) {
+                    if (t.data) {
+                        n.setState({
+                            orderRecords: t.data,
+                            orderLoading: !1,
+                            orderPagination: e
+                        })
+                    } else {
+                        n.setState({
+                            orderLoading: !1
+                        })
+                    }
+                }).catch(function() {
+                    n.setState({
+                        orderLoading: !1
+                    })
+                })
+            }
             render() {
                 var e = this.props.user.user
                   , t = this.props.ticket
                   , n = t.ticket
-                  , r = t.replyLoading;
-                return o.a.createElement(g, {
+                  , r = t.replyLoading
+                  , i = this.state
+                  , a = i.orderModal
+                  , u = i.orderRecords
+                  , l = i.orderLoading
+                  , c = i.orderPagination
+                  , f = [{
+                    title: "\u8ba2\u5355\u53f7",
+                    dataIndex: "trade_no",
+                    key: "trade_no",
+                    width: 180
+                }, {
+                    title: "\u7c7b\u578b",
+                    dataIndex: "type",
+                    key: "type",
+                    width: 80,
+                    render: function(e) {
+                        var t = {
+                            1: "\u65b0\u8d2d",
+                            2: "\u7eed\u8d39",
+                            3: "\u53d8\u66f4",
+                            4: "\u6d41\u91cf\u5305",
+                            9: "\u5145\u503c"
+                        };
+                        return t[e] || "-"
+                    }
+                }, {
+                    title: "\u8ba2\u9605\u8ba1\u5212",
+                    dataIndex: "plan_name",
+                    key: "plan_name",
+                    width: 120
+                }, {
+                    title: "\u5468\u671f",
+                    dataIndex: "period",
+                    key: "period",
+                    width: 80,
+                    align: "center",
+                    render: function(e) {
+                        var t = {
+                            month_price: "\u6708\u4ed8",
+                            quarter_price: "\u5b63\u4ed8",
+                            half_year: "\u534a\u5e74",
+                            year_price: "\u5e74\u4ed8",
+                            two_year: "\u4e24\u5e74"
+                        };
+                        return t[e] || e
+                    }
+                }, {
+                    title: "\u652f\u4ed8\u91d1\u989d",
+                    dataIndex: "total_amount",
+                    key: "total_amount",
+                    width: 100,
+                    align: "right",
+                    render: function(e) {
+                        return (e / 100).toFixed(2)
+                    }
+                }, {
+                    title: "\u8ba2\u5355\u72b6\u6001",
+                    dataIndex: "status",
+                    key: "status",
+                    width: 100,
+                    render: function(e) {
+                        var t = ["\u672a\u652f\u4ed8", "\u5df2\u652f\u4ed8", "\u5df2\u53d6\u6d88", "\u5df2\u5b8c\u6210", "\u5df2\u6298\u62b5"];
+                        return t[e] || "-"
+                    }
+                }, {
+                    title: "\u521b\u5efa\u65f6\u95f4",
+                    dataIndex: "created_at",
+                    key: "created_at",
+                    width: 160,
+                    align: "right",
+                    render: function(e) {
+                        return h()(1e3 * e).format("YYYY/MM/DD HH:mm")
+                    }
+                }];
+                return o.a.createElement(o.a.Fragment, null, o.a.createElement(g, {
                     ticket: n,
                     user: e,
                     onKeyDown: (e,t)=>{
@@ -26490,8 +26660,29 @@
                         this.setState({
                             message: e.target.value
                         })
-                    }
-                })
+                    },
+                    onOrderFilter: ()=>this.showOrderModal()
+                }), o.a.createElement(k["a"], {
+                    width: "80%",
+                    title: "\u4ed6\u7684\u8ba2\u5355",
+                    visible: a,
+                    onClose: ()=>this.setState({
+                        orderModal: !1
+                    })
+                }, o.a.createElement(S["a"], {
+                    loading: l
+                }, o.a.createElement(T["a"], {
+                    dataSource: u,
+                    columns: f,
+                    pagination: Object.assign({}, c, {
+                        size: "small"
+                    }),
+                    scroll: {
+                        x: 900
+                    },
+                    onChange: e=>this.onOrderPageChange(e),
+                    rowKey: "id"
+                }))))
             }
         }
         t["default"] = Object(a["c"])(e=>{

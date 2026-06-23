@@ -671,6 +671,13 @@ document.getElementById('clearBtn').addEventListener('click', function() {
 // =========== Init ===========
 document.addEventListener('DOMContentLoaded', function() {
     loadFilterOptions();
+
+    var urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('user_id')) {
+        document.getElementById('filterUserId').value = urlParams.get('user_id');
+        state.filters = buildFilters();
+    }
+
     loadLogData();
 
     document.getElementById('searchBtn').addEventListener('click', searchLogs);

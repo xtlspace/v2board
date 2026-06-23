@@ -32010,6 +32010,10 @@
                 window.jump = (e=>{
                     this.getKnowledge(e)
                 }
+                ),
+                window.Base64Encode = (e=>{
+                    return btoa(unescape(encodeURIComponent(e)))
+                }
                 )
             }
             hide() {
@@ -32023,7 +32027,8 @@
                     visible: !1
                 }),
                 window.copy = void 0,
-                window.jump = void 0
+                window.jump = void 0,
+                window.Base64Encode = void 0
             }
             render() {
                 var e = this.state.visible
