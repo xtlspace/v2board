@@ -14,6 +14,7 @@ use App\Services\TicketService;
 use App\Models\Ticket;
 use App\Models\TicketMessage;
 use App\Utils\Dict;
+use App\Utils\IPLocation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -243,13 +244,12 @@ class TicketController extends Controller
 					$ip_address = $_SERVER['REMOTE_ADDR'];
 				}
 
-				$api_url = "http://ip-api.com/json/{$ip_address}?fields=520191&lang=zh-CN";
-				$response = file_get_contents($api_url);
-				$user_location = json_decode($response, true);
-				if ($user_location && $user_location['status'] === 'success') {
-					$location =  $user_location['city'] . ", " . $user_location['country'];
-				} else {
-					$location =  "无法确定用户地址";
+				try {
+					$ipLocation = new IPLocation();
+					$loc = $ipLocation->find($ip_address);
+					$location = $loc ? trim(implode(' ', [$loc['country'], $loc['region'], $loc['city'], $loc['isp']])) : '无法确定用户地址';
+				} catch (\Exception $e) {
+					$location = '无法确定用户地址';
 				}
 
 				$plan = Plan::where('id', $user->plan_id)->first();
