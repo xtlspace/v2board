@@ -867,6 +867,7 @@ CREATE TABLE `v2_sub_rule` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `remark` varchar(255) NOT NULL,
   `sort` int(11) NOT NULL DEFAULT '0',
+  `user_id` varchar(128) DEFAULT NULL COMMENT '匹配用户ID',
   `user_agent` varchar(255) DEFAULT NULL,
   `ip_country` varchar(128) DEFAULT NULL,
   `ip_region` varchar(128) DEFAULT NULL,

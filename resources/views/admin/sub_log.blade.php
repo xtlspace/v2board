@@ -242,6 +242,7 @@
                                 <th>省份</th>
                                 <th>城市</th>
                                 <th>运营商</th>
+                                <th>匹配 User ID</th>
                                 <th>原 Host</th>
                                 <th>替换为</th>
                                 <th>替换端口</th>
@@ -250,7 +251,7 @@
                             </tr>
                         </thead>
                         <tbody id="rulesBody">
-                            <tr><td colspan="12"><div class="loading"><i class="fas fa-spinner"></i><p>加载中...</p></div></td></tr>
+                            <tr><td colspan="13"><div class="loading"><i class="fas fa-spinner"></i><p>加载中...</p></div></td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -274,6 +275,10 @@
             <div class="form-row">
                 <label>排序 <span class="text-muted">*</span></label>
                 <input type="number" id="ruleSort" value="0" min="0">
+            </div>
+            <div class="form-row">
+                <label>匹配 User ID <span class="hint">精确匹配，留空=不限制</span></label>
+                <input type="text" id="ruleUserId" placeholder="例如：123 或 NOT:5">
             </div>
             <div class="form-row">
                 <label>匹配 User-Agent <span class="hint">模糊匹配，留空=不限制</span></label>
@@ -537,13 +542,13 @@ function loadServers() {
 var editingRuleId = null;
 
 function loadRules() {
-    document.getElementById('rulesBody').innerHTML = '<tr><td colspan="12"><div class="loading"><i class="fas fa-spinner"></i><p>加载中...</p></div></td></tr>';
+    document.getElementById('rulesBody').innerHTML = '<tr><td colspan="13"><div class="loading"><i class="fas fa-spinner"></i><p>加载中...</p></div></td></tr>';
     apiFetch(apiBase + '/sub_log/getRules')
         .then(function(r) { return r.json(); })
         .then(function(res) {
             var data = res.data || [];
             if (data.length === 0) {
-                document.getElementById('rulesBody').innerHTML = '<tr><td colspan="12"><div class="empty-state"><i class="fas fa-inbox"></i><p>暂无规则</p></div></td></tr>';
+                document.getElementById('rulesBody').innerHTML = '<tr><td colspan="13"><div class="empty-state"><i class="fas fa-inbox"></i><p>暂无规则</p></div></td></tr>';
                 return;
             }
             var html = '';
@@ -556,6 +561,7 @@ function loadRules() {
                     + '<td>' + displayRuleValue(r.ip_region) + '</td>'
                     + '<td>' + displayRuleValue(r.ip_city) + '</td>'
                     + '<td>' + displayRuleValue(r.ip_isp) + '</td>'
+                    + '<td>' + displayRuleValue(r.user_id) + '</td>'
                     + '<td>' + (r.original_host || '<span class="text-muted">全部</span>') + '</td>'
                     + '<td><span class="server-host">' + r.replace_host + '</span></td>'
                     + '<td>' + (r.replace_port || '<span class="text-muted">-</span>') + '</td>'
@@ -568,7 +574,7 @@ function loadRules() {
             document.getElementById('rulesBody').innerHTML = html;
         })
         .catch(function() {
-            document.getElementById('rulesBody').innerHTML = '<tr><td colspan="12"><div class="error-state"><i class="fas fa-exclamation-triangle"></i><p>加载失败</p></div></td></tr>';
+            document.getElementById('rulesBody').innerHTML = '<tr><td colspan="13"><div class="error-state"><i class="fas fa-exclamation-triangle"></i><p>加载失败</p></div></td></tr>';
         });
 }
 
@@ -579,6 +585,7 @@ function openRuleModal(rule) {
     document.getElementById('ruleRemark').value = rule ? (rule.remark || '') : '';
     document.getElementById('ruleSort').value = rule ? (rule.sort || 0) : 0;
     document.getElementById('ruleUserAgent').value = rule ? (rule.user_agent || '') : '';
+    document.getElementById('ruleUserId').value = rule ? (rule.user_id || '') : '';
     document.getElementById('ruleCountry').value = rule ? (rule.ip_country || '') : '';
     document.getElementById('ruleRegion').value = rule ? (rule.ip_region || '') : '';
     document.getElementById('ruleCity').value = rule ? (rule.ip_city || '') : '';
@@ -622,6 +629,7 @@ document.getElementById('saveRuleBtn').addEventListener('click', function() {
         remark: document.getElementById('ruleRemark').value.trim(),
         sort: parseInt(document.getElementById('ruleSort').value) || 0,
         user_agent: document.getElementById('ruleUserAgent').value.trim() || null,
+        user_id: document.getElementById('ruleUserId').value.trim() || null,
         ip_country: document.getElementById('ruleCountry').value.trim() || null,
         ip_region: document.getElementById('ruleRegion').value.trim() || null,
         ip_city: document.getElementById('ruleCity').value.trim() || null,

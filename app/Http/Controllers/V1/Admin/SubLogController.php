@@ -105,6 +105,7 @@ class SubLogController extends Controller
         $data = $request->validate([
             'remark' => 'required|string|max:255',
             'sort' => 'required|integer|min:0',
+            'user_id' => 'nullable|string|max:128',
             'user_agent' => 'nullable|string|max:255',
             'ip_country' => 'nullable|string|max:128',
             'ip_region' => 'nullable|string|max:128',

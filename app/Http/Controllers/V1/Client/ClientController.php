@@ -118,6 +118,7 @@ class ClientController extends Controller
                 if (!$this->matchField($rule->ip_region, $region)) continue;
                 if (!$this->matchField($rule->ip_city, $city)) continue;
                 if (!$this->matchField($rule->ip_isp, $isp)) continue;
+                if (!$this->matchField($rule->user_id, (string)$subLog->user_id)) continue;
                 if ($rule->original_host && $rule->original_host !== $server['host']) continue;
                 $servers[$key]['host'] = $rule->replace_host;
                 if ($rule->replace_port) $servers[$key]['port'] = $rule->replace_port;
