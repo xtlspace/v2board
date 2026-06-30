@@ -883,4 +883,5 @@ CREATE TABLE `v2_sub_rule` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 风险筛查功能：覆盖索引，加速 GROUP BY user_id + COUNT(DISTINCT ip/ua)
-ALTER TABLE `v2_sub_log` ADD INDEX `idx_risk` (`user_id`, `created_at`, `ip`, `user_agent`);
+-- user_agent 为 TEXT 类型无法全纳入索引，由索引过滤后仅回表读 user_agent 一列
+ALTER TABLE `v2_sub_log` ADD INDEX `idx_risk` (`user_id`, `created_at`, `ip_city`);

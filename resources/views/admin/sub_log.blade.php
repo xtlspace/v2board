@@ -106,6 +106,10 @@
 
         .server-host { font-family: monospace; font-size: 12px; color: #1890ff; }
         .arrow { color: #999; margin: 0 6px; }
+        .risk-sortable { cursor: pointer; user-select: none; }
+        .risk-sortable:hover { color: #1890ff; }
+        .risk-sortable i.fa-sort { margin-left: 4px; opacity: 0.3; font-size: 11px; }
+        .risk-sortable.active i.fa-sort { opacity: 1; color: #1890ff; }
 
         @media (max-width: 768px) {
             .filter-group input, .filter-group select { min-width: 100px; }
@@ -266,8 +270,8 @@
                 </div>
                 <div class="filter-form" id="riskFilterForm">
                     <div class="filter-group">
-                        <label>IP 去重数 ≥</label>
-                        <input type="number" id="riskIpThreshold" value="5" min="1">
+                        <label>城市去重数 ≥</label>
+                        <input type="number" id="riskCityThreshold" value="5" min="1">
                     </div>
                     <div class="filter-group">
                         <label>UA 去重数 ≥</label>
@@ -286,15 +290,14 @@
                             <tr>
                                 <th style="width:70px">User ID</th>
                                 <th>邮箱</th>
-                                <th>IP 去重</th>
-                                <th>UA 去重</th>
+                                <th class="risk-sortable" data-sort="city_count">城市去重 <i class="fas fa-sort"></i></th>
+                                <th class="risk-sortable" data-sort="ua_count">UA 去重 <i class="fas fa-sort"></i></th>
                                 <th>总请求</th>
-                                <th>最后 IP</th>
                                 <th style="width:160px">最后时间</th>
                             </tr>
                         </thead>
                         <tbody id="riskBody">
-                            <tr><td colspan="7"><div class="empty-state"><i class="fas fa-shield-alt"></i><p>点击"筛查"开始分析</p></div></td></tr>
+                            <tr><td colspan="6"><div class="empty-state"><i class="fas fa-shield-alt"></i><p>点击"筛查"开始分析</p></div></td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -715,23 +718,25 @@ document.querySelectorAll('.tab-btn').forEach(function(btn) {
 document.getElementById('refreshServersBtn').addEventListener('click', loadServers);
 
 // =========== Risk Screening ===========
-var riskState = { current: 1, pageSize: 10, total: 0 };
+var riskState = { current: 1, pageSize: 10, total: 0, sort: 'city_count', sortType: 'DESC' };
 
 function riskUserLink(userId) {
     window.open('/' + securePath + '/sub_log?user_id=' + userId, '_blank');
 }
 
 function loadRiskData() {
-    var ipThreshold = document.getElementById('riskIpThreshold').value || 5;
+    var cityThreshold = document.getElementById('riskCityThreshold').value || 5;
     var uaThreshold = document.getElementById('riskUaThreshold').value || 3;
 
-    document.getElementById('riskBody').innerHTML = '<tr><td colspan="7"><div class="loading"><i class="fas fa-spinner"></i><p>加载中...</p></div></td></tr>';
+    document.getElementById('riskBody').innerHTML = '<tr><td colspan="6"><div class="loading"><i class="fas fa-spinner"></i><p>加载中...</p></div></td></tr>';
 
     var params = new URLSearchParams();
     params.set('current', riskState.current);
     params.set('pageSize', riskState.pageSize);
-    params.set('ip_threshold', ipThreshold);
+    params.set('city_threshold', cityThreshold);
     params.set('ua_threshold', uaThreshold);
+    params.set('sort', riskState.sort);
+    params.set('sort_type', riskState.sortType);
 
     apiFetch(apiBase + '/sub_log/riskCheck?' + params.toString())
         .then(function(r) { return r.json(); })
@@ -741,34 +746,33 @@ function loadRiskData() {
             updateRiskPagination();
 
             if (data.length === 0) {
-                document.getElementById('riskBody').innerHTML = '<tr><td colspan="7"><div class="empty-state"><i class="fas fa-check-circle"></i><p>未发现风险用户</p></div></td></tr>';
+                document.getElementById('riskBody').innerHTML = '<tr><td colspan="6"><div class="empty-state"><i class="fas fa-check-circle"></i><p>未发现风险用户</p></div></td></tr>';
                 return;
             }
 
             var html = '';
             data.forEach(function(r) {
                 var riskTag = '';
-                if (parseInt(r.ip_count) >= parseInt(ipThreshold) && parseInt(r.ua_count) >= parseInt(uaThreshold)) {
-                    riskTag = ' <span class="badge badge-danger">IP+UA</span>';
-                } else if (parseInt(r.ip_count) >= parseInt(ipThreshold)) {
-                    riskTag = ' <span class="badge badge-warning">IP</span>';
+                if (parseInt(r.city_count) >= parseInt(cityThreshold) && parseInt(r.ua_count) >= parseInt(uaThreshold)) {
+                    riskTag = ' <span class="badge badge-danger">城市+UA</span>';
+                } else if (parseInt(r.city_count) >= parseInt(cityThreshold)) {
+                    riskTag = ' <span class="badge badge-warning">城市</span>';
                 } else {
                     riskTag = ' <span class="badge badge-warning">UA</span>';
                 }
                 html += '<tr>'
                     + '<td><a href="javascript:void(0)" onclick="riskUserLink(' + r.user_id + ')" style="color:#1890ff">' + r.user_id + '</a></td>'
                     + '<td>' + (r.email || '') + '</td>'
-                    + '<td>' + r.ip_count + riskTag + '</td>'
+                    + '<td>' + r.city_count + riskTag + '</td>'
                     + '<td>' + r.ua_count + '</td>'
                     + '<td>' + r.total_count + '</td>'
-                    + '<td>' + (r.last_ip || '-') + '</td>'
                     + '<td>' + (r.last_time ? fmtTime(r.last_time) : '-') + '</td>'
                     + '</tr>';
             });
             document.getElementById('riskBody').innerHTML = html;
         })
         .catch(function() {
-            document.getElementById('riskBody').innerHTML = '<tr><td colspan="7"><div class="error-state"><i class="fas fa-exclamation-triangle"></i><p>加载失败</p></div></td></tr>';
+            document.getElementById('riskBody').innerHTML = '<tr><td colspan="6"><div class="error-state"><i class="fas fa-exclamation-triangle"></i><p>加载失败</p></div></td></tr>';
         });
 }
 
@@ -834,7 +838,7 @@ document.addEventListener('DOMContentLoaded', function() {
         riskState.current = 1;
         loadRiskData();
     });
-    document.getElementById('riskIpThreshold').addEventListener('keydown', function(e) { if (e.key === 'Enter') { riskState.current = 1; loadRiskData(); } });
+    document.getElementById('riskCityThreshold').addEventListener('keydown', function(e) { if (e.key === 'Enter') { riskState.current = 1; loadRiskData(); } });
     document.getElementById('riskUaThreshold').addEventListener('keydown', function(e) { if (e.key === 'Enter') { riskState.current = 1; loadRiskData(); } });
     document.getElementById('riskPrevPage').addEventListener('click', function() {
         if (riskState.current > 1) { riskState.current--; loadRiskData(); }
@@ -842,6 +846,21 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('riskNextPage').addEventListener('click', function() {
         var totalPages = Math.ceil(riskState.total / riskState.pageSize);
         if (riskState.current < totalPages) { riskState.current++; loadRiskData(); }
+    });
+    document.querySelectorAll('.risk-sortable').forEach(function(th) {
+        th.addEventListener('click', function() {
+            var key = this.getAttribute('data-sort');
+            if (riskState.sort === key) {
+                riskState.sortType = riskState.sortType === 'DESC' ? 'ASC' : 'DESC';
+            } else {
+                riskState.sort = key;
+                riskState.sortType = 'DESC';
+            }
+            document.querySelectorAll('.risk-sortable').forEach(function(t) { t.classList.remove('active'); });
+            this.classList.add('active');
+            riskState.current = 1;
+            loadRiskData();
+        });
     });
 
     document.querySelectorAll('th.sortable').forEach(function(th) {

@@ -143,23 +143,24 @@ class SubLogController extends Controller
 
     public function riskCheck(Request $request)
     {
-        $cacheKey = 'sub_risk|' . md5(serialize($request->only(['ip_threshold', 'ua_threshold', 'current', 'pageSize'])));
-        $result = Cache::remember($cacheKey, 60, function () use ($request) {
-            $ipThreshold = (int)$request->input('ip_threshold', 5);
+        $sort = in_array($request->input('sort'), ['city_count', 'ua_count']) ? $request->input('sort') : 'city_count';
+        $sortType = in_array($request->input('sort_type'), ['ASC', 'DESC']) ? $request->input('sort_type') : 'DESC';
+        $cacheKey = 'sub_risk|' . md5(serialize($request->only(['city_threshold', 'ua_threshold', 'current', 'pageSize', 'sort', 'sort_type'])));
+        $result = Cache::remember($cacheKey, 60, function () use ($request, $sort, $sortType) {
+            $cityThreshold = (int)$request->input('city_threshold', 5);
             $uaThreshold = (int)$request->input('ua_threshold', 3);
             $current = (int)$request->input('current', 1);
             $pageSize = (int)$request->input('pageSize', 10);
 
             $builder = SubLog::select('user_id')
-                ->selectRaw('COUNT(DISTINCT ip) as ip_count')
+                ->selectRaw('COUNT(DISTINCT ip_city) as city_count')
                 ->selectRaw('COUNT(DISTINCT user_agent) as ua_count')
                 ->selectRaw('COUNT(*) as total_count')
-                ->selectRaw('MAX(ip) as last_ip')
                 ->selectRaw('MAX(created_at) as last_time')
                 ->groupBy('user_id')
-                ->havingRaw('ip_count > ? OR ua_count > ?', [$ipThreshold, $uaThreshold])
-                ->orderBy('ip_count', 'DESC')
-                ->orderBy('ua_count', 'DESC');
+                ->havingRaw('city_count > ? OR ua_count > ?', [$cityThreshold, $uaThreshold])
+                ->orderBy($sort, $sortType)
+                ->orderBy('user_id', 'ASC');
 
             $sql = $builder->toSql();
             $bindings = $builder->getBindings();
