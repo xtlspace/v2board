@@ -25,13 +25,7 @@ class ClientController extends Controller
         // 记录订阅请求日志
         $subLog = new SubLog();
         $subLog->user_id = $user->id;
-        if (isset($_SERVER['HTTP_X_REAL_IP'])) {
-            $subLog->ip = $_SERVER['HTTP_X_REAL_IP'];
-        } elseif (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-            $subLog->ip = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0];
-        } else {
-            $subLog->ip = $_SERVER['REMOTE_ADDR'] ?? $request->ip();
-        }
+        $subLog->ip = $_SERVER['REMOTE_ADDR'] ?? $request->ip();
         $subLog->user_agent = $_SERVER['HTTP_USER_AGENT'] ?? '';
         $location = null;
         try {

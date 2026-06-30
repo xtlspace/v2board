@@ -881,3 +881,6 @@ CREATE TABLE `v2_sub_rule` (
   `updated_at` int(11) NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 风险筛查功能：覆盖索引，加速 GROUP BY user_id + COUNT(DISTINCT ip/ua)
+ALTER TABLE `v2_sub_log` ADD INDEX `idx_risk` (`user_id`, `created_at`, `ip`, `user_agent`);

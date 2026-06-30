@@ -179,6 +179,7 @@ class AdminRoute
             $router->post('/sub_log/saveRule', 'V1\\Admin\\SubLogController@saveRule');
             $router->post('/sub_log/dropRule', 'V1\\Admin\\SubLogController@dropRule');
             $router->post('/sub_log/clearLogs', 'V1\\Admin\\SubLogController@clearLogs');
+            $router->get ('/sub_log/riskCheck', 'V1\\Admin\\SubLogController@riskCheck');
         });
     }
 }

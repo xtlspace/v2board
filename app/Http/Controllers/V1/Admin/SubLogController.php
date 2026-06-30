@@ -14,6 +14,7 @@ use App\Models\ServerTuic;
 use App\Models\ServerAnytls;
 use App\Models\ServerV2node;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class SubLogController extends Controller
 {
@@ -138,6 +139,47 @@ class SubLogController extends Controller
         $rule->delete();
         \Illuminate\Support\Facades\Cache::forget('sub_rules');
         return response(['data' => true]);
+    }
+
+    public function riskCheck(Request $request)
+    {
+        $cacheKey = 'sub_risk|' . md5(serialize($request->only(['ip_threshold', 'ua_threshold', 'current', 'pageSize'])));
+        $result = Cache::remember($cacheKey, 60, function () use ($request) {
+            $ipThreshold = (int)$request->input('ip_threshold', 5);
+            $uaThreshold = (int)$request->input('ua_threshold', 3);
+            $current = (int)$request->input('current', 1);
+            $pageSize = (int)$request->input('pageSize', 10);
+
+            $builder = SubLog::select('user_id')
+                ->selectRaw('COUNT(DISTINCT ip) as ip_count')
+                ->selectRaw('COUNT(DISTINCT user_agent) as ua_count')
+                ->selectRaw('COUNT(*) as total_count')
+                ->selectRaw('MAX(ip) as last_ip')
+                ->selectRaw('MAX(created_at) as last_time')
+                ->groupBy('user_id')
+                ->havingRaw('ip_count > ? OR ua_count > ?', [$ipThreshold, $uaThreshold])
+                ->orderBy('ip_count', 'DESC')
+                ->orderBy('ua_count', 'DESC');
+
+            $sql = $builder->toSql();
+            $bindings = $builder->getBindings();
+            $total = (int)\DB::selectOne('SELECT COUNT(*) as aggregate FROM (' . $sql . ') as sub', $bindings)->aggregate;
+
+            $data = $builder->forPage($current, $pageSize)->get();
+
+            $userIds = $data->pluck('user_id')->toArray();
+            if (!empty($userIds)) {
+                $users = \App\Models\User::whereIn('id', $userIds)->pluck('email', 'id');
+                $data->transform(function ($item) use ($users) {
+                    $item['email'] = $users->get($item->user_id, '');
+                    return $item;
+                });
+            }
+
+            return ['data' => $data, 'total' => $total];
+        });
+
+        return response($result);
     }
 
     private function applyFilters(Request $request, $builder)

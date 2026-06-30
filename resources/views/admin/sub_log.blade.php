@@ -65,6 +65,8 @@
         .badge-type { background: #f0f0f0; color: #666; }
         .badge-enable { background: #f6ffed; color: #52c41a; }
         .badge-disable { background: #fff2f0; color: #ff4d4f; }
+        .badge-warning { background: #fffbe6; color: #faad14; }
+        .badge-danger { background: #fff2f0; color: #ff4d4f; }
         .text-muted { color: #999; }
 
         .pagination { display: flex; align-items: center; justify-content: space-between; padding: 16px 0 0; }
@@ -124,6 +126,7 @@
                 <button class="tab-btn active" data-tab="tabLogs">订阅日志</button>
                 <button class="tab-btn" data-tab="tabServers">节点地址汇总</button>
                 <button class="tab-btn" data-tab="tabRules">替换规则</button>
+                <button class="tab-btn" data-tab="tabRisk">风险筛查</button>
             </div>
 
             <div id="tabLogs" class="tab-content active">
@@ -254,6 +257,54 @@
                             <tr><td colspan="13"><div class="loading"><i class="fas fa-spinner"></i><p>加载中...</p></div></td></tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <div id="tabRisk" class="tab-content">
+                <div class="toolbar">
+                    <span class="toolbar-title">风险筛查</span>
+                </div>
+                <div class="filter-form" id="riskFilterForm">
+                    <div class="filter-group">
+                        <label>IP 去重数 ≥</label>
+                        <input type="number" id="riskIpThreshold" value="5" min="1">
+                    </div>
+                    <div class="filter-group">
+                        <label>UA 去重数 ≥</label>
+                        <input type="number" id="riskUaThreshold" value="3" min="1">
+                    </div>
+                    <div class="filter-group" style="padding-bottom:1px">
+                        <label>&nbsp;</label>
+                        <div style="display:flex;gap:8px">
+                            <button class="btn btn-primary" id="riskSearchBtn"><i class="fas fa-search"></i>筛查</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width:70px">User ID</th>
+                                <th>邮箱</th>
+                                <th>IP 去重</th>
+                                <th>UA 去重</th>
+                                <th>总请求</th>
+                                <th>最后 IP</th>
+                                <th style="width:160px">最后时间</th>
+                            </tr>
+                        </thead>
+                        <tbody id="riskBody">
+                            <tr><td colspan="7"><div class="empty-state"><i class="fas fa-shield-alt"></i><p>点击"筛查"开始分析</p></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="riskPagination" style="display:none">
+                    <div class="pagination-info"><span id="riskTotalInfo">共 0 条</span></div>
+                    <div class="pagination-controls">
+                        <button class="btn btn-default btn-sm" id="riskPrevPage" disabled><i class="fas fa-chevron-left"></i></button>
+                        <span id="riskPageInfo">0/0</span>
+                        <button class="btn btn-default btn-sm" id="riskNextPage" disabled><i class="fas fa-chevron-right"></i></button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -657,10 +708,80 @@ document.querySelectorAll('.tab-btn').forEach(function(btn) {
         var tab = this.getAttribute('data-tab');
         if (tab === 'tabServers') loadServers();
         if (tab === 'tabRules') loadRules();
+        if (tab === 'tabRisk') loadRiskData();
     });
 });
 
 document.getElementById('refreshServersBtn').addEventListener('click', loadServers);
+
+// =========== Risk Screening ===========
+var riskState = { current: 1, pageSize: 10, total: 0 };
+
+function riskUserLink(userId) {
+    window.open('/' + securePath + '/sub_log?user_id=' + userId, '_blank');
+}
+
+function loadRiskData() {
+    var ipThreshold = document.getElementById('riskIpThreshold').value || 5;
+    var uaThreshold = document.getElementById('riskUaThreshold').value || 3;
+
+    document.getElementById('riskBody').innerHTML = '<tr><td colspan="7"><div class="loading"><i class="fas fa-spinner"></i><p>加载中...</p></div></td></tr>';
+
+    var params = new URLSearchParams();
+    params.set('current', riskState.current);
+    params.set('pageSize', riskState.pageSize);
+    params.set('ip_threshold', ipThreshold);
+    params.set('ua_threshold', uaThreshold);
+
+    apiFetch(apiBase + '/sub_log/riskCheck?' + params.toString())
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+            var data = res.data || [];
+            riskState.total = res.total || 0;
+            updateRiskPagination();
+
+            if (data.length === 0) {
+                document.getElementById('riskBody').innerHTML = '<tr><td colspan="7"><div class="empty-state"><i class="fas fa-check-circle"></i><p>未发现风险用户</p></div></td></tr>';
+                return;
+            }
+
+            var html = '';
+            data.forEach(function(r) {
+                var riskTag = '';
+                if (parseInt(r.ip_count) >= parseInt(ipThreshold) && parseInt(r.ua_count) >= parseInt(uaThreshold)) {
+                    riskTag = ' <span class="badge badge-danger">IP+UA</span>';
+                } else if (parseInt(r.ip_count) >= parseInt(ipThreshold)) {
+                    riskTag = ' <span class="badge badge-warning">IP</span>';
+                } else {
+                    riskTag = ' <span class="badge badge-warning">UA</span>';
+                }
+                html += '<tr>'
+                    + '<td><a href="javascript:void(0)" onclick="riskUserLink(' + r.user_id + ')" style="color:#1890ff">' + r.user_id + '</a></td>'
+                    + '<td>' + (r.email || '') + '</td>'
+                    + '<td>' + r.ip_count + riskTag + '</td>'
+                    + '<td>' + r.ua_count + '</td>'
+                    + '<td>' + r.total_count + '</td>'
+                    + '<td>' + (r.last_ip || '-') + '</td>'
+                    + '<td>' + (r.last_time ? fmtTime(r.last_time) : '-') + '</td>'
+                    + '</tr>';
+            });
+            document.getElementById('riskBody').innerHTML = html;
+        })
+        .catch(function() {
+            document.getElementById('riskBody').innerHTML = '<tr><td colspan="7"><div class="error-state"><i class="fas fa-exclamation-triangle"></i><p>加载失败</p></div></td></tr>';
+        });
+}
+
+function updateRiskPagination() {
+    var pagination = document.getElementById('riskPagination');
+    if (riskState.total === 0) { pagination.style.display = 'none'; return; }
+    pagination.style.display = 'flex';
+    var totalPages = Math.ceil(riskState.total / riskState.pageSize) || 1;
+    document.getElementById('riskTotalInfo').textContent = '\u5171 ' + riskState.total + ' \u6761';
+    document.getElementById('riskPageInfo').textContent = riskState.current + '/' + totalPages;
+    document.getElementById('riskPrevPage').disabled = riskState.current <= 1;
+    document.getElementById('riskNextPage').disabled = riskState.current >= totalPages;
+}
 
 document.getElementById('clearBtn').addEventListener('click', function() {
     if (!confirm('\u786e\u8ba4\u6e05\u9664\u5f53\u524d\u7b5b\u9009\u6761\u4ef6\u4e0b\u7684\u6240\u6709\u8ba2\u9605\u65e5\u5fd7\uff1f\u6b64\u64cd\u4f5c\u4e0d\u53ef\u6062\u590d\u3002')) return;
@@ -707,6 +828,20 @@ document.addEventListener('DOMContentLoaded', function() {
         state.pageSize = parseInt(this.value);
         state.current = 1;
         loadLogData();
+    });
+
+    document.getElementById('riskSearchBtn').addEventListener('click', function() {
+        riskState.current = 1;
+        loadRiskData();
+    });
+    document.getElementById('riskIpThreshold').addEventListener('keydown', function(e) { if (e.key === 'Enter') { riskState.current = 1; loadRiskData(); } });
+    document.getElementById('riskUaThreshold').addEventListener('keydown', function(e) { if (e.key === 'Enter') { riskState.current = 1; loadRiskData(); } });
+    document.getElementById('riskPrevPage').addEventListener('click', function() {
+        if (riskState.current > 1) { riskState.current--; loadRiskData(); }
+    });
+    document.getElementById('riskNextPage').addEventListener('click', function() {
+        var totalPages = Math.ceil(riskState.total / riskState.pageSize);
+        if (riskState.current < totalPages) { riskState.current++; loadRiskData(); }
     });
 
     document.querySelectorAll('th.sortable').forEach(function(th) {
