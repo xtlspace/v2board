@@ -74,6 +74,32 @@ class TicketController extends Controller
         ]);
     }
 
+    public function save(Request $request)
+    {
+        $data = $request->validate([
+            'user_id' => 'required|integer|exists:v2_user,id',
+            'subject' => 'required|string|max:255',
+            'level' => 'required|in:0,1,2',
+            'message' => 'required|string'
+        ]);
+
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        $ticket = Ticket::create([
+            'user_id' => (int)$data['user_id'],
+            'subject' => $data['subject'],
+            'level' => (int)$data['level'],
+            'status' => 0,
+        ]);
+        TicketMessage::create([
+            'user_id' => (int)$data['user_id'],
+            'ticket_id' => $ticket->id,
+            'message' => $data['message']
+        ]);
+        \Illuminate\Support\Facades\DB::commit();
+
+        return response(['data' => true]);
+    }
+
     public function close(Request $request)
     {
         if (empty($request->input('id'))) {

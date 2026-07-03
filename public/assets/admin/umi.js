@@ -70938,10 +70938,12 @@
         class M extends g.a.Component {
             constructor(e) {
                 super(e),
-                this.state = {
-                    sorter: {},
-                    visible: !1
-                }
+            this.state = {
+                sorter: {},
+                visible: !1,
+                ticketModalVisible: !1,
+                ticketCreateData: { subject: '', level: 1, message: '' }
+            }
             }
             componentWillUnmount() {
                 this.props.dispatch({
@@ -71067,6 +71069,29 @@
                     okText: "\u786e\u5b9a",
                     cancelText: "\u53d6\u6d88"
                 })
+            }
+            openTicketForUser(e) {
+                this.setState({
+                    ticketModalVisible: !0,
+                    ticketCreateData: { subject: '', level: 1, message: '', _userId: e.id, _email: e.email }
+                });
+            }
+            saveTicket() {
+                var e = this;
+                var d = this.state.ticketCreateData;
+                if (!d.subject || !d.message) return;
+                var pathParts = window.location.pathname.split('/');
+                var securePath = pathParts[1] || '';
+                fetch('/api/v1/' + securePath + '/ticket/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'authorization': window.localStorage.getItem('authorization') },
+                    body: JSON.stringify({ user_id: d._userId, subject: d.subject, level: d.level, message: d.message })
+                }).then(function(r) { return r.json(); })
+                .then(function(res) {
+                    if (res.data) {
+                        e.setState({ ticketModalVisible: !1, ticketCreateData: { subject: '', level: 1, message: '' } });
+                    }
+                });
             }
             render() {
                 var e, t, n, r, o, p, m = this.props.user, b = m.users, x = m.pagination, _ = m.fetchLoading, E = m.filter, M = this.props.serverGroup.groups, R = this.props.plan.plans, N = [{
@@ -71216,6 +71241,10 @@
                             }, g.a.createElement("a", null, g.a.createElement(u["a"], {
                                 type: "usergroup-add"
                             }), " TA\u7684\u9080\u8bf7")), g.a.createElement(c["a"].Item, {
+                                onClick: ()=>this.openTicketForUser(t)
+                            }, g.a.createElement("a", null, g.a.createElement(u["a"], {
+                                type: "message"
+                            }), " \u5f00\u542f\u5de5\u5355")), g.a.createElement(c["a"].Item, {
                                 onContextMenu: e=>{
                                     e.stopPropagation()
                                 }
@@ -71437,7 +71466,15 @@
                     }
                 }, g.a.createElement("a", null, g.a.createElement(u["a"], {
                     type: "usergroup-add"
-                }), " TA\u7684\u9080\u8bf7")), g.a.createElement("li", {
+                }, " TA\u7684\u9080\u8bf7")), g.a.createElement("li", {
+                    className: "ant-dropdown-menu-item",
+                    onClick: ()=>{
+                        var e;
+                        return this.openTicketForUser(null === (e = this.record) || void 0 === e ? void 0 : e)
+                    }
+                }, g.a.createElement("a", null, g.a.createElement(u["a"], {
+                    type: "message"
+                }), " \u5f00\u542f\u5de5\u5355")), g.a.createElement("li", {
                     className: "ant-dropdown-menu-item"
                 }, g.a.createElement(j["a"], {
                     userId: null === (o = this.record) || void 0 === o ? void 0 : o.id,
@@ -71450,7 +71487,52 @@
                     onClick: ()=>this.delUser(this.record)
                 }, g.a.createElement(u["a"], {
                     type: "delete"
-                }), " \u5220\u9664\u7528\u6237"))))))))
+                }), " \u5220\u9664\u7528\u6237")))))))  // closes: a, li, ul, Table, bg-white, block, Spin
+                , g.a.createElement(p["a"], {
+                    title: "\u5f00\u542f\u5de5\u5355",
+                    visible: this.state.ticketModalVisible,
+                    onCancel: ()=>this.setState({ ticketModalVisible: !1 }),
+                    onOk: ()=>this.saveTicket(),
+                    okText: "\u63d0\u4ea4",
+                    cancelText: "\u53d6\u6d88"
+                }, g.a.createElement("div", null,
+                    g.a.createElement("div", {className: "form-group"},
+                        g.a.createElement("label", null, "\u7528\u6237"),
+                        g.a.createElement("p", {className: "form-control-static"}, this.state.ticketCreateData._email)
+                    ),
+                    g.a.createElement("div", {className: "form-group"},
+                        g.a.createElement("label", null, "\u4e3b\u9898"),
+                        g.a.createElement("input", {
+                            className: "form-control",
+                            placeholder: "\u8bf7\u8f93\u5165\u5de5\u5355\u4e3b\u9898",
+                            value: this.state.ticketCreateData.subject,
+                            onChange: e=>this.setState({ ticketCreateData: Object.assign({}, this.state.ticketCreateData, { subject: e.target.value }) })
+                        })
+                    ),
+                    g.a.createElement("div", {className: "form-group"},
+                        g.a.createElement("label", null, "\u7b49\u7ea7"),
+                        g.a.createElement("select", {
+                            className: "form-control",
+                            value: this.state.ticketCreateData.level,
+                            onChange: e=>this.setState({ ticketCreateData: Object.assign({}, this.state.ticketCreateData, { level: e.target.value }) })
+                        },
+                            g.a.createElement("option", {value: 0}, "\u4f4e"),
+                            g.a.createElement("option", {value: 1}, "\u4e2d"),
+                            g.a.createElement("option", {value: 2}, "\u9ad8")
+                        )
+                    ),
+                    g.a.createElement("div", {className: "form-group"},
+                        g.a.createElement("label", null, "\u5185\u5bb9"),
+                        g.a.createElement("textarea", {
+                            className: "form-control",
+                            rows: 5,
+                            placeholder: "\u8bf7\u63cf\u8ff0\u95ee\u9898",
+                            value: this.state.ticketCreateData.message,
+                            onChange: e=>this.setState({ ticketCreateData: Object.assign({}, this.state.ticketCreateData, { message: e.target.value }) })
+                        })
+                    )
+                ))
+                )  // close Page
             }
         }
         t["default"] = Object(E["c"])(e=>{
