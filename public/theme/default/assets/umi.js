@@ -53039,7 +53039,8 @@
                     onClick: ()=>this.props.dispatch({
                         type: "ticket/setState",
                         payload: {
-                            newTicketModalVisible: !0
+                            newTicketModalVisible: !0,
+                            saveData: { level: 1 }
                         }
                     })
                 }, d ? m.a.createElement(u["a"], {
