@@ -61,7 +61,7 @@ class TicketService {
     }
 
     // 半小时内不再重复通知
-    private function sendEmailNotify(Ticket $ticket, TicketMessage $ticketMessage)
+    public function sendEmailNotify(Ticket $ticket, TicketMessage $ticketMessage)
     {
         $user = User::find($ticket->user_id);
         $cacheKey = 'ticket_sendEmailNotify_' . $ticket->user_id;

@@ -90,12 +90,14 @@ class TicketController extends Controller
             'level' => (int)$data['level'],
             'status' => 0,
         ]);
-        TicketMessage::create([
+        $ticketMessage = TicketMessage::create([
             'user_id' => (int)$request->user['id'],
             'ticket_id' => $ticket->id,
             'message' => $data['message']
         ]);
         \Illuminate\Support\Facades\DB::commit();
+
+        (new \App\Services\TicketService())->sendEmailNotify($ticket, $ticketMessage);
 
         return response(['data' => true]);
     }
