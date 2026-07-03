@@ -70935,6 +70935,7 @@
           , A = n("Oa6W")
           , P = n("v32e")
           , j = n("X0q5");
+        var __Modal = p;
         class M extends g.a.Component {
             constructor(e) {
                 super(e),
@@ -71466,13 +71467,14 @@
                     }
                 }, g.a.createElement("a", null, g.a.createElement(u["a"], {
                     type: "usergroup-add"
-                }, " TA\u7684\u9080\u8bf7")), g.a.createElement("li", {
-                    className: "ant-dropdown-menu-item",
+                }), " TA\u7684\u9080\u8bf7")), g.a.createElement("li", {
+                    className: "ant-dropdown-menu-item"
+                }, g.a.createElement("a", {
                     onClick: ()=>{
                         var e;
                         return this.openTicketForUser(null === (e = this.record) || void 0 === e ? void 0 : e)
                     }
-                }, g.a.createElement("a", null, g.a.createElement(u["a"], {
+                }, g.a.createElement(u["a"], {
                     type: "message"
                 }), " \u5f00\u542f\u5de5\u5355")), g.a.createElement("li", {
                     className: "ant-dropdown-menu-item"
@@ -71487,8 +71489,8 @@
                     onClick: ()=>this.delUser(this.record)
                 }, g.a.createElement(u["a"], {
                     type: "delete"
-                }), " \u5220\u9664\u7528\u6237")))))))  // closes: a, li, ul, Table, bg-white, block, Spin
-                , g.a.createElement(p["a"], {
+                }), " \u5220\u9664\u7528\u6237")))))))
+                , g.a.createElement(__Modal["a"], {
                     title: "\u5f00\u542f\u5de5\u5355",
                     visible: this.state.ticketModalVisible,
                     onCancel: ()=>this.setState({ ticketModalVisible: !1 }),
@@ -71532,7 +71534,7 @@
                         })
                     )
                 ))
-                )  // close Page
+                )
             }
         }
         t["default"] = Object(E["c"])(e=>{

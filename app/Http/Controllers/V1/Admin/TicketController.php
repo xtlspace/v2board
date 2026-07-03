@@ -91,7 +91,7 @@ class TicketController extends Controller
             'status' => 0,
         ]);
         TicketMessage::create([
-            'user_id' => (int)$data['user_id'],
+            'user_id' => (int)$request->user['id'],
             'ticket_id' => $ticket->id,
             'message' => $data['message']
         ]);
