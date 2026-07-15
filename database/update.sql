@@ -877,6 +877,7 @@ CREATE TABLE `v2_sub_rule` (
   `replace_host` varchar(255) NOT NULL,
   `replace_port` int(11) DEFAULT NULL,
   `enable` tinyint(1) NOT NULL DEFAULT '1',
+  `type` tinyint(1) NOT NULL DEFAULT '0' COMMENT '0=替换, 1=白名单',
   `created_at` int(11) NOT NULL,
   `updated_at` int(11) NOT NULL,
   PRIMARY KEY (`id`)

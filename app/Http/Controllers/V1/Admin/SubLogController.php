@@ -115,6 +115,7 @@ class SubLogController extends Controller
             'original_host' => 'nullable|string|max:255',
             'replace_host' => 'required|string|max:255',
             'replace_port' => 'nullable|integer',
+            'type' => 'required|in:0,1',
             'enable' => 'required|in:0,1',
         ]);
 

@@ -65,6 +65,7 @@
         .badge-type { background: #f0f0f0; color: #666; }
         .badge-enable { background: #f6ffed; color: #52c41a; }
         .badge-disable { background: #fff2f0; color: #ff4d4f; }
+        .badge-success { background: #f6ffed; color: #52c41a; }
         .badge-warning { background: #fffbe6; color: #faad14; }
         .badge-danger { background: #fff2f0; color: #ff4d4f; }
         .text-muted { color: #999; }
@@ -235,7 +236,7 @@
 
             <div id="tabRules" class="tab-content">
                 <div class="toolbar">
-                    <span class="toolbar-title">替换规则 <span class="text-muted" style="font-weight:400;font-size:12px">按 sort 优先级，取第一条匹配</span></span>
+                    <span class="toolbar-title">替换规则 <span class="text-muted" style="font-weight:400;font-size:12px">按 sort 优先级，取第一条匹配；白名单规则匹配后跳过该服务器</span></span>
                     <button class="btn btn-primary btn-sm" id="addRuleBtn"><i class="fas fa-plus"></i>添加规则</button>
                 </div>
                 <div class="table-wrapper">
@@ -253,12 +254,13 @@
                                 <th>原 Host</th>
                                 <th>替换为</th>
                                 <th>替换端口</th>
+                                <th>类型</th>
                                 <th>状态</th>
                                 <th class="col-actions">操作</th>
                             </tr>
                         </thead>
                         <tbody id="rulesBody">
-                            <tr><td colspan="13"><div class="loading"><i class="fas fa-spinner"></i><p>加载中...</p></div></td></tr>
+                            <tr><td colspan="14"><div class="loading"><i class="fas fa-spinner"></i><p>加载中...</p></div></td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -369,6 +371,13 @@
             <div class="form-row">
                 <label>替换端口 <span class="hint">留空=不替换端口</span></label>
                 <input type="number" id="ruleReplacePort" placeholder="例如：443" min="1" max="65535">
+            </div>
+            <div class="form-row">
+                <label>类型</label>
+                <select id="ruleType">
+                    <option value="0">替换</option>
+                    <option value="1">白名单</option>
+                </select>
             </div>
             <div class="form-row">
                 <label>状态</label>
@@ -602,7 +611,7 @@ function loadRules() {
         .then(function(res) {
             var data = res.data || [];
             if (data.length === 0) {
-                document.getElementById('rulesBody').innerHTML = '<tr><td colspan="13"><div class="empty-state"><i class="fas fa-inbox"></i><p>暂无规则</p></div></td></tr>';
+                document.getElementById('rulesBody').innerHTML = '<tr><td colspan="14"><div class="empty-state"><i class="fas fa-inbox"></i><p>暂无规则</p></div></td></tr>';
                 return;
             }
             var html = '';
@@ -619,6 +628,7 @@ function loadRules() {
                     + '<td>' + (r.original_host || '<span class="text-muted">全部</span>') + '</td>'
                     + '<td><span class="server-host">' + r.replace_host + '</span></td>'
                     + '<td>' + (r.replace_port || '<span class="text-muted">-</span>') + '</td>'
+                    + '<td>' + (parseInt(r.type) === 1 ? '<span class="badge badge-success">白名单</span>' : '<span class="badge badge-type">替换</span>') + '</td>'
                     + '<td>' + (r.enable ? '<span class="badge badge-enable">启用</span>' : '<span class="badge badge-disable">禁用</span>') + '</td>'
                     + '<td class="col-actions">'
                     + '<button class="btn btn-default btn-sm" onclick="editRule(' + r.id + ')"><i class="fas fa-edit"></i></button> '
@@ -647,6 +657,7 @@ function openRuleModal(rule) {
     document.getElementById('ruleOriginalHost').value = rule ? (rule.original_host || '') : '';
     document.getElementById('ruleReplaceHost').value = rule ? (rule.replace_host || '') : '';
     document.getElementById('ruleReplacePort').value = rule ? (rule.replace_port || '') : '';
+    document.getElementById('ruleType').value = rule ? (rule.type || 0) : 0;
     document.getElementById('ruleEnable').value = rule ? (rule.enable ? '1' : '0') : '1';
     document.getElementById('ruleModal').classList.add('show');
 }
@@ -691,6 +702,7 @@ document.getElementById('saveRuleBtn').addEventListener('click', function() {
         original_host: document.getElementById('ruleOriginalHost').value.trim() || null,
         replace_host: document.getElementById('ruleReplaceHost').value.trim(),
         replace_port: parseInt(document.getElementById('ruleReplacePort').value) || null,
+        type: parseInt(document.getElementById('ruleType').value),
         enable: parseInt(document.getElementById('ruleEnable').value)
     };
     if (!data.replace_host) { alert('替换 Host 不能为空'); return; }
