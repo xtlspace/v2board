@@ -128,11 +128,13 @@ class ClientController extends Controller
         if (empty($ruleValue)) return true;
         $not = str_starts_with($ruleValue, 'NOT:');
         if ($not) $ruleValue = substr($ruleValue, strlen('NOT:'));
+        $full = str_starts_with($ruleValue, 'FULL:');
+        if ($full) $ruleValue = substr($ruleValue, strlen('FULL:'));
 
         $values = explode(',', $ruleValue);
         foreach ($values as $val) {
             $val = trim($val);
-            if ($exact) {
+            if ($exact || $full) {
                 if ($actualValue === $val) return !$not;
             } else {
                 if (strpos($actualValue, strtolower($val)) !== false) return !$not;
