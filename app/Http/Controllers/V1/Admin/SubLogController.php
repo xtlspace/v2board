@@ -190,8 +190,14 @@ class SubLogController extends Controller
             $builder->where('user_id', (int)$request->input('user_id'));
         }
         if ($request->filled('user_agent')) {
-            $keyword = mb_strtolower($request->input('user_agent'));
-            $builder->whereRaw('LOWER(user_agent) LIKE ?', ['%' . $keyword . '%']);
+            $keyword = $request->input('user_agent');
+            if (str_starts_with($keyword, 'FULL:')) {
+                $keyword = mb_substr($keyword, strlen('FULL:'));
+                $builder->where('user_agent', $keyword);
+            } else {
+                $keyword = mb_strtolower($keyword);
+                $builder->whereRaw('LOWER(user_agent) LIKE ?', ['%' . $keyword . '%']);
+            }
         }
         if ($request->filled('ip')) {
             $builder->where('ip', 'like', '%' . $request->input('ip') . '%');

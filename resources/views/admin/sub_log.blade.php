@@ -142,7 +142,7 @@
                     </div>
                     <div class="filter-group">
                         <label>User-Agent</label>
-                        <input type="text" id="filterUserAgent" placeholder="关键字搜索">
+                        <input type="text" id="filterUserAgent" placeholder="关键字搜索，FULL:前缀精确匹配">
                     </div>
                     <div class="filter-group">
                         <label>IP 地址</label>
