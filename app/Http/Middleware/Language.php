@@ -9,9 +9,7 @@ class Language
 {
     public function handle($request, Closure $next)
     {
-        if ($request->header('content-language')) {
-            App::setLocale($request->header('content-language'));
-        }
+        App::setLocale('zh-CN');
         return $next($request);
     }
 }
