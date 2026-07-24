@@ -26511,7 +26511,7 @@
                     condition: "=",
                     value: e.user_id
                 }));
-                window.open("/admin/order")
+                window.open("/" + window.settings.secure_path + "#/order")
             }
             render() {
                 var e = this.props.user.user
