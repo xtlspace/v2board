@@ -26506,149 +26506,18 @@
             showOrderModal() {
                 var e = this.props.ticket.ticket;
                 if (!e) return;
-                this.setState({
-                    orderModal: !0,
-                    orderLoading: !0
-                });
-                var t = this;
-                fetch("/api/v1/xtls/order/fetch?filter[0][key]=user_id&filter[0][condition]=" + encodeURIComponent("=") + "&filter[0][value]=" + e.user_id + "&pageSize=10&current=1&total=1", {
-                    headers: {
-                        Authorization: localStorage.getItem("authorization") || ""
-                    }
-                }).then(function(n) {
-                    return n.json()
-                }).then(function(n) {
-                    if (n.data) {
-                        t.setState({
-                            orderRecords: n.data,
-                            orderLoading: !1,
-                            orderPagination: {
-                                page: 1,
-                                pageSize: 10,
-                                total: n.total
-                            }
-                        })
-                    } else {
-                        t.setState({
-                            orderLoading: !1
-                        })
-                    }
-                }).catch(function() {
-                    t.setState({
-                        orderLoading: !1
-                    })
-                })
-            }
-            onOrderPageChange(e) {
-                var t = this.props.ticket.ticket;
-                if (!t) return;
-                this.setState({
-                    orderLoading: !0
-                });
-                var n = this;
-                fetch("/api/v1/xtls/order/fetch?filter[0][key]=user_id&filter[0][condition]=" + encodeURIComponent("=") + "&filter[0][value]=" + t.user_id + "&pageSize=" + e.pageSize + "&current=" + e.current + "&total=1", {
-                    headers: {
-                        Authorization: localStorage.getItem("authorization") || ""
-                    }
-                }).then(function(t) {
-                    return t.json()
-                }).then(function(t) {
-                    if (t.data) {
-                        n.setState({
-                            orderRecords: t.data,
-                            orderLoading: !1,
-                            orderPagination: e
-                        })
-                    } else {
-                        n.setState({
-                            orderLoading: !1
-                        })
-                    }
-                }).catch(function() {
-                    n.setState({
-                        orderLoading: !1
-                    })
-                })
+                sessionStorage.setItem("pendingOrderFilter", JSON.stringify({
+                    key: "user_id",
+                    condition: "=",
+                    value: e.user_id
+                }));
+                window.open("/admin/order")
             }
             render() {
                 var e = this.props.user.user
                   , t = this.props.ticket
                   , n = t.ticket
-                  , r = t.replyLoading
-                  , i = this.state
-                  , a = i.orderModal
-                  , u = i.orderRecords
-                  , l = i.orderLoading
-                  , c = i.orderPagination
-                  , f = [{
-                    title: "\u8ba2\u5355\u53f7",
-                    dataIndex: "trade_no",
-                    key: "trade_no",
-                    width: 180
-                }, {
-                    title: "\u7c7b\u578b",
-                    dataIndex: "type",
-                    key: "type",
-                    width: 80,
-                    render: function(e) {
-                        var t = {
-                            1: "\u65b0\u8d2d",
-                            2: "\u7eed\u8d39",
-                            3: "\u53d8\u66f4",
-                            4: "\u6d41\u91cf\u5305",
-                            9: "\u5145\u503c"
-                        };
-                        return t[e] || "-"
-                    }
-                }, {
-                    title: "\u8ba2\u9605\u8ba1\u5212",
-                    dataIndex: "plan_name",
-                    key: "plan_name",
-                    width: 120
-                }, {
-                    title: "\u5468\u671f",
-                    dataIndex: "period",
-                    key: "period",
-                    width: 80,
-                    align: "center",
-                    render: function(e) {
-                        var t = {
-                            month_price: "\u6708\u4ed8",
-                            quarter_price: "\u5b63\u4ed8",
-                            half_year: "\u534a\u5e74",
-                            year_price: "\u5e74\u4ed8",
-                            two_year: "\u4e24\u5e74"
-                        };
-                        return t[e] || e
-                    }
-                }, {
-                    title: "\u652f\u4ed8\u91d1\u989d",
-                    dataIndex: "total_amount",
-                    key: "total_amount",
-                    width: 100,
-                    align: "right",
-                    render: function(e) {
-                        return (e / 100).toFixed(2)
-                    }
-                }, {
-                    title: "\u8ba2\u5355\u72b6\u6001",
-                    dataIndex: "status",
-                    key: "status",
-                    width: 100,
-                    render: function(e) {
-                        var t = ["\u672a\u652f\u4ed8", "\u5df2\u652f\u4ed8", "\u5df2\u53d6\u6d88", "\u5df2\u5b8c\u6210", "\u5df2\u6298\u62b5"];
-                        return t[e] || "-"
-                    }
-                }, {
-                    title: "\u521b\u5efa\u65f6\u95f4",
-                    dataIndex: "created_at",
-                    key: "created_at",
-                    width: 160,
-                    align: "right",
-                    render: function(e) {
-                        return h()(1e3 * e).format("YYYY/MM/DD HH:mm")
-                    }
-                }];
+                  , r = t.replyLoading;
                 return o.a.createElement(o.a.Fragment, null, o.a.createElement(g, {
                     ticket: n,
                     user: e,
@@ -26662,27 +26531,7 @@
                         })
                     },
                     onOrderFilter: ()=>this.showOrderModal()
-                }), o.a.createElement(k["a"], {
-                    width: "80%",
-                    title: "\u4ed6\u7684\u8ba2\u5355",
-                    visible: a,
-                    onClose: ()=>this.setState({
-                        orderModal: !1
-                    })
-                }, o.a.createElement(S["a"], {
-                    loading: l
-                }, o.a.createElement(T["a"], {
-                    dataSource: u,
-                    columns: f,
-                    pagination: Object.assign({}, c, {
-                        size: "small"
-                    }),
-                    scroll: {
-                        x: 900
-                    },
-                    onChange: e=>this.onOrderPageChange(e),
-                    rowKey: "id"
-                }))))
+                }))
             }
         }
         t["default"] = Object(a["c"])(e=>{
@@ -95964,9 +95813,21 @@
                 })
             }
             componentDidMount() {
-                this.props.dispatch({
-                    type: "order/fetch"
-                }),
+                var pendingFilter = sessionStorage.getItem("pendingOrderFilter");
+                if (pendingFilter) {
+                    sessionStorage.removeItem("pendingOrderFilter");
+                    var filter = JSON.parse(pendingFilter);
+                    this.props.dispatch({
+                        type: "order/addFilter",
+                        key: filter.key,
+                        condition: filter.condition,
+                        value: filter.value
+                    })
+                } else {
+                    this.props.dispatch({
+                        type: "order/fetch"
+                    })
+                }
                 this.props.dispatch({
                     type: "plan/fetch"
                 })
