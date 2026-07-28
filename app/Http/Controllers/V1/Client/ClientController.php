@@ -134,7 +134,19 @@ class ClientController extends Controller
         $values = explode(',', $ruleValue);
         foreach ($values as $val) {
             $val = trim($val);
-            if ($exact || $full) {
+            if (preg_match('/^(>=|<=|>|<)(\d+)$/', $val, $m)) {
+                $op = $m[1];
+                $num = (int)$m[2];
+                $actualNum = (int)$actualValue;
+                $matched = false;
+                switch ($op) {
+                    case '>': $matched = $actualNum > $num; break;
+                    case '<': $matched = $actualNum < $num; break;
+                    case '>=': $matched = $actualNum >= $num; break;
+                    case '<=': $matched = $actualNum <= $num; break;
+                }
+                if ($matched) return !$not;
+            } elseif ($exact || $full) {
                 if ($actualValue === $val) return !$not;
             } else {
                 if (strpos($actualValue, strtolower($val)) !== false) return !$not;

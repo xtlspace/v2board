@@ -263,6 +263,7 @@ DROP `online`;
 
 ALTER TABLE `v2_user`
 CHANGE `v2ray_uuid` `uuid` varchar(36) COLLATE 'utf8_general_ci' NOT NULL AFTER `last_login_ip`;
+ALTER TABLE `v2_user` ADD COLUMN `reg_ip` VARCHAR(45) DEFAULT NULL AFTER `last_login_ip`;
 
 ALTER TABLE `v2_server_trojan`
 ADD `rate` varchar(11) COLLATE 'utf8mb4_general_ci' NOT NULL AFTER `name`;

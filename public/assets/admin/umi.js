@@ -71048,6 +71048,12 @@
                         return w()(1e3 * e).format("YYYY/MM/DD HH:mm")
                     }
                 }, {
+                    title: "\u6ce8\u518cIP",
+                    dataIndex: "reg_ip",
+                    key: "reg_ip",
+                    width: 140,
+                    render: function(e) { return e || "-" }
+                }, {
                     title: "\u64cd\u4f5c",
                     dataIndex: "action",
                     key: "action",
@@ -71202,6 +71208,10 @@
                         key: "remarks",
                         title: "\u5907\u6ce8",
                         condition: ["\u6a21\u7cca"]
+                    }, {
+                        key: "reg_ip",
+                        title: "\u6ce8\u518cIP",
+                        condition: ["=", "\u6a21\u7cca"]
                     }, {
                         key: "is_admin",
                         title: "\u7ba1\u7406\u5458",
