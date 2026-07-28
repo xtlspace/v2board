@@ -26,6 +26,9 @@ class AuthService
             'id' => $this->user->id,
             'session' => $guid,
         ], config('app.key'), 'HS256');
+        $this->user->last_login_at = time();
+        $this->user->last_login_ip = $request->ip();
+        $this->user->save();
         self::addSession($this->user->id, $guid, [
             'ip' => $request->ip(),
             'login_at' => time(),

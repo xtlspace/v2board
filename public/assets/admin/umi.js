@@ -71054,6 +71054,12 @@
                     width: 140,
                     render: function(e) { return e || "-" }
                 }, {
+                    title: "\u6700\u540e\u767b\u5f55IP",
+                    dataIndex: "last_login_ip",
+                    key: "last_login_ip",
+                    width: 140,
+                    render: function(e) { return e || "-" }
+                }, {
                     title: "\u64cd\u4f5c",
                     dataIndex: "action",
                     key: "action",
@@ -71211,6 +71217,10 @@
                     }, {
                         key: "reg_ip",
                         title: "\u6ce8\u518cIP",
+                        condition: ["=", "\u6a21\u7cca"]
+                    }, {
+                        key: "last_login_ip",
+                        title: "\u6700\u540e\u767b\u5f55IP",
                         condition: ["=", "\u6a21\u7cca"]
                     }, {
                         key: "is_admin",

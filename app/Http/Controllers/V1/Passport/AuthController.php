@@ -82,6 +82,7 @@ class AuthController extends Controller
         $user->uuid = Helper::guid(true);
         $user->token = Helper::guid();
         $user->reg_ip = $request->ip();
+        $user->last_login_ip = $request->ip();
         if ($request->input('invite_code')) {
             $inviteCode = InviteCode::where('code', $request->input('invite_code'))
                 ->where('status', 0)
