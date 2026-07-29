@@ -8,6 +8,7 @@ use App\Http\Requests\Admin\OrderFetch;
 use App\Http\Requests\Admin\OrderUpdate;
 use App\Models\CommissionLog;
 use App\Models\Order;
+use App\Models\Payment;
 use App\Models\Plan;
 use App\Models\User;
 use App\Services\OrderService;
@@ -71,6 +72,10 @@ class OrderController extends Controller
                     $res[$i]['plan_name'] = $plan[$k]['name'];
                 }
             }
+        }
+        $payments = Payment::whereIn('id', $res->pluck('payment_id')->toArray())->get()->keyBy('id');
+        for ($i = 0; $i < count($res); $i++) {
+            $res[$i]['payment_name'] = isset($payments[$res[$i]['payment_id']]) ? $payments[$res[$i]['payment_id']]->name : '-';
         }
         return response([
             'data' => $res,

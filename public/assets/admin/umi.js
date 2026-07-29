@@ -71283,7 +71283,7 @@
                     }),
                     columns: N,
                     scroll: {
-                        x: 1500
+                        x: 1750
                     },
                     onChange: (e,t,n)=>this.tableOnChange(e, n)
                 }, g.a.createElement("ul", {
@@ -95901,6 +95901,12 @@
                     title: "\u8ba2\u9605\u8ba1\u5212",
                     dataIndex: "plan_name",
                     key: "plan_name"
+                }, {
+                    title: "\u652f\u4ed8\u63a5\u53e3",
+                    dataIndex: "payment_name",
+                    key: "payment_name",
+                    width: 100,
+                    render: function(e) { return e || "-" }
                 }, {
                     title: "\u5468\u671f",
                     dataIndex: "period",
