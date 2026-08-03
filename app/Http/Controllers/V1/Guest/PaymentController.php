@@ -43,7 +43,9 @@ class PaymentController extends Controller
             $order->total_amount / 100,
             $order->trade_no
         );
-        #$telegramService->sendMessageWithAdmin($message);
+        if (config('v2board.payment_notify_enable', 0)) {
+            $telegramService->sendMessageWithAdmin($message);
+        }
         return true;
     }
 }

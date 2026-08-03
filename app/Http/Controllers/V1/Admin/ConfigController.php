@@ -146,7 +146,8 @@ class ConfigController extends Controller
                 'telegram_bot_enable' => config('v2board.telegram_bot_enable', 0),
                 'telegram_bot_token' => config('v2board.telegram_bot_token'),
                 'telegram_discuss_link' => config('v2board.telegram_discuss_link'),
-                'first_purchase_notify_enable' => (int)config('v2board.first_purchase_notify_enable', 0)
+                'first_purchase_notify_enable' => (int)config('v2board.first_purchase_notify_enable', 0),
+                'payment_notify_enable' => (int)config('v2board.payment_notify_enable', 0)
             ],
             'app' => [
                 'windows_version' => config('v2board.windows_version'),
