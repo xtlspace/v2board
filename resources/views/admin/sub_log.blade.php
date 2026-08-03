@@ -138,7 +138,7 @@
                 <div class="filter-form" id="filterForm">
                     <div class="filter-group">
                         <label>User ID</label>
-                        <input type="number" id="filterUserId" placeholder="精确搜索" min="1">
+                        <input type="text" id="filterUserId" placeholder="精确搜索，支持 > < >= <=">
                     </div>
                     <div class="filter-group">
                         <label>User-Agent</label>

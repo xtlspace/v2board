@@ -187,7 +187,12 @@ class SubLogController extends Controller
     private function applyFilters(Request $request, $builder)
     {
         if ($request->filled('user_id')) {
-            $builder->where('user_id', (int)$request->input('user_id'));
+            $userId = $request->input('user_id');
+            if (preg_match('/^(>=|<=|>|<)(\d+)$/', $userId, $m)) {
+                $builder->where('user_id', $m[1], (int)$m[2]);
+            } else {
+                $builder->where('user_id', (int)$userId);
+            }
         }
         if ($request->filled('user_agent')) {
             $keyword = $request->input('user_agent');

@@ -81,6 +81,7 @@ class ConfigSave extends FormRequest
         'telegram_discuss_id' => '',
         'telegram_channel_id' => '',
         'telegram_discuss_link' => 'nullable|url',
+        'first_purchase_notify_enable' => 'in:0,1',
         // app
         'windows_version' => '',
         'windows_download_url' => '',

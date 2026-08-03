@@ -6,6 +6,7 @@ use App\Jobs\OrderHandleJob;
 use App\Models\Order;
 use App\Models\Plan;
 use App\Models\User;
+use App\Utils\IPLocation;
 use Illuminate\Support\Facades\DB;
 
 class OrderService
@@ -267,7 +268,65 @@ class OrderService
         } catch (\Exception $e) {
             return false;
         }
+        try {
+            $this->notifyFirstPurchase();
+        } catch (\Exception $e) {
+        }
         return true;
+    }
+
+    private function notifyFirstPurchase()
+    {
+        if (!config('v2board.first_purchase_notify_enable', 0)) return;
+        $order = $this->order;
+        if ((int)$order->type !== 1) return;
+        $isFirst = Order::where('user_id', $order->user_id)
+            ->whereNotIn('status', [0, 2])
+            ->count() === 1;
+        if (!$isFirst) return;
+
+        $user = User::find($order->user_id);
+        if (!$user) return;
+
+        $plan = Plan::find($order->plan_id);
+        $planName = $plan ? $plan->name : '未找到套餐信息';
+        $regLine = trim($this->ipLocationText($user->reg_ip) . ' ' . $user->reg_ip) ?: '-';
+        $loginLine = trim($this->ipLocationText($user->last_login_ip) . ' ' . $user->last_login_ip) ?: '-';
+
+        $telegramService = new TelegramService();
+        $telegramService->sendMessageWithAdmin(
+            "🛒首次购买提醒\n———————————————\n邮箱：\n`{$user->email}`\n注册地:\n{$regLine}\n登录地:\n{$loginLine}\n购买套餐:\n`{$planName}({$this->periodText($order->period)})`",
+            true
+        );
+    }
+
+    private function ipLocationText($ip)
+    {
+        if (empty($ip)) return '';
+        try {
+            $loc = (new IPLocation())->find($ip);
+            if ($loc) {
+                return trim(implode(' ', array_filter([$loc['country'], $loc['region'], $loc['city']])));
+            }
+        } catch (\Exception $e) {
+        }
+        return '';
+    }
+
+    private function periodText($period)
+    {
+        $map = [
+            'month_price' => '月付',
+            'quarter_price' => '季付',
+            'half_year_price' => '半年付',
+            'year_price' => '年付',
+            'two_year_price' => '两年付',
+            'three_year_price' => '三年付',
+            'onetime_price' => '一次性',
+            'reset_price' => '流量重置包',
+            'deposit' => '充值'
+        ];
+        return isset($map[$period]) ? $map[$period] : $period;
     }
 
     public function cancel():bool

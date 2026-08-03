@@ -75,7 +75,7 @@ class OrderController extends Controller
         }
         $payments = Payment::whereIn('id', $res->pluck('payment_id')->toArray())->get()->keyBy('id');
         for ($i = 0; $i < count($res); $i++) {
-            $res[$i]['payment_name'] = isset($payments[$res[$i]['payment_id']]) ? $payments[$res[$i]['payment_id']]->name : '-';
+            $res[$i]['payment_name'] = isset($payments[$res[$i]['payment_id']]) ? $payments[$res[$i]['payment_id']]->name . '(' . $res[$i]['payment_id'] . ')' : '-';
         }
         return response([
             'data' => $res,
