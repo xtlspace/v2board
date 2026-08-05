@@ -95947,9 +95947,9 @@
                     render: (e,t)=>{
                         var n = ["error", "processing", "default", "success", "default"];
                         return g.a.createElement("div", null, g.a.createElement(c["a"], {
-                            disabled: 0 !== e,
+                            disabled: 0 !== e && 3 !== e,
                             trigger: ["click"],
-                            overlay: g.a.createElement(h["a"], null, g.a.createElement(h["a"].Item, {
+                            overlay: g.a.createElement(h["a"], null, 0 === e && g.a.createElement(h["a"].Item, {
                                 key: "1",
                                 onClick: e=>{
                                     this.props.dispatch({
@@ -95968,9 +95968,9 @@
                             }, "\u53d6\u6d88"))
                         }, g.a.createElement("div", null, g.a.createElement(u["a"], {
                             status: n[e]
-                        }), g.a.createElement("span", null, y["a"].orderStatusText[e], " "), 0 === e && g.a.createElement("a", {
+                        }), g.a.createElement("span", null, y["a"].orderStatusText[e], " "), (0 === e || 3 === e) && g.a.createElement("a", {
                             href: "javascript:void(0);"
-                        }, "\u6807\u8bb0\u4e3a ", g.a.createElement(d["a"], {
+                        }, 0 === e ? "\u6807\u8bb0\u4e3a " : "\u64cd\u4f5c ", g.a.createElement(d["a"], {
                             type: "caret-down"
                         })))))
                     }

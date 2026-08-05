@@ -108,7 +108,7 @@ class OrderController extends Controller
         if (!$order) {
             abort(500, '订单不存在');
         }
-        if ($order->status !== 0) abort(500, '只能对待支付的订单进行操作');
+        if (!in_array($order->status, [0, 3])) abort(500, '只能对待支付或已完成的订单进行操作');
 
         $orderService = new OrderService($order);
         if (!$orderService->cancel()) {

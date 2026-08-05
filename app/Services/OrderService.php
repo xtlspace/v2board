@@ -290,12 +290,12 @@ class OrderService
 
         $plan = Plan::find($order->plan_id);
         $planName = $plan ? $plan->name : '未找到套餐信息';
-        $regLine = trim($this->ipLocationText($user->reg_ip) . ' ' . $user->reg_ip) ?: '-';
-        $loginLine = trim($this->ipLocationText($user->last_login_ip) . ' ' . $user->last_login_ip) ?: '-';
-
+        $regLoc = trim($this->ipLocationText($user->reg_ip)) ?: '-';
+        $loginLoc = trim($this->ipLocationText($user->last_login_ip)) ?: '-';
+		
         $telegramService = new TelegramService();
         $telegramService->sendMessageWithAdmin(
-            "🛒首次购买提醒\n———————————————\n邮箱：\n`{$user->email}`\n注册地:\n{$regLine}\n登录地:\n{$loginLine}\n购买套餐:\n`{$planName}({$this->periodText($order->period)})`",
+            "🛒首次购买提醒\n———————————————\n邮箱： `{$user->email}`\n订单号： `{$order->trade_no}`\n注册地: {$regLoc}(`{$user->reg_ip}`)\n登录地: {$loginLoc}(`{$user->last_login_ip}`)\n购买套餐: {$planName}({$this->periodText($order->period)})",
             true
         );
     }
@@ -306,7 +306,7 @@ class OrderService
         try {
             $loc = (new IPLocation())->find($ip);
             if ($loc) {
-                return trim(implode(' ', array_filter([$loc['country'], $loc['region'], $loc['city']])));
+                return trim(implode(' ', array_filter([$loc['country'], $loc['region'], $loc['city'], $loc['isp']])));
             }
         } catch (\Exception $e) {
         }
@@ -333,20 +333,52 @@ class OrderService
     {
         $order = $this->order;
         DB::beginTransaction();
+        $wasPending = $order->status === 0;
+        $wasCompleted = $order->status === 3;
         $order->status = 2;
+        // 已完成订单取消时：未实际发放的佣金一并作废，杜绝后续发放
+        if ($wasCompleted && (int)$order->commission_status !== 2) {
+            $order->commission_balance = 0;
+            $order->actual_commission_balance = 0;
+            $order->commission_status = 0;
+        }
         if (!$order->save()) {
             DB::rollBack();
             return false;
         }
-        if ($order->balance_amount) {
+        // 仅待支付订单取消时退还余额支付部分
+        if ($wasPending && $order->balance_amount) {
             $userService = new UserService();
             if (!$userService->addBalance($order->user_id, $order->balance_amount)) {
                 DB::rollBack();
                 return false;
             }
         }
+        // 已完成订单取消时回收订阅服务（仅当该订单套餐正是用户当前套餐）
+        if ($wasCompleted) {
+            $user = User::find($order->user_id);
+            if ($user && $order->plan_id === $user->plan_id) {
+                $this->revokeSubscription($user);
+                if (!$user->save()) {
+                    DB::rollBack();
+                    return false;
+                }
+            }
+        }
         DB::commit();
         return true;
+    }
+
+    private function revokeSubscription(User $user)
+    {
+        $user->plan_id = NULL;
+        $user->group_id = NULL;
+        $user->expired_at = NULL;
+        $user->transfer_enable = 0;
+        $user->u = 0;
+        $user->d = 0;
+        $user->device_limit = 0;
+        $user->speed_limit = NULL;
     }
 
     private function setSpeedLimit($speedLimit)
