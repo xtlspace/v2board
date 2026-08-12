@@ -1153,7 +1153,7 @@
                     }),
                     zIndex: 2e3
                 }, c.a.createElement(h.a, {
-                    value: this.props.subscribeUrl,
+                    value: (Object(u["i"])() || Object(u["j"])()) ? ("sub://" + window.btoa(this.props.subscribeUrl).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "") + "?remark=" + window.settings.title + "&user=ILoveU-Meta/Rocket") : this.props.subscribeUrl,
                     renderAs: "canvas"
                 }), c.a.createElement("div", {
                     style: {
