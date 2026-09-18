@@ -17250,23 +17250,7 @@
         Object(i["e"])("i18n"))
             Object(o["setLocale"])(Object(i["e"])("i18n"));
         else
-            switch (navigator.language.split("-")[0]) {
-            case "ja":
-                Object(o["setLocale"])("ja-JP");
-                break;
-            case "zh":
-                Object(o["setLocale"])("zh-CN");
-                break;
-            case "en":
-                Object(o["setLocale"])("en-US");
-                break;
-            case "vi":
-                Object(o["setLocale"])("vi-VN");
-                break;
-            case "ko":
-                Object(o["setLocale"])("ko-KR");
-                break
-            }
+            Object(o["setLocale"])("zh-CN");
         "1" === Object(i["e"])("dark_mode") && Object(a["enable"])({
             brightness: 100,
             contrast: 90,
