@@ -53,6 +53,11 @@ class ConfigSave extends FormRequest
         'show_info_to_server_enable' => 'in:0,1',
         'show_subscribe_method' => 'in:0,1,2',
         'show_subscribe_expire' => 'nullable|integer',
+        'sub_reminder_enable' => 'in:0,1',
+        'sub_reminder_name_no_sub' => 'nullable',
+        'sub_reminder_name_expired' => 'nullable',
+        'sub_reminder_name_exhaust' => 'nullable',
+        'sub_reminder_node' => 'nullable',
         // server
         'server_api_url' => 'nullable|string',
         'server_token' => 'nullable|min:16',
@@ -124,6 +129,14 @@ class ConfigSave extends FormRequest
                     }
                     $fail('充值奖励格式不正确，必须为充值金额:奖励金额');
                 }
+            }
+        };
+        $rules['sub_reminder_node'][] = function ($attribute, $value, $fail) {
+            if (empty($value)) {
+                return;
+            }
+            if (!is_string($value) || json_decode($value, true) === null) {
+                $fail('提醒节点配置格式不正确，必须为合法的JSON');
             }
         };
         return $rules;

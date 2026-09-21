@@ -116,6 +116,11 @@ class ConfigController extends Controller
                 'show_info_to_server_enable' => (int)config('v2board.show_info_to_server_enable', 0),
                 'show_subscribe_method' => (int)config('v2board.show_subscribe_method', 0),
                 'show_subscribe_expire' => (int)config('v2board.show_subscribe_expire', 5),
+                'sub_reminder_enable' => (int)config('v2board.sub_reminder_enable', 0),
+                'sub_reminder_name_no_sub' => config('v2board.sub_reminder_name_no_sub', '您尚未购买订阅'),
+                'sub_reminder_name_expired' => config('v2board.sub_reminder_name_expired', '您的订阅已过期'),
+                'sub_reminder_name_exhaust' => config('v2board.sub_reminder_name_exhaust', '您的流量已用尽'),
+                'sub_reminder_node' => config('v2board.sub_reminder_node', ''),
             ],
             'frontend' => [
                 'frontend_theme' => config('v2board.frontend_theme', 'v2board'),

@@ -6024,7 +6024,51 @@
                     placeholder: "\u8bf7\u8f93\u5165",
                     defaultValue: r.show_subscribe_expire,
                     onChange: e=>this.set("safe", "show_subscribe_expire", e.target.value)
-                })) : "")), f.a.createElement(s["a"].TabPane, {
+                })) : "")), f.a.createElement(m, {
+                    title: "\u8ba2\u9605\u63d0\u9192\u8282\u70b9",
+                    description: "\u5f00\u542f\u540e\uff0c\u672a\u8d2d\u4e70\u8ba2\u9605 / \u5df2\u8fc7\u671f / \u6d41\u91cf\u7528\u5c3d\u7684\u7528\u6237\u62c9\u8ba2\u9605\u65f6\uff0c\u4ec5\u8f93\u51fa\u4e00\u6761\u63d0\u9192\u8282\u70b9\uff0c\u4e0d\u518d\u8f93\u51fa\u5b8c\u6574\u8282\u70b9\u3002"
+                }, f.a.createElement(l["a"], {
+                    checked: parseInt(r.sub_reminder_enable),
+                    onChange: e=>this.set("subscribe", "sub_reminder_enable", e ? 1 : 0)
+                })), f.a.createElement(m, {
+                    title: "\u672a\u8d2d\u4e70\u63d0\u9192\u540d\u79f0",
+                    description: "\u8bf7\u586b\u5199\u672a\u8d2d\u4e70\u8ba2\u9605\u7528\u6237\u62c9\u8ba2\u9605\u65f6\u7684\u8282\u70b9\u540d\u79f0\u3002"
+                }, f.a.createElement("input", {
+                    type: "text",
+                    className: "form-control",
+                    placeholder: "\u8bf7\u8f93\u5165",
+                    defaultValue: r.sub_reminder_name_no_sub,
+                    onChange: e=>this.set("subscribe", "sub_reminder_name_no_sub", e.target.value)
+                })), f.a.createElement(m, {
+                    title: "\u5df2\u8fc7\u671f\u63d0\u9192\u540d\u79f0",
+                    description: "\u8bf7\u586b\u5199\u5df2\u8fc7\u671f\u7528\u6237\u62c9\u8ba2\u9605\u65f6\u7684\u8282\u70b9\u540d\u79f0\u3002"
+                }, f.a.createElement("input", {
+                    type: "text",
+                    className: "form-control",
+                    placeholder: "\u8bf7\u8f93\u5165",
+                    defaultValue: r.sub_reminder_name_expired,
+                    onChange: e=>this.set("subscribe", "sub_reminder_name_expired", e.target.value)
+                })), f.a.createElement(m, {
+                    title: "\u6d41\u91cf\u7528\u5c3d\u63d0\u9192\u540d\u79f0",
+                    description: "\u8bf7\u586b\u5199\u6d41\u91cf\u7528\u5c3d\u7528\u6237\u62c9\u8ba2\u9605\u65f6\u7684\u8282\u70b9\u540d\u79f0\u3002"
+                }, f.a.createElement("input", {
+                    type: "text",
+                    className: "form-control",
+                    placeholder: "\u8bf7\u8f93\u5165",
+                    defaultValue: r.sub_reminder_name_exhaust,
+                    onChange: e=>this.set("subscribe", "sub_reminder_name_exhaust", e.target.value)
+                })), f.a.createElement(m, {
+                    isChildren: !0,
+                    title: "\u63d0\u9192\u8282\u70b9\u914d\u7f6e",
+                    description: "\u53c2\u8003v2node\u8282\u70b9\u5b57\u6bb5\u7684JSON\uff0c\u5982 {\"host\":\"1.2.3.4\",\"port\":443,\"protocol\":\"vless\",\"uuid\":\"\",\"tls\":1,\"network\":\"tcp\"}\u3002host\u4e0eport\u5fc5\u586b\uff0cuuid\u7559\u7a7a\u5219\u4f7f\u7528\u7528\u6237\u81ea\u8eabuuid\uff0c\u5176\u4f59\u5b57\u6bb5\u53c2\u8003v2node\u8282\u70b9\u7f16\u8f91\u3002\u8282\u70b9\u914d\u7f6e\u4e0d\u5b8c\u6574\u65f6\uff08\u672a\u586bhost/port\u6216\u672a\u5f00\u542f\uff09\u4fdd\u6301\u539f\u6709\u884c\u4e3a\u3002"
+                }, f.a.createElement("textarea", {
+                    rows: "10",
+                    type: "text",
+                    className: "form-control",
+                    placeholder: "\u8bf7\u8f93\u5165 JSON",
+                    defaultValue: r.sub_reminder_node,
+                    onChange: e=>this.set("subscribe", "sub_reminder_node", e.target.value)
+                })), f.a.createElement(s["a"].TabPane, {
                     tab: "\u5145\u503c",
                     key: "deposit"
                 }, f.a.createElement("div", {
