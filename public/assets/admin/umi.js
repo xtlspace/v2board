@@ -6024,7 +6024,7 @@
                     placeholder: "\u8bf7\u8f93\u5165",
                     defaultValue: r.show_subscribe_expire,
                     onChange: e=>this.set("safe", "show_subscribe_expire", e.target.value)
-                })) : "")), f.a.createElement(m, {
+                })) : "", f.a.createElement(m, {
                     title: "\u8ba2\u9605\u63d0\u9192\u8282\u70b9",
                     description: "\u5f00\u542f\u540e\uff0c\u672a\u8d2d\u4e70\u8ba2\u9605 / \u5df2\u8fc7\u671f / \u6d41\u91cf\u7528\u5c3d\u7684\u7528\u6237\u62c9\u8ba2\u9605\u65f6\uff0c\u4ec5\u8f93\u51fa\u4e00\u6761\u63d0\u9192\u8282\u70b9\uff0c\u4e0d\u518d\u8f93\u51fa\u5b8c\u6574\u8282\u70b9\u3002"
                 }, f.a.createElement(l["a"], {
@@ -6068,7 +6068,7 @@
                     placeholder: "\u8bf7\u8f93\u5165 JSON",
                     defaultValue: r.sub_reminder_node,
                     onChange: e=>this.set("subscribe", "sub_reminder_node", e.target.value)
-                })), f.a.createElement(s["a"].TabPane, {
+                })))), f.a.createElement(s["a"].TabPane, {
                     tab: "\u5145\u503c",
                     key: "deposit"
                 }, f.a.createElement("div", {

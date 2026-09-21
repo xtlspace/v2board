@@ -57,7 +57,7 @@ class ConfigSave extends FormRequest
         'sub_reminder_name_no_sub' => 'nullable',
         'sub_reminder_name_expired' => 'nullable',
         'sub_reminder_name_exhaust' => 'nullable',
-        'sub_reminder_node' => 'nullable',
+        'sub_reminder_node' => ['nullable'],
         // server
         'server_api_url' => 'nullable|string',
         'server_token' => 'nullable|min:16',
