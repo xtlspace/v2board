@@ -70961,6 +70961,12 @@
                     cancelText: "\u53d6\u6d88"
                 })
             }
+            loginAs(e) {
+                this.props.dispatch({
+                    type: "user/loginAs",
+                    id: e.id
+                })
+            }
             delUser(e) {
                 var t = this;
                 p["a"].confirm({
@@ -70990,7 +70996,7 @@
                 var securePath = pathParts[1] || '';
                 fetch('/api/v1/' + securePath + '/ticket/save', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'authorization': window.localStorage.getItem('authorization') },
+                    headers: { 'Content-Type': 'application/json', 'authorization': window.localStorage.getItem('admin_authorization') },
                     body: JSON.stringify({ user_id: d._userId, subject: d.subject, level: d.level, message: d.message })
                 }).then(function(r) { return r.json(); })
                 .then(function(res) {
@@ -71171,7 +71177,11 @@
                                 key: null === t || void 0 === t ? void 0 : t.email
                             }, g.a.createElement("a", null, g.a.createElement(u["a"], {
                                 type: "solution"
-                            }), " TA\u7684\u6d41\u91cf\u8bb0\u5f55"))), g.a.createElement(c["a"].Item, null, g.a.createElement("a", {
+                            }), " TA\u7684\u6d41\u91cf\u8bb0\u5f55"))), g.a.createElement(c["a"].Item, {
+                                onClick: ()=>this.loginAs(t)
+                            }, g.a.createElement("a", null, g.a.createElement(u["a"], {
+                                type: "login"
+                            }), " \u4ee5\u8be5\u7528\u6237\u767b\u5f55")),g.a.createElement(c["a"].Item, null, g.a.createElement("a", {
                                 onClick: ()=>this.delUser(t)
                             }, g.a.createElement(u["a"], {
                                 type: "delete"
@@ -82242,6 +82252,33 @@
                                         type: "fetch"
                                     });
                                 case 8:
+                                case "end":
+                                    return e.stop()
+                                }
+                        }, e)
+                    })()
+                },
+                loginAs(e, t) {
+                    var n = e.id
+                      , i = t.put;
+                    return f().mark(function e() {
+                        var t;
+                        return f().wrap(function(e) {
+                            while (1)
+                                switch (e.prev = e.next) {
+                                case 0:
+                                    return e.next = 2,
+                                    Object(a["b"])("/" + window.settings.secure_path + "/user/loginAs", {
+                                        id: n
+                                    });
+                                case 2:
+                                    if (t = e.sent,
+                                    200 === t.code && t.data && t.data.auth_data) {
+                                        window.localStorage.setItem("authorization", t.data.auth_data),
+                                        window.open("/");
+                                    }
+                                    return e.abrupt("return");
+                                case 3:
                                 case "end":
                                     return e.stop()
                                 }
@@ -113679,13 +113716,13 @@
             r["a"].success("\u590d\u5236\u6210\u529f")
         }
         function d(e) {
-            return window.localStorage.setItem("authorization", e)
+            return window.localStorage.setItem("admin_authorization", e)
         }
         function p() {
-            return window.localStorage.removeItem("authorization")
+            return window.localStorage.removeItem("admin_authorization")
         }
         function m() {
-            return window.localStorage.getItem("authorization")
+            return window.localStorage.getItem("admin_authorization")
         }
     },
     ykC2: function(e, t, n) {

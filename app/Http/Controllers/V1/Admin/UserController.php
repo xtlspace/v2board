@@ -389,4 +389,15 @@ class UserController extends Controller
             'data' => true
         ]);
     }
+
+    public function loginAs(Request $request)
+    {
+        $user = User::find($request->input('id'));
+        if (!$user) abort(500, '用户不存在');
+        if ($user->banned) abort(500, '该用户已被封禁，无法登录');
+        $authService = new AuthService($user);
+        return response([
+            'data' => $authService->generateAuthData($request, false)
+        ]);
+    }
 }
