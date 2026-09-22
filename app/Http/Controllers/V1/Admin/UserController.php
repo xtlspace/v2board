@@ -400,4 +400,14 @@ class UserController extends Controller
             'data' => $authService->generateAuthData($request, false)
         ]);
     }
+
+    public function loginAsSelf(Request $request)
+    {
+        $user = User::find($request->user['id'] ?? 0);
+        if (!$user) abort(500, '用户不存在');
+        $authService = new AuthService($user);
+        return response([
+            'data' => $authService->generateAuthData($request, false)
+        ]);
+    }
 }

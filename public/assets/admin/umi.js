@@ -21228,6 +21228,11 @@
                     }, t)))
                 }
             }
+            loginAsSelf() {
+                this.props.dispatch({
+                    type: "user/loginAsSelf"
+                })
+            }
             isAdmin() {
                 return -1 !== this.props.location.pathname.indexOf("admin")
             }
@@ -21240,7 +21245,8 @@
                     className: "content-header justify-content-lg-center bg-black-10"
                 }, o.a.createElement("a", {
                     className: "link-fx font-size-lg text-white",
-                    href: "/"
+                    href: "javascript:void(0);",
+                    onClick: ()=>this.loginAsSelf()
                 }, o.a.createElement("span", {
                     className: "text-white-75"
                 }, window.settings.title ? window.settings.title : "V2Board")), o.a.createElement("div", {
@@ -82276,6 +82282,29 @@
                                     200 === t.code && t.data && t.data.auth_data) {
                                         window.localStorage.setItem("authorization", t.data.auth_data),
                                         window.open("/");
+                                    }
+                                    return e.abrupt("return");
+                                case 3:
+                                case "end":
+                                    return e.stop()
+                                }
+                        }, e)
+                    })()
+                },
+                loginAsSelf(e, t) {
+                    return f().mark(function e() {
+                        var t;
+                        return f().wrap(function(e) {
+                            while (1)
+                                switch (e.prev = e.next) {
+                                case 0:
+                                    return e.next = 2,
+                                    Object(a["b"])("/" + window.settings.secure_path + "/user/loginAsSelf");
+                                case 2:
+                                    if (t = e.sent,
+                                    200 === t.code && t.data && t.data.auth_data) {
+                                        window.localStorage.setItem("authorization", t.data.auth_data),
+                                        window.location.href = "/";
                                     }
                                     return e.abrupt("return");
                                 case 3:
