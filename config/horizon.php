@@ -1,10 +1,16 @@
 <?php
 
 use Illuminate\Support\Str;
-use Linfo\Linfo;
 
-$lInfo = new Linfo();
-$parser = $lInfo->getParser();
+$totalRamBytes = 4 * 1024 * 1024 * 1024;
+if (is_readable('/proc/meminfo')) {
+    foreach (file('/proc/meminfo') as $line) {
+        if (preg_match('/^MemTotal:\s+(\d+)\s+kB/i', $line, $matches)) {
+            $totalRamBytes = (int) $matches[1] * 1024;
+            break;
+        }
+    }
+}
 
 return [
 
@@ -182,7 +188,7 @@ return [
                 ],
                 'balance' => 'auto',
                 'minProcesses' => 1,
-                'maxProcesses' => (int)ceil($parser->getRam()['total'] / 1024 / 1024 / 1024 * 6),
+                'maxProcesses' => (int)ceil($totalRamBytes / 1024 / 1024 / 1024 * 6),
                 'tries' => 1,
                 'balanceCooldown' => 3,
             ],

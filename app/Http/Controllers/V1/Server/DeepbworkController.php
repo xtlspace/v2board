@@ -54,7 +54,7 @@ class DeepbworkController extends Controller
             array_push($result, $user);
         }
         $eTag = sha1(json_encode($result));
-        if (strpos($request->header('If-None-Match'), $eTag) !== false ) {
+        if (strpos((string) $request->header('If-None-Match'), $eTag) !== false ) {
             abort(304);
         }
         return response([
