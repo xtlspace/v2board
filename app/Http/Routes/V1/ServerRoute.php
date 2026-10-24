@@ -10,7 +10,10 @@ class ServerRoute
         $router->group([
             'prefix' => 'server'
         ], function ($router) {
-            $router->any('/uniproxy/{action}', function($action) {
+            $router->any('/{class}/{action}', function($class, $action) {
+                if (strcasecmp($class, 'uniproxy') !== 0) {
+                    abort(404);
+                }
                 $ctrl = \App::make("\\App\\Http\\Controllers\\V1\\Server\\UniProxyController");
                 if (!method_exists($ctrl, $action)) {
                     abort(404);
