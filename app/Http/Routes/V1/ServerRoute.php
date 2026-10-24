@@ -10,8 +10,11 @@ class ServerRoute
         $router->group([
             'prefix' => 'server'
         ], function ($router) {
-            $router->any('/{class}/{action}', function($class, $action) {
-                $ctrl = \App::make("\\App\\Http\\Controllers\\V1\\Server\\" . ucfirst($class) . "Controller");
+            $router->any('/uniproxy/{action}', function($action) {
+                $ctrl = \App::make("\\App\\Http\\Controllers\\V1\\Server\\UniProxyController");
+                if (!method_exists($ctrl, $action)) {
+                    abort(404);
+                }
                 return \App::call([$ctrl, $action]);
             });
         });

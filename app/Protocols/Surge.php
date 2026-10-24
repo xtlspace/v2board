@@ -7,6 +7,7 @@ use App\Utils\Helper;
 class Surge
 {
     public $flag = 'surge';
+    public $flags = ['surfboard'];
     private $servers;
     private $user;
 
@@ -46,9 +47,14 @@ class Surge
                 $proxies .= self::buildTrojan($user['uuid'], $item);
                 // [Proxy Group]
                 $proxyGroup .= $item['name'] . ', ';
-            }elseif ($item['type'] === 'hysteria' && $item['version'] === 2) { //surge只支持hysteria2
+            }elseif ($item['type'] === 'tuic') {
                 // [Proxy]
-                $proxies .= self::buildHysteria($user['uuid'], $item);
+                $proxies .= self::buildTuic($user['uuid'], $item);
+                // [Proxy Group]
+                $proxyGroup .= $item['name'] . ', ';
+            }elseif ($item['type'] === 'hysteria2' || ($item['type'] === 'hysteria' && (int)($item['version'] ?? 0) === 2)) {
+                // [Proxy]
+                $proxies .= self::buildHysteria2($user['uuid'], $item);
                 // [Proxy Group]
                 $proxyGroup .= $item['name'] . ', ';
             }elseif ($item['type'] === 'anytls') {
@@ -87,6 +93,7 @@ class Surge
         return $config;
     }
 
+    // https://manual.nssurge.com/policies/shadowsocks.html
     public static function buildShadowsocks($password, $server)
     {
         if ($server['cipher'] === '2022-blake3-aes-128-gcm') {
@@ -100,11 +107,11 @@ class Surge
         }
         $config = [
             "{$server['name']}=ss",
+            "{$server['host']}",
+            "{$server['port']}",
+            "encrypt-method={$server['cipher']}",
+            "password={$password}",
         ];
-        $config[] = $server['host'];
-        $config[] = $server['port'];
-        $config[] = "encrypt-method={$server['cipher']}";
-        $config[] = "password={$password}";
 
         if (isset($server['obfs']) && $server['obfs'] === 'http') {
             $config[] = "obfs={$server['obfs']}";
@@ -115,14 +122,15 @@ class Surge
                 $config[] = "obfs-uri={$server['obfs-path']}";
             }
         }
-        $config[] = 'fast-open=false';
-        $config[] = 'udp=true';
+        $config[] = 'tfo=true';
+        $config[] = 'udp-relay=true';
         $uri = implode(',', $config);
         $uri .= "\r\n";
 
         return $uri;
     }
 
+    // https://manual.nssurge.com/policies/vmess.html
     public static function buildVmess($uuid, $server)
     {
         $config = [
@@ -131,38 +139,31 @@ class Surge
             "{$server['port']}",
             "username={$uuid}",
             "vmess-aead=true",
-            'tfo=true',
-            'udp-relay=true'
+            'tfo=true'
         ];
 
-        if ($server['tls']) {
-            array_push($config, 'tls=true');
-            if ($server['tlsSettings']) {
-                $tlsSettings = $server['tlsSettings'];
-                if (isset($tlsSettings['allowInsecure']) && !empty($tlsSettings['allowInsecure']))
-                    array_push($config, 'skip-cert-verify=' . ($tlsSettings['allowInsecure'] ? 'true' : 'false'));
-                if (isset($tlsSettings['serverName']) && !empty($tlsSettings['serverName']))
-                    array_push($config, "sni={$tlsSettings['serverName']}");
-            }
+        if (!empty($server['tls'])) {
+            $config[] = 'tls=true';
+            self::appendTlsParams($config, $server);
         }
-        if ($server['network'] === 'ws') {
-            array_push($config, 'ws=true');
-            if ($server['networkSettings']) {
-                $wsSettings = $server['networkSettings'];
-                if (isset($wsSettings['path']) && !empty($wsSettings['path']))
-                    array_push($config, "ws-path={$wsSettings['path']}");
-                if (isset($wsSettings['headers']['Host']) && !empty($wsSettings['headers']['Host']))
-                    array_push($config, "ws-headers=Host:{$wsSettings['headers']['Host']}");
-                if (isset($wsSettings['security'])) 
-                    array_push($config, "encrypt-method={$wsSettings['security']}");
-            }
+        if (($server['network'] ?? null) === 'ws') {
+            $config[] = 'ws=true';
+            $wsSettings = self::getNetworkSettings($server);
+            if (isset($wsSettings['path']) && !empty($wsSettings['path']))
+                $config[] = "ws-path={$wsSettings['path']}";
+            if (isset($wsSettings['headers']['Host']) && !empty($wsSettings['headers']['Host']))
+                $config[] = "ws-headers=Host:{$wsSettings['headers']['Host']}";
+            if (isset($wsSettings['security']) && !empty($wsSettings['security']))
+                $config[] = "encrypt-method={$wsSettings['security']}";
         }
 
+        $config = array_filter($config);
         $uri = implode(',', $config);
         $uri .= "\r\n";
         return $uri;
     }
 
+    // https://manual.nssurge.com/policies/trojan.html
     public static function buildTrojan($password, $server)
     {
         $config = [
@@ -170,22 +171,17 @@ class Surge
             "{$server['host']}",
             "{$server['port']}",
             "password={$password}",
-            $server['server_name'] ? "sni={$server['server_name']}" : "",
-            'tfo=true',
-            'udp-relay=true'
+            'tfo=true'
         ];
-        if (!empty($server['allow_insecure'])) {
-            array_push($config, $server['allow_insecure'] ? 'skip-cert-verify=true' : 'skip-cert-verify=false');
-        }
-        if (isset($server['network']) && (string)$server['network'] === 'ws') {
-            array_push($config, 'ws=true');
-            if ($server['network_settings']) {
-                $wsSettings = $server['network_settings'];
-                if (isset($wsSettings['path']) && !empty($wsSettings['path']))
-                    array_push($config, "ws-path={$wsSettings['path']}");
-                if (isset($wsSettings['headers']['Host']) && !empty($wsSettings['headers']['Host']))
-                    array_push($config, "ws-headers=Host:{$wsSettings['headers']['Host']}");
-            }
+        self::appendTlsParams($config, $server);
+
+        if (($server['network'] ?? null) === 'ws') {
+            $config[] = 'ws=true';
+            $wsSettings = self::getNetworkSettings($server);
+            if (isset($wsSettings['path']) && !empty($wsSettings['path']))
+                $config[] = "ws-path={$wsSettings['path']}";
+            if (isset($wsSettings['headers']['Host']) && !empty($wsSettings['headers']['Host']))
+                $config[] = "ws-headers=Host:{$wsSettings['headers']['Host']}";
         }
         $config = array_filter($config);
         $uri = implode(',', $config);
@@ -193,58 +189,109 @@ class Surge
         return $uri;
     }
 
-    //参考文档: https://manual.nssurge.com/policy/proxy.html
-    public static function buildHysteria($password, $server)
+    // https://manual.nssurge.com/policies/tuic.html
+    public static function buildTuic($password, $server)
     {
-        $parts = explode(",",$server['port']);
-        $firstPart = $parts[0];
-        if (strpos($firstPart, '-') !== false) {
-            $range = explode('-', $firstPart);
-            $firstPort = $range[0];
-        } else {
-            $firstPort = $firstPart;
-        }
+        $config = [
+            "{$server['name']}=tuic-v5",
+            "{$server['host']}",
+            self::firstPort($server['port']),
+            "uuid={$password}",
+            "password={$password}",
+            'alpn=h3',
+            'tfo=true'
+        ];
+        self::appendTlsParams($config, $server);
+        self::appendPortHopping($config, $server['port']);
+        $config = array_filter($config);
+        $uri = implode(',', $config);
+        $uri .= "\r\n";
+        return $uri;
+    }
 
+    // https://manual.nssurge.com/policies/hysteria2.html
+    public static function buildHysteria2($password, $server)
+    {
         $config = [
             "{$server['name']}=hysteria2",
             "{$server['host']}",
-            "{$firstPort}",
-            "password={$password}",
-            "download-bandwidth={$server['up_mbps']}",
-            $server['server_name'] ? "sni={$server['server_name']}" : "",
-            // 'tfo=true', 
-            'udp-relay=true'
+            self::firstPort($server['port']),
+            "password={$password}"
         ];
-        if (!empty($server['insecure'])) {
-            array_push($config, $server['insecure'] ? 'skip-cert-verify=true' : 'skip-cert-verify=false');
+        if (!empty($server['up_mbps'])) {
+            $config[] = "download-bandwidth={$server['up_mbps']}";
         }
+        self::appendTlsParams($config, $server);
+        if (!empty($server['obfs']) && !empty($server['obfs_password'])) {
+            $obfs = strtolower((string)$server['obfs']);
+            $key = $obfs === 'gecko' ? 'gecko-password' : 'salamander-password';
+            $config[] = "{$key}={$server['obfs_password']}";
+        }
+        self::appendPortHopping($config, $server['port']);
         $config = array_filter($config);
         $uri = implode(',', $config);
         $uri .= "\r\n";
         return $uri;
     }
 
+    // https://manual.nssurge.com/policies/anytls.html
     public static function buildAnyTLS($password, $server)
     {
-        $tlsSettings = $server['tls_settings'] ?? [];
-        $allowInsecure = ($server['insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0)) == 1 ? 'true' : 'false';
-        $sni = $server['server_name'] ?? ($tlsSettings['server_name'] ?? '');
-
         $config = [
             "{$server['name']}=anytls",
             "{$server['host']}",
             "{$server['port']}",
             "password={$password}",
-            "skip-cert-verify={$allowInsecure}",
-            'tfo=true',
+            'reuse=true',
+            'tfo=true'
         ];
-
-        if ($sni) {
-            $config[] = "sni={$sni}";
-        }
-
-        $uri = implode(', ', $config);
+        self::appendTlsParams($config, $server);
+        $config = array_filter($config);
+        $uri = implode(',', $config);
         $uri .= "\r\n";
         return $uri;
+    }
+
+    private static function getTlsSettings($server)
+    {
+        return $server['tls_settings'] ?? ($server['tlsSettings'] ?? []);
+    }
+
+    private static function getNetworkSettings($server)
+    {
+        return $server['network_settings'] ?? ($server['networkSettings'] ?? []);
+    }
+
+    private static function firstPort($port)
+    {
+        $parts = explode(',', $port);
+        $firstPart = $parts[0];
+        if (strpos($firstPart, '-') !== false) {
+            return explode('-', $firstPart)[0];
+        }
+        return $firstPart;
+    }
+
+    private static function appendPortHopping(&$config, $port)
+    {
+        if (strpos($port, ',') !== false || strpos($port, '-') !== false) {
+            $config[] = 'port-hopping=' . str_replace(',', ';', $port);
+        }
+    }
+
+    private static function appendTlsParams(&$config, $server)
+    {
+        $tlsSettings = self::getTlsSettings($server);
+        $serverName = $server['server_name'] ?? ($tlsSettings['server_name'] ?? ($tlsSettings['serverName'] ?? ''));
+        if (!empty($server['disable_sni'])) {
+            $config[] = 'sni=off';
+        } elseif (!empty($serverName)) {
+            $config[] = "sni={$serverName}";
+        }
+
+        $allowInsecure = (int)($server['insecure'] ?? ($tlsSettings['allow_insecure'] ?? ($tlsSettings['allowInsecure'] ?? 0)));
+        if ($allowInsecure === 1) {
+            $config[] = 'skip-cert-verify=true';
+        }
     }
 }

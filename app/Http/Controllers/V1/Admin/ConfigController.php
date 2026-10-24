@@ -6,11 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ConfigSave;
 use App\Jobs\SendEmailJob;
 use App\Services\TelegramService;
+use App\Utils\ConfigCache;
 use App\Utils\Dict;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class ConfigController extends Controller
 {
@@ -197,6 +198,10 @@ class ConfigController extends Controller
     {
         $data = $request->validated();
         $config = config('v2board') ?? [];
+
+        $oldSecurePath = config('v2board.secure_path', config('v2board.frontend_admin_path', hash('crc32b', config('app.key'))));
+        $oldSubscribePath = (string) (config('v2board.subscribe_path') ?? '');
+
         foreach (ConfigSave::RULES as $k => $v) {
             if (!in_array($k, array_keys(ConfigSave::RULES))) {
                 unset($config[$k]);
@@ -206,16 +211,33 @@ class ConfigController extends Controller
                 $config[$k] = $data[$k];
             }
         }
-        $data = var_export($config, 1);
-        if (!File::put(base_path() . '/config/v2board.php', "<?php\n return $data ;")) {
+        $exported = var_export($config, 1);
+        if (!File::put(base_path() . '/config/v2board.php', "<?php\n return $exported ;")) {
             abort(500, '修改失败');
         }
+
+        // 让当前请求立即生效
+        config(['v2board' => $config]);
+
+        // 独立进程重建配置缓存，避免在请求内 config:cache 替换全局容器
+        if (!ConfigCache::rebuild()) {
+            abort(500, '修改失败');
+        }
+
+        $newSecurePath = $config['secure_path'] ?? ($config['frontend_admin_path'] ?? hash('crc32b', config('app.key')));
+        $newSubscribePath = (string) ($config['subscribe_path'] ?? '');
+        if (($oldSecurePath !== $newSecurePath || $oldSubscribePath !== $newSubscribePath) && app()->routesAreCached()) {
+            if (!ConfigCache::rebuildRoutes()) {
+                // route:cache 内部会先 route:clear，失败时路由退化为每请求注册，新配置仍会生效
+                Log::warning('route:cache rebuild failed after config save');
+            }
+        }
+
         if (function_exists('opcache_reset')) {
             if (opcache_reset() === false) {
                 abort(500, '缓存清除失败，请卸载或检查opcache配置状态');
             }
         }
-        Artisan::call('config:cache');
         if(Cache::has('WEBMANPID')) {
             $pid = Cache::get('WEBMANPID');
             Cache::forget('WEBMANPID');

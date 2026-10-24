@@ -4,6 +4,21 @@
     "version": "1.7.5",
     "images": "https://images.unsplash.com/photo-1515405295579-ba7b45403062?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2160&q=80",
     "configs": [{
+        "label": "默认语言",
+        "placeholder": "请选择前台默认语言",
+        "field_name": "language",
+        "field_type": "select",
+        "select_options": {
+            "zh-CN": "简体中文",
+            "zh-TW": "繁體中文",
+            "en-US": "English",
+            "ja-JP": "日本語",
+            "vi-VN": "Tiếng Việt",
+            "ko-KR": "한국어",
+            "fa-IR": "فارسی"
+        },
+        "default_value": "zh-CN"
+    }, {
         "label": "主题色",
         "placeholder": "请选择主题颜色",
         "field_name": "theme_color",

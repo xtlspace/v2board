@@ -398,9 +398,10 @@
 var securePath = '{{$secure_path}}';
 var apiBase = '/api/v1/' + securePath;
 
-var authToken = window.localStorage.getItem('authorization');
+var authToken = window.localStorage.getItem('admin_authorization');
 if (!authToken) {
-    window.location.href = '/' + securePath + '/login';
+    window.location.replace('/' + securePath + '#/login');
+    throw new Error('redirect to admin login');
 }
 
 function displayRuleValue(val) {

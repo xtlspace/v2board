@@ -34,62 +34,6 @@ class AdminRoute
             $router->get ('/server/manage/getNodes', 'V1\\Admin\\Server\\ManageController@getNodes');
             $router->post('/server/manage/sort', 'V1\\Admin\\Server\\ManageController@sort');
             $router->group([
-                'prefix' => 'server/trojan'
-            ], function ($router) {
-                $router->post('save', 'V1\\Admin\\Server\\TrojanController@save');
-                $router->post('drop', 'V1\\Admin\\Server\\TrojanController@drop');
-                $router->post('update', 'V1\\Admin\\Server\\TrojanController@update');
-                $router->post('copy', 'V1\\Admin\\Server\\TrojanController@copy');
-            });
-            $router->group([
-                'prefix' => 'server/vmess'
-            ], function ($router) {
-                $router->post('save', 'V1\\Admin\\Server\\VmessController@save');
-                $router->post('drop', 'V1\\Admin\\Server\\VmessController@drop');
-                $router->post('update', 'V1\\Admin\\Server\\VmessController@update');
-                $router->post('copy', 'V1\\Admin\\Server\\VmessController@copy');
-            });
-            $router->group([
-                'prefix' => 'server/shadowsocks'
-            ], function ($router) {
-                $router->post('save', 'V1\\Admin\\Server\\ShadowsocksController@save');
-                $router->post('drop', 'V1\\Admin\\Server\\ShadowsocksController@drop');
-                $router->post('update', 'V1\\Admin\\Server\\ShadowsocksController@update');
-                $router->post('copy', 'V1\\Admin\\Server\\ShadowsocksController@copy');
-            });
-            $router->group([
-                'prefix' => 'server/tuic'
-            ], function ($router) {
-                $router->post('save', 'V1\\Admin\\Server\\TuicController@save');
-                $router->post('drop', 'V1\\Admin\\Server\\TuicController@drop');
-                $router->post('update', 'V1\\Admin\\Server\\TuicController@update');
-                $router->post('copy', 'V1\\Admin\\Server\\TuicController@copy');
-            });
-            $router->group([
-                'prefix' => 'server/hysteria'
-            ], function ($router) {
-                $router->post('save', 'V1\\Admin\\Server\\HysteriaController@save');
-                $router->post('drop', 'V1\\Admin\\Server\\HysteriaController@drop');
-                $router->post('update', 'V1\\Admin\\Server\\HysteriaController@update');
-                $router->post('copy', 'V1\\Admin\\Server\\HysteriaController@copy');
-            });
-            $router->group([
-                'prefix' => 'server/vless'
-            ], function ($router) {
-                $router->post('save', 'V1\\Admin\\Server\\VlessController@save');
-                $router->post('drop', 'V1\\Admin\\Server\\VlessController@drop');
-                $router->post('update', 'V1\\Admin\\Server\\VlessController@update');
-                $router->post('copy', 'V1\\Admin\\Server\\VlessController@copy');
-            });
-            $router->group([
-                'prefix' => 'server/anytls'
-            ], function ($router) {
-                $router->post('save', 'V1\\Admin\\Server\\AnyTLSController@save');
-                $router->post('drop', 'V1\\Admin\\Server\\AnyTLSController@drop');
-                $router->post('update', 'V1\\Admin\\Server\\AnyTLSController@update');
-                $router->post('copy', 'V1\\Admin\\Server\\AnyTLSController@copy');
-            });
-            $router->group([
                 'prefix' => 'server/v2node'
             ], function ($router) {
                 $router->post('save', 'V1\\Admin\\Server\\V2nodeController@save');
@@ -117,9 +61,7 @@ class AdminRoute
             $router->post('/user/loginAsSelf', 'V1\\Admin\\UserController@loginAsSelf');
             $router->post('/user/delUser', 'V1\\Admin\\UserController@delUser');
             $router->post('/user/allDel', 'V1\\Admin\\UserController@allDel');
-            $router->post('/user/setInviteUser', 'V1\\Admin\\UserController@setInviteUser');
             // Stat
-            $router->get ('/stat/getStat', 'V1\\Admin\\StatController@getStat');
             $router->get ('/stat/getOverride', 'V1\\Admin\\StatController@getOverride');
             $router->get ('/stat/getServerLastRank', 'V1\\Admin\\StatController@getServerLastRank');
             $router->get ('/stat/getServerTodayRank', 'V1\\Admin\\StatController@getServerTodayRank');
@@ -127,12 +69,9 @@ class AdminRoute
             $router->get ('/stat/getUserTodayRank', 'V1\\Admin\\StatController@getUserTodayRank');
             $router->get ('/stat/getOrder', 'V1\\Admin\\StatController@getOrder');
             $router->get ('/stat/getStatUser', 'V1\\Admin\\StatController@getStatUser');
-            $router->get ('/stat/getRanking', 'V1\\Admin\\StatController@getRanking');
-            $router->get ('/stat/getStatRecord', 'V1\\Admin\\StatController@getStatRecord');
             // Notice
             $router->get ('/notice/fetch', 'V1\\Admin\\NoticeController@fetch');
             $router->post('/notice/save', 'V1\\Admin\\NoticeController@save');
-            $router->post('/notice/update', 'V1\\Admin\\NoticeController@update');
             $router->post('/notice/drop', 'V1\\Admin\\NoticeController@drop');
             $router->post('/notice/show', 'V1\\Admin\\NoticeController@show');
             // Ticket

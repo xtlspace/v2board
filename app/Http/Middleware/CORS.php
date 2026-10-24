@@ -8,9 +8,9 @@ class CORS
 {
     public function handle($request, Closure $next)
     {
-        $origin = $request->header('origin');
+        $origin = (string) $request->header('origin');
         if (empty($origin)) {
-            $referer = $request->header('referer');
+            $referer = (string) $request->header('referer');
             if (!empty($referer) && preg_match("/^((https|http):\/\/)?([^\/]+)/i", $referer, $matches)) {
                 $origin = $matches[0];
             }

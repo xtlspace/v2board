@@ -70,19 +70,18 @@ class V2boardInstall extends Command
             } catch (\Exception $e) {
                 abort(500, '数据库连接失败');
             }
-            $file = \File::get(base_path() . '/database/install.sql');
-            if (!$file) {
+            $file = base_path() . '/database/install.sql';
+            if (!is_file($file)) {
                 abort(500, '数据库文件不存在');
             }
-            $sql = str_replace("\n", "", $file);
-            $sql = preg_split("/;/", $sql);
-            if (!is_array($sql)) {
+            $sql = \App\Utils\SqlImporter::statements($file);
+            if (!is_array($sql) || empty($sql)) {
                 abort(500, '数据库文件格式有误');
             }
             $this->info('正在导入数据库请稍等...');
             foreach ($sql as $item) {
                 try {
-                    DB::select(DB::raw($item));
+                    DB::statement($item);
                 } catch (\Exception $e) {
                 }
             }
@@ -133,12 +132,11 @@ class V2boardInstall extends Command
             $envPath = app()->environmentFilePath();
             $contents = file_get_contents($envPath);
 
-            preg_match("/^{$key}=[^\r\n]*/m", $contents, $matches);
+            // 必须锚定行首并只替换第一条，否则 "APP_KEY=" 会命中 "PUSHER_APP_KEY=" / "MIX_PUSHER_APP_KEY="
+            $pattern = '/^' . preg_quote($key, '/') . '=.*$/m';
 
-            $oldValue = count($matches) ? $matches[0] : '';
-
-            if ($oldValue) {
-                $contents = str_replace("{$oldValue}", "{$key}={$value}", $contents);
+            if (preg_match($pattern, $contents)) {
+                $contents = preg_replace($pattern, $key . '=' . $value, $contents, 1);
             } else {
                 $contents = $contents . "\n{$key}={$value}\n";
             }

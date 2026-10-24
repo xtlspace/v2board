@@ -49,18 +49,18 @@ class UniProxyController extends Controller
             })->toArray();
 
         $response['users'] = $users;
-        if (strpos($request->header('X-Response-Format'), 'msgpack') !== false) {
+        if (strpos((string) $request->header('X-Response-Format'), 'msgpack') !== false) {
             $packer = new Packer();
             $response = $packer->pack($response);
             $eTag = sha1($response);
-            if (strpos($request->header('If-None-Match'), $eTag) !== false) {
+            if (strpos((string) $request->header('If-None-Match'), $eTag) !== false) {
                 abort(304);
             }
 
             return response($response, 200, ['Content-Type' => 'application/x-msgpack'])->header('ETag', "\"{$eTag}\"");
         } else {
             $eTag = sha1(json_encode($response));
-            if (strpos($request->header('If-None-Match'), $eTag) !== false) {
+            if (strpos((string) $request->header('If-None-Match'), $eTag) !== false) {
                 abort(304);
             }
 
@@ -297,7 +297,7 @@ class UniProxyController extends Controller
             $response['routes'] = $this->serverService->getRoutes($this->nodeInfo['route_id']);
         }
         $eTag = sha1(json_encode($response));
-        if (strpos($request->header('If-None-Match'), $eTag) !== false) {
+        if (strpos((string) $request->header('If-None-Match'), $eTag) !== false) {
             abort(304);
         }
 

@@ -40,20 +40,19 @@ class V2boardUpdate extends Command
     {
         \Artisan::call('config:cache');
         DB::connection()->getPdo();
-        $file = \File::get(base_path() . '/database/update.sql');
-        if (!$file) {
+        $file = base_path() . '/database/update.sql';
+        if (!is_file($file)) {
             abort(500, '数据库文件不存在');
         }
-        $sql = str_replace("\n", "", $file);
-        $sql = preg_split("/;/", $sql);
-        if (!is_array($sql)) {
+        $sql = \App\Utils\SqlImporter::statements($file);
+        if (!is_array($sql) || empty($sql)) {
             abort(500, '数据库文件格式有误');
         }
         $this->info('正在导入数据库请稍等...');
         foreach ($sql as $item) {
             if (!$item) continue;
             try {
-                DB::select(DB::raw($item));
+                DB::statement($item);
             } catch (\Exception $e) {
             }
         }

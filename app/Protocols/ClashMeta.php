@@ -8,7 +8,7 @@ use Symfony\Component\Yaml\Yaml;
 class ClashMeta
 {
     public $flag = 'meta';
-    public $flags = ['clash', 'meta', 'verge', 'nyanpasu', 'stash', 'shadowrocket'];
+    public $flags = ['clash', 'mihomo', 'verge', 'stash'];
     private $servers;
     private $user;
 
@@ -18,7 +18,7 @@ class ClashMeta
         $this->servers = $servers;
     }
 
-    public function handle()
+    public function handle($defaultConfigPath = null, $customConfigPath = null)
     {
         $servers = $this->servers;
         $user = $this->user;
@@ -26,8 +26,8 @@ class ClashMeta
         header("subscription-userinfo: upload={$user['u']}; download={$user['d']}; total={$user['transfer_enable']}; expire={$user['expired_at']}");
         header('profile-update-interval: 24');
         header("content-disposition:attachment;filename*=UTF-8''".rawurlencode($appName));
-        $defaultConfig = base_path() . '/resources/rules/default.clash.yaml';
-        $customConfig = base_path() . '/resources/rules/custom.clash.yaml';
+        $defaultConfig = $defaultConfigPath ?: base_path() . '/resources/rules/default.clash.yaml';
+        $customConfig = $customConfigPath ?: base_path() . '/resources/rules/custom.clash.yaml';
         if (\File::exists($customConfig)) {
             $config = Yaml::parseFile($customConfig);
         } else {
@@ -446,7 +446,7 @@ class ClashMeta
             $array['mport'] = $server['port'];
         }
         $array['udp'] = true;
-        $array['skip-cert-verify'] = $server['insecure'] == 1 ? true : false;
+        $array['skip-cert-verify'] = ($server['insecure'] ?? ($server['allow_insecure'] ?? ($server['tls_settings']['allow_insecure'] ?? 0))) == 1 ? true : false;
 
         if (isset($server['server_name'])) $array['sni'] = $server['server_name'];
 

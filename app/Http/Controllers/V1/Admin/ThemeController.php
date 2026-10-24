@@ -4,8 +4,8 @@ namespace App\Http\Controllers\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Services\ThemeService;
+use App\Utils\ConfigCache;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 
 class ThemeController extends Controller
@@ -77,10 +77,11 @@ class ThemeController extends Controller
             abort(500, '修改失败');
         }
 
-        try {
-            Artisan::call('config:cache');
-//            sleep(2);
-        } catch (\Exception $e) {
+        // 让当前请求立即生效
+        config(["theme.{$payload['name']}" => $config]);
+
+        // 独立进程重建配置缓存，避免在请求内 config:cache 替换全局容器
+        if (!ConfigCache::rebuild()) {
             abort(500, '保存失败');
         }
 

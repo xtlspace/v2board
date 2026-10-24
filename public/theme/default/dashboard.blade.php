@@ -9,17 +9,25 @@
     @endif
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no">
-    @php ($colors = [
-        'darkblue' => '#3b5998',
-        'black' => '#343a40',
-        'default' => '#0665d0',
-        'green' => '#319795'
-    ])
+    @php
+        $colors = [
+            'darkblue' => '#3b5998',
+            'black' => '#343a40',
+            'default' => '#0665d0',
+            'green' => '#319795'
+        ];
+    @endphp
     <meta name="theme-color" content="{{$colors[$theme_config['theme_color']]}}">
 
     <title>{{$title}}</title>
     <!-- <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nunito+Sans:300,400,400i,600,700"> -->
     <script>window.routerBase = "/";</script>
+    @php
+        $language = isset($theme_config['language']) ? $theme_config['language'] : 'zh-CN';
+        if (!in_array($language, ['zh-CN', 'zh-TW', 'en-US', 'ja-JP', 'vi-VN', 'ko-KR', 'fa-IR'])) {
+            $language = 'zh-CN';
+        }
+    @endphp
     <script>
         window.settings = {
             title: '{{$title}}',
@@ -32,13 +40,14 @@
             version: '{{$version}}',
             background_url: '{{$theme_config['background_url']}}',
             description: '{{$description}}',
+            language: '{{$language}}',
             i18n: [
-                'zh-CN'
+                '{{$language}}'
             ],
             logo: '{{$logo}}'
         }
     </script>
-    <script src="/theme/{{$theme}}/assets/i18n/zh-CN.js?v={{$version}}"></script>
+    <script src="/theme/{{$theme}}/assets/i18n/{{$language}}.js?v={{$version}}"></script>
 </head>
 
 <body>

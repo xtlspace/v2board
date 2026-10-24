@@ -5,13 +5,6 @@ namespace App\Http\Controllers\V1\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\SubLog;
 use App\Models\SubRule;
-use App\Models\ServerVmess;
-use App\Models\ServerTrojan;
-use App\Models\ServerShadowsocks;
-use App\Models\ServerVless;
-use App\Models\ServerHysteria;
-use App\Models\ServerTuic;
-use App\Models\ServerAnytls;
 use App\Models\ServerV2node;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -59,28 +52,16 @@ class SubLogController extends Controller
     public function getServers(Request $request)
     {
         $servers = [];
-        $models = [
-            'vmess' => ServerVmess::class,
-            'trojan' => ServerTrojan::class,
-            'shadowsocks' => ServerShadowsocks::class,
-            'vless' => ServerVless::class,
-            'hysteria' => ServerHysteria::class,
-            'tuic' => ServerTuic::class,
-            'anytls' => ServerAnytls::class,
-            'v2node' => ServerV2node::class,
-        ];
-        foreach ($models as $type => $model) {
-            $rows = $model::where('show', 1)->orderBy('sort')->get(['id', 'name', 'host', 'port', 'group_id']);
-            foreach ($rows as $row) {
-                $servers[] = [
-                    'type' => $type,
-                    'id' => $row->id,
-                    'name' => $row->name,
-                    'host' => $row->host,
-                    'port' => $row->port,
-                    'group_id' => $row->group_id,
-                ];
-            }
+        $rows = ServerV2node::where('show', 1)->orderBy('sort')->get(['id', 'name', 'host', 'port', 'group_id']);
+        foreach ($rows as $row) {
+            $servers[] = [
+                'type' => 'v2node',
+                'id' => $row->id,
+                'name' => $row->name,
+                'host' => $row->host,
+                'port' => $row->port,
+                'group_id' => $row->group_id,
+            ];
         }
         return response(['data' => $servers]);
     }

@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Artisan;
+use App\Utils\ConfigCache;
 use Illuminate\Support\Facades\File;
 
 class ThemeService
@@ -28,21 +28,20 @@ class ThemeService
             $data[$config['field_name']] = isset($config['default_value']) ? $config['default_value'] : '';
         }
 
-        $data = var_export($data, 1);
+        $exported = var_export($data, 1);
         try {
-            if (!File::put(base_path() . "/config/theme/{$this->theme}.php", "<?php\n return $data ;")) {
+            if (!File::put(base_path() . "/config/theme/{$this->theme}.php", "<?php\n return $exported ;")) {
                 abort(500, "{$this->theme}初始化失败");
             }
         } catch (\Exception $e) {
             abort(500, '请检查V2Board目录权限');
         }
 
-        try {
-            Artisan::call('config:cache');
-            while (true) {
-                if (config("theme.{$this->theme}")) break;
-            }
-        } catch (\Exception $e) {
+        // 让当前请求立即生效
+        config(["theme.{$this->theme}" => $data]);
+
+        // 独立进程重建配置缓存，避免在请求内 config:cache 替换全局容器
+        if (!ConfigCache::rebuild()) {
             abort(500, "{$this->theme}初始化失败");
         }
     }

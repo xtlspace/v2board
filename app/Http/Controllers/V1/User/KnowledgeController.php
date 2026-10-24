@@ -62,6 +62,13 @@ class KnowledgeController extends Controller
         ]);
     }
 
+    public function getCategory(Request $request)
+    {
+        return response([
+            'data' => array_keys(Knowledge::get()->groupBy('category')->toArray())
+        ]);
+    }
+
     private function getBetween($input, $start, $end)
     {
         $substr = substr($input, strlen($start) + strpos($input, $start), (strlen($input) - strpos($input, $end)) * (-1));

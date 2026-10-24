@@ -107240,24 +107240,8 @@
                     style: {
                         padding: 15
                     }
-                }, y.a.createElement(d["a"], {
-                    overlay: y.a.createElement(p["a"], null, y.a.createElement(p["a"].Item, null, y.a.createElement(mV2node, {
-                        key: Math.random()
-                    }, y.a.createElement("a", null, this.getTypeTag("v2node", "V2node")))), y.a.createElement(p["a"].Item, null, y.a.createElement(w["a"], {
-                        key: Math.random()
-                    }, y.a.createElement("a", null, this.getTypeTag("shadowsocks", "Shadowsocks")))), y.a.createElement(p["a"].Item, null, y.a.createElement(k["a"], {
-                        key: Math.random()
-                    }, y.a.createElement("a", null, this.getTypeTag("vmess", "VMess")))), y.a.createElement(p["a"].Item, null, y.a.createElement(C["a"], {
-                        key: Math.random()
-                    }, y.a.createElement("a", null, this.getTypeTag("trojan", "Trojan")))), y.a.createElement(p["a"].Item, null, y.a.createElement(W, {
-                        key: Math.random()
-                    }, y.a.createElement("a", null, this.getTypeTag("hysteria", "Hysteria")))), y.a.createElement(p["a"].Item, null, y.a.createElement(mTuic, {
-                        key: Math.random()
-                    }, y.a.createElement("a", null, this.getTypeTag("tuic", "Tuic")))), y.a.createElement(p["a"].Item, null, y.a.createElement(G, {
-                        key: Math.random()
-                    }, y.a.createElement("a", null, this.getTypeTag("vless", "VLess")))), y.a.createElement(p["a"].Item, null, y.a.createElement(mAnyTLS, {
-                        key: Math.random()
-                    }, y.a.createElement("a", null, this.getTypeTag("anytls", "AnyTLS")))))
+                }, y.a.createElement(mV2node, {
+                    key: Math.random()
                 }, y.a.createElement(l["a"], null, y.a.createElement(m["a"], {
                     type: "plus"
                 }))), y.a.createElement(s["a"], {

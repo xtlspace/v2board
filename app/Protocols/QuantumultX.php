@@ -6,7 +6,7 @@ use App\Utils\Helper;
 
 class QuantumultX
 {
-    public $flag = 'quantumult%20x';
+    public $flag = 'quantumult';
     private $servers;
     private $user;
 

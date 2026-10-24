@@ -1038,9 +1038,6 @@
                 var e = this.props.subscribeUrl
                   , t = [];
                 return t.push({
-                    title: "Hiddify",
-                    href: "hiddify://import/" + e + "&flag=sing" + "#" + window.settings.title
-                }), t.push({
                     title: "Sing-box",
                     href: "sing-box://import-remote-profile?url=" + encodeURIComponent(e) + "#" + window.settings.title
                 }), (Object(u["i"])() || Object(u["j"])()) && (t.push({
@@ -1056,10 +1053,6 @@
                 t.push({
                     title: "Surge",
                     href: "surge:///install-config?url=" + encodeURIComponent(e) + "&name=" + window.settings.title
-                }),
-                t.push({
-                    title: "Stash",
-                    href: "stash://install-config?url=" + encodeURIComponent(e) + "&name=" + window.settings.title
                 })),
                 Object(u["k"])() && t.push({
                     title: "Clash",
@@ -1069,17 +1062,10 @@
                     title: "Clash",
                     href: "clash://install-config?url=" + encodeURIComponent(e + "&flag=meta") + "&name=" + window.settings.title
                 })),
-                Object(u["g"])() && (t.push({
-                    title: "NekoBox For Android",
-                    href: "clash://install-config?url=" + encodeURIComponent(e + "&flag=meta") + "&name=" + window.settings.title
-                }) && t.push({
+                Object(u["g"])() && t.push({
                     title: "Clash",
                     href: "clash://install-config?url=" + encodeURIComponent(e + "&flag=meta") + "&name=" + window.settings.title
                 }),
-                t.push({
-                    title: "Surfboard",
-                    href: "surge:///install-config?url=" + encodeURIComponent(e) + "&name=" + window.settings.title
-                })),
                 c.a.createElement("div", {
                     className: v.a.oneClickSubscribe,
                     ref: "subscribeBox"
@@ -17247,10 +17233,7 @@
         if (l.rel = "stylesheet",
         l.href = u ? "./theme/".concat(c.color, ".css") : "/theme/default/assets/theme/".concat(c.color, ".css"),
         document.getElementsByTagName("head")[0].appendChild(l),
-        Object(i["e"])("i18n"))
-            Object(o["setLocale"])(Object(i["e"])("i18n"));
-        else
-            Object(o["setLocale"])("zh-CN");
+        Object(o["setLocale"])(s.language || "zh-CN"));
         "1" === Object(i["e"])("dark_mode") && Object(a["enable"])({
             brightness: 100,
             contrast: 90,
@@ -24243,14 +24226,7 @@
                     className: "far fa fa-moon"
                 }) : i.a.createElement("i", {
                     className: "far fa fa-sun"
-                }))), i.a.createElement("div", {
-                    className: "dropdown d-inline-block"
-                }, i.a.createElement(p["a"], null, i.a.createElement("button", {
-                    type: "button",
-                    className: "dark" === m.header ? "btn btn-primary mr-1" : "btn mr-1"
-                }, i.a.createElement("i", {
-                    className: "far fa fa-language"
-                })))), this.state.loading ? i.a.createElement("div", {
+                }))), this.state.loading ? i.a.createElement("div", {
                     className: "spinner-grow text-primary"
                 }) : i.a.createElement("div", {
                     className: "dropdown d-inline-block"
@@ -30858,9 +30834,7 @@
                     id: "\u516c\u544a"
                 })))), l.a.createElement("p", {
                     className: "font-size-lg text-white mb-1"
-                }, e.title), l.a.createElement("p", {
-                    className: "font-w600 text-white-75"
-                }, v()(1e3 * e.created_at).format("YYYY-MM-DD"))))
+                }, e.title)))
             }
             resetPackage() {
                 var e = this.props.user.subscribe
@@ -35488,16 +35462,7 @@
                     onClick: ()=>u.a.push("/forgetpassword")
                 }, Object(l["formatMessage"])({
                     id: "\u5fd8\u8bb0\u5bc6\u7801"
-                })), a.a.createElement(f["a"], null, a.a.createElement("span", {
-                    className: "v2board-login-i18n-btn"
-                }, a.a.createElement("i", {
-                    className: "si si-globe pr-1"
-                }), a.a.createElement("span", {
-                    className: "font-size-sm text-muted",
-                    style: {
-                        verticalAlign: "text-bottom"
-                    }
-                }, p["a"].i18nText[Object(l["getLocale"])()]))))))))))
+                })))))))))
             }
         }
         t["default"] = Object(s["c"])(e=>{
@@ -35769,16 +35734,7 @@
                     onClick: ()=>s.a.push("/login")
                 }, Object(l["formatMessage"])({
                     id: "\u8fd4\u56de\u767b\u5165"
-                })), i.a.createElement(f["a"], null, i.a.createElement("span", {
-                    className: "v2board-login-i18n-btn"
-                }, i.a.createElement("i", {
-                    className: "si si-globe pr-1"
-                }), i.a.createElement("span", {
-                    className: "font-size-sm text-muted",
-                    style: {
-                        verticalAlign: "text-bottom"
-                    }
-                }, d["a"].i18nText[Object(l["getLocale"])()]))))))))))
+                })))))))))
             }
         }
         t["default"] = Object(c["c"])(e=>{
@@ -50406,16 +50362,7 @@
                     onClick: ()=>s.a.push("/login")
                 }, Object(l["formatMessage"])({
                     id: "\u8fd4\u56de\u767b\u5165"
-                })), i.a.createElement(f["a"], null, i.a.createElement("span", {
-                    className: "v2board-login-i18n-btn"
-                }, i.a.createElement("i", {
-                    className: "si si-globe pr-1"
-                }), i.a.createElement("span", {
-                    className: "font-size-sm text-muted",
-                    style: {
-                        verticalAlign: "text-bottom"
-                    }
-                }, d["a"].i18nText[Object(l["getLocale"])()]))))))))))
+                })))))))))
             }
         }
         t["default"] = Object(c["c"])(e=>{

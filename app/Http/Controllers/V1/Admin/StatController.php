@@ -5,13 +5,6 @@ namespace App\Http\Controllers\V1\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\CommissionLog;
 use App\Models\Order;
-use App\Models\ServerHysteria;
-use App\Models\ServerTuic;
-use App\Models\ServerShadowsocks;
-use App\Models\ServerTrojan;
-use App\Models\ServerVmess;
-use App\Models\ServerVless;
-use App\Models\ServerAnytls;
 use App\Models\ServerV2node;
 use App\Models\Stat;
 use App\Models\StatServer;
@@ -110,14 +103,6 @@ class StatController extends Controller
     public function getServerLastRank()
     {
         $servers = [
-            'shadowsocks' => ServerShadowsocks::where('parent_id', null)->get()->toArray(),
-            'v2ray' => ServerVmess::where('parent_id', null)->get()->toArray(),
-            'trojan' => ServerTrojan::where('parent_id', null)->get()->toArray(),
-            'vmess' => ServerVmess::where('parent_id', null)->get()->toArray(),
-            'vless' => ServerVless::where('parent_id', null)->get()->toArray(),
-            'tuic' => ServerTuic::where('parent_id', null)->get()->toArray(),
-            'hysteria'=> ServerHysteria::where('parent_id', null)->get()->toArray(),
-            'anytls' => ServerAnytls::where('parent_id', null)->get()->toArray(),
             'v2node' => ServerV2node::where('parent_id', null)->get()->toArray()
         ];
         $startAt = strtotime('-1 day', strtotime(date('Y-m-d')));
@@ -137,9 +122,12 @@ class StatController extends Controller
             ->get()
             ->toArray();
         foreach ($statistics as $k => $v) {
-            foreach ($servers[$v['server_type']] as $server) {
-                if ($server['id'] === $v['server_id']) {
-                    $statistics[$k]['server_name'] = $server['name'];
+            $statistics[$k]['server_name'] = null;
+            if (isset($servers[$v['server_type']])) {
+                foreach ($servers[$v['server_type']] as $server) {
+                    if ($server['id'] === $v['server_id']) {
+                        $statistics[$k]['server_name'] = $server['name'];
+                    }
                 }
             }
             $statistics[$k]['total'] = $statistics[$k]['total'] / 1073741824;
@@ -153,14 +141,6 @@ class StatController extends Controller
     public function getServerTodayRank()
     {
         $servers = [
-            'shadowsocks' => ServerShadowsocks::where('parent_id', null)->get()->toArray(),
-            'v2ray' => ServerVmess::where('parent_id', null)->get()->toArray(),
-            'trojan' => ServerTrojan::where('parent_id', null)->get()->toArray(),
-            'vmess' => ServerVmess::where('parent_id', null)->get()->toArray(),
-            'vless' => ServerVless::where('parent_id', null)->get()->toArray(),
-            'tuic' => ServerTuic::where('parent_id', null)->get()->toArray(),
-            'hysteria'=> ServerHysteria::where('parent_id', null)->get()->toArray(),
-            'anytls' => ServerAnytls::where('parent_id', null)->get()->toArray(),
             'v2node' => ServerV2node::where('parent_id', null)->get()->toArray()
         ];
         $startAt = strtotime(date('Y-m-d'));
@@ -180,9 +160,12 @@ class StatController extends Controller
             ->get()
             ->toArray();
         foreach ($statistics as $k => $v) {
-            foreach ($servers[$v['server_type']] as $server) {
-                if ($server['id'] === $v['server_id']) {
-                    $statistics[$k]['server_name'] = $server['name'];
+            $statistics[$k]['server_name'] = null;
+            if (isset($servers[$v['server_type']])) {
+                foreach ($servers[$v['server_type']] as $server) {
+                    if ($server['id'] === $v['server_id']) {
+                        $statistics[$k]['server_name'] = $server['name'];
+                    }
                 }
             }
             $statistics[$k]['total'] = $statistics[$k]['total'] / 1073741824;
