@@ -89,7 +89,11 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->render(function (\Illuminate\View\ViewException $e, $request) {
-            return response('主题渲染失败。如更新主题，参数可能发生变化请重新配置主题后再试', 500);
+            $message = '主题渲染失败。如更新主题，参数可能发生变化请重新配置主题后再试';
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message], 500);
+            }
+            return response($message, 500);
         });
     })
     ->create();

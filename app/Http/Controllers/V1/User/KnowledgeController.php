@@ -64,8 +64,14 @@ class KnowledgeController extends Controller
 
     public function getCategory(Request $request)
     {
+        $builder = Knowledge::where('show', 1);
+        $language = $request->input('language');
+        if ($language) {
+            $builder->where('language', $language);
+        }
+
         return response([
-            'data' => array_keys(Knowledge::get()->groupBy('category')->toArray())
+            'data' => array_keys($builder->get(['category'])->groupBy('category')->toArray())
         ]);
     }
 

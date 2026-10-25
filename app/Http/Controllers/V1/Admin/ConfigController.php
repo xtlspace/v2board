@@ -9,7 +9,6 @@ use App\Services\TelegramService;
 use App\Utils\ConfigCache;
 use App\Utils\Dict;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
@@ -212,17 +211,12 @@ class ConfigController extends Controller
             }
         }
         $exported = var_export($config, 1);
-        if (!File::put(base_path() . '/config/v2board.php', "<?php\n return $exported ;")) {
+        if (!ConfigCache::write(base_path() . '/config/v2board.php', "<?php\n return $exported ;")) {
             abort(500, '修改失败');
         }
 
         // 让当前请求立即生效
         config(['v2board' => $config]);
-
-        // 独立进程重建配置缓存，避免在请求内 config:cache 替换全局容器
-        if (!ConfigCache::rebuild()) {
-            abort(500, '修改失败');
-        }
 
         $newSecurePath = $config['secure_path'] ?? ($config['frontend_admin_path'] ?? hash('crc32b', config('app.key')));
         $newSubscribePath = (string) ($config['subscribe_path'] ?? '');

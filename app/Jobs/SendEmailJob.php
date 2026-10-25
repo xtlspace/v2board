@@ -34,18 +34,39 @@ class SendEmailJob implements ShouldQueue
      *
      * @return void
      */
+    public function applyMailConfig(): void
+    {
+        if (!config('v2board.email_host')) {
+            return;
+        }
+
+        $panelPort = trim((string) config('v2board.email_port', ''));
+        if ($panelPort !== '' && ctype_digit($panelPort)) {
+            $port = (int) $panelPort;
+        } else {
+            $fallbackPort = trim((string) config('mail.mailers.smtp.port', ''));
+            $port = ctype_digit($fallbackPort) ? (int) $fallbackPort : 587;
+        }
+
+        $encryption = strtolower(trim((string) config('v2board.email_encryption', '')));
+        $useImplicitTls = in_array($encryption, ['ssl', 'smtps'], true);
+        $useAutoTls = !in_array($encryption, ['', 'none'], true);
+
+        Config::set('mail.default', 'smtp');
+        Config::set('mail.mailers.smtp.host', config('v2board.email_host', config('mail.mailers.smtp.host')));
+        Config::set('mail.mailers.smtp.port', $port);
+        Config::set('mail.mailers.smtp.encryption', $encryption);
+        Config::set('mail.mailers.smtp.scheme', $useImplicitTls ? 'smtps' : 'smtp');
+        Config::set('mail.mailers.smtp.auto_tls', $useAutoTls);
+        Config::set('mail.mailers.smtp.username', config('v2board.email_username', config('mail.mailers.smtp.username')));
+        Config::set('mail.mailers.smtp.password', config('v2board.email_password', config('mail.mailers.smtp.password')));
+        Config::set('mail.from.address', config('v2board.email_from_address', config('mail.from.address')));
+        Config::set('mail.from.name', config('v2board.app_name', 'V2Board'));
+    }
+
     public function handle()
     {
-        if (config('v2board.email_host')) {
-            Config::set('mail.default', 'smtp');
-            Config::set('mail.mailers.smtp.host', config('v2board.email_host', config('mail.mailers.smtp.host')));
-            Config::set('mail.mailers.smtp.port', config('v2board.email_port', config('mail.mailers.smtp.port')));
-            Config::set('mail.mailers.smtp.encryption', config('v2board.email_encryption', config('mail.mailers.smtp.encryption')));
-            Config::set('mail.mailers.smtp.username', config('v2board.email_username', config('mail.mailers.smtp.username')));
-            Config::set('mail.mailers.smtp.password', config('v2board.email_password', config('mail.mailers.smtp.password')));
-            Config::set('mail.from.address', config('v2board.email_from_address', config('mail.from.address')));
-            Config::set('mail.from.name', config('v2board.app_name', 'V2Board'));
-        }
+        $this->applyMailConfig();
         $params = $this->params;
         $email = $params['email'];
         $subject = $params['subject'];
@@ -59,7 +80,7 @@ class SendEmailJob implements ShouldQueue
                     $message->to($email)->subject($subject);
                 }
             );
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $error = $e->getMessage();
         }
 

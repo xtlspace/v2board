@@ -75,10 +75,10 @@ class ConfigSave extends FormRequest
         // email
         'email_template' => '',
         'email_host' => '',
-        'email_port' => '',
+        'email_port' => 'nullable|integer|between:1,65535',
         'email_username' => '',
         'email_password' => '',
-        'email_encryption' => '',
+        'email_encryption' => 'nullable|in:ssl,tls,starttls,smtps,none',
         'email_from_address' => '',
         // telegram
         'telegram_bot_enable' => 'in:0,1',
@@ -112,6 +112,20 @@ class ConfigSave extends FormRequest
         'password_limit_count' => 'integer',
         'password_limit_expire' => 'integer',
     ];
+    protected function prepareForValidation(): void
+    {
+        $normalized = [];
+        if ($this->has('email_port')) {
+            $normalized['email_port'] = trim((string) $this->input('email_port'));
+        }
+        if ($this->has('email_encryption')) {
+            $normalized['email_encryption'] = strtolower(trim((string) $this->input('email_encryption')));
+        }
+        if ($normalized) {
+            $this->merge($normalized);
+        }
+    }
+
     /**
      * Get the validation rules that apply to the request.
      *
@@ -155,6 +169,9 @@ class ConfigSave extends FormRequest
             'logo.url' => 'LOGO URL格式不正确，必须携带https(s)://',
             'secure_path.min' => '后台路径长度最小为8位',
             'secure_path.regex' => '后台路径只能为字母或数字',
+            'email_port.integer' => 'SMTP端口必须为整数',
+            'email_port.between' => 'SMTP端口必须在 1-65535 之间',
+            'email_encryption.in' => 'SMTP加密方式只支持 ssl、tls、starttls、smtps、none',
         ];
     }
 }

@@ -73,17 +73,12 @@ class ThemeController extends Controller
         File::ensureDirectoryExists(base_path() . '/config/theme/');
 
         $data = var_export($config, 1);
-        if (!File::put(base_path() . "/config/theme/{$payload['name']}.php", "<?php\n return $data ;")) {
-            abort(500, '修改失败');
+        if (!ConfigCache::write(base_path() . "/config/theme/{$payload['name']}.php", "<?php\n return $data ;")) {
+            abort(500, '保存失败');
         }
 
         // 让当前请求立即生效
         config(["theme.{$payload['name']}" => $config]);
-
-        // 独立进程重建配置缓存，避免在请求内 config:cache 替换全局容器
-        if (!ConfigCache::rebuild()) {
-            abort(500, '保存失败');
-        }
 
         return response([
             'data' => $config

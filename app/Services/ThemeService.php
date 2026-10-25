@@ -29,20 +29,11 @@ class ThemeService
         }
 
         $exported = var_export($data, 1);
-        try {
-            if (!File::put(base_path() . "/config/theme/{$this->theme}.php", "<?php\n return $exported ;")) {
-                abort(500, "{$this->theme}初始化失败");
-            }
-        } catch (\Exception $e) {
-            abort(500, '请检查V2Board目录权限');
+        if (!ConfigCache::write(base_path() . "/config/theme/{$this->theme}.php", "<?php\n return $exported ;")) {
+            abort(500, "{$this->theme}初始化失败");
         }
 
         // 让当前请求立即生效
         config(["theme.{$this->theme}" => $data]);
-
-        // 独立进程重建配置缓存，避免在请求内 config:cache 替换全局容器
-        if (!ConfigCache::rebuild()) {
-            abort(500, "{$this->theme}初始化失败");
-        }
     }
 }

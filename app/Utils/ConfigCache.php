@@ -6,6 +6,9 @@ use Symfony\Component\Process\Process;
 
 class ConfigCache
 {
+    /** @var array<string, bool> */
+    private static array $cliBinaries = [];
+
     /**
      * 重建配置缓存
      *
@@ -38,6 +41,74 @@ class ConfigCache
     }
 
     /**
+     * 原子写入配置文件，并在配置缓存重建失败时恢复旧文件。
+     */
+    public static function write(string $path, string $contents): bool
+    {
+        $directory = dirname($path);
+        if (!is_dir($directory) && !@mkdir($directory, 0755, true) && !is_dir($directory)) {
+            return false;
+        }
+
+        $lock = @fopen(storage_path('framework/config-cache.lock'), 'c');
+        if ($lock) {
+            @flock($lock, LOCK_EX);
+        }
+
+        $temporary = null;
+        try {
+            $oldContents = is_file($path) ? file_get_contents($path) : null;
+            if ($oldContents === false) {
+                $oldContents = null;
+            }
+
+            $temporary = @tempnam($directory, '.config-');
+            if ($temporary === false) {
+                return false;
+            }
+            if (@file_put_contents($temporary, $contents) === false) {
+                return false;
+            }
+            @chmod($temporary, 0644);
+
+            if (!@rename($temporary, $path)) {
+                return false;
+            }
+
+            if (self::rebuild()) {
+                return true;
+            }
+
+            self::log('配置缓存重建失败，恢复原配置文件', ['path' => $path]);
+            if ($oldContents !== null) {
+                $restore = @tempnam($directory, '.restore-');
+                if ($restore !== false && @file_put_contents($restore, $oldContents) !== false) {
+                    @chmod($restore, 0644);
+                    if (!@rename($restore, $path)) {
+                        self::log('原配置文件恢复失败', ['path' => $path]);
+                        @unlink($restore);
+                    }
+                } elseif ($restore !== false) {
+                    @unlink($restore);
+                }
+            } else {
+                @unlink($path);
+            }
+
+            self::rebuild();
+            return false;
+        } finally {
+            if ($temporary !== null && is_file($temporary)) {
+                @unlink($temporary);
+            }
+            if ($lock) {
+                @flock($lock, LOCK_UN);
+                @fclose($lock);
+            }
+        }
+    }
+
+    /**
      * 在独立 CLI 进程中执行 artisan 命令
      *
      * @param array $args
@@ -45,39 +116,94 @@ class ConfigCache
      */
     private static function run(array $args): bool
     {
-        try {
-            $process = new Process(
-                array_merge([self::phpBinary()], array_merge(['artisan'], $args)),
-                base_path(),
-                null,
-                null,
-                120
-            );
-            $process->run();
-            return $process->isSuccessful();
-        } catch (\Throwable $e) {
-            return false;
+        foreach (self::cliBinaries() as $binary) {
+            try {
+                $process = new Process(
+                    array_merge([$binary, base_path('artisan')], $args),
+                    base_path(),
+                    null,
+                    null,
+                    120
+                );
+                $process->run();
+                if ($process->isSuccessful()) {
+                    return true;
+                }
+                self::log('artisan 命令执行失败', [
+                    'binary' => $binary,
+                    'args' => implode(' ', $args),
+                    'exit' => $process->getExitCode(),
+                    'stderr' => trim($process->getErrorOutput()),
+                ]);
+            } catch (\Throwable $e) {
+                self::log('artisan 命令启动失败', [
+                    'binary' => $binary,
+                    'args' => implode(' ', $args),
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
+
+        return false;
     }
 
     /**
      * 获取可用的 PHP CLI 可执行文件路径
      *
-     * php-fpm 环境下 PHP_BINARY 指向 php-fpm 可执行文件，不能用于执行 artisan，
-     * 这里回退到同一套安装目录下的 bin/php。
+     * FPM 的 PHP_BINARY 可能是 php-fpm 或 php-fpm8.x，不能直接执行 artisan。
+     * 优先使用 PHP_BINDIR，其次推导同安装目录下的 bin/php，最后尝试系统 PHP。
+     * 每个候选都用 `php -r 'echo PHP_SAPI;'` 验证，避免把 FPM/Apache 当 CLI。
      *
-     * 注意：不能用 is_executable() 做探测，open_basedir 生效时它会返回 false 并抛出
-     * open_basedir warning（该 warning 会污染接口响应），此处只做字符串推导，
-     * 由 Process 自身去处理路径不存在的情况。
-     *
-     * @return string
+     * @return array<int, string>
      */
-    private static function phpBinary(): string
+    private static function cliBinaries(): array
     {
-        $binary = PHP_BINARY;
-        if (str_ends_with($binary, 'php-fpm')) {
-            return dirname($binary, 2) . '/bin/php';
+        $override = getenv('V2BOARD_PHP_CLI');
+        if ($override) {
+            $candidates = [$override];
+        } else {
+            $candidates = [
+                defined('PHP_BINDIR') ? PHP_BINDIR . '/php' : null,
+                dirname(PHP_BINARY, 2) . '/bin/php',
+                '/usr/bin/php',
+            ];
+            if (!str_contains(basename(PHP_BINARY), 'php-fpm')) {
+                $candidates[] = PHP_BINARY;
+            }
         }
-        return $binary;
+
+        $binaries = [];
+        foreach (array_unique(array_filter($candidates)) as $binary) {
+            if (!isset(self::$cliBinaries[$binary])) {
+                self::$cliBinaries[$binary] = self::isCliBinary($binary);
+            }
+            if (self::$cliBinaries[$binary]) {
+                $binaries[] = $binary;
+            }
+        }
+
+        return $binaries;
+    }
+
+    private static function isCliBinary(string $binary): bool
+    {
+        try {
+            $process = new Process([$binary, '-r', 'echo PHP_SAPI;'], base_path(), null, null, 5);
+            $process->run();
+            return $process->isSuccessful() && trim($process->getOutput()) === 'cli';
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    private static function log(string $message, array $context = []): void
+    {
+        $line = sprintf(
+            "[%s] %s%s\n",
+            date('c'),
+            $message,
+            $context ? ' ' . json_encode($context, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : ''
+        );
+        @file_put_contents(storage_path('logs/config-cache.log'), $line, FILE_APPEND | LOCK_EX);
     }
 }

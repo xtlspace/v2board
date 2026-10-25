@@ -859,13 +859,29 @@ CREATE TABLE `v2_server_v2node` (
 ALTER TABLE `v2_server_route`
 CHANGE `action_value` `action_value` text NULL AFTER `action`;
 
+CREATE TABLE IF NOT EXISTS `v2_sub_log` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL DEFAULT '0',
+  `ip` varchar(128) DEFAULT NULL,
+  `user_agent` text,
+  `ip_country` varchar(128) DEFAULT NULL,
+  `ip_region` varchar(128) DEFAULT NULL,
+  `ip_city` varchar(128) DEFAULT NULL,
+  `ip_isp` varchar(128) DEFAULT NULL,
+  `created_at` int(11) NOT NULL,
+  `updated_at` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_risk` (`user_id`, `created_at`, `ip_city`),
+  KEY `idx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 ALTER TABLE `v2_sub_log`
 ADD `ip_country` varchar(128) NULL DEFAULT NULL AFTER `ip`,
 ADD `ip_region` varchar(128) NULL DEFAULT NULL AFTER `ip_country`,
 ADD `ip_city` varchar(128) NULL DEFAULT NULL AFTER `ip_region`,
 ADD `ip_isp` varchar(128) NULL DEFAULT NULL AFTER `ip_city`;
 
-CREATE TABLE `v2_sub_rule` (
+CREATE TABLE IF NOT EXISTS `v2_sub_rule` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `remark` varchar(255) NOT NULL,
   `sort` int(11) NOT NULL DEFAULT '0',
@@ -888,3 +904,4 @@ CREATE TABLE `v2_sub_rule` (
 -- 风险筛查功能：覆盖索引，加速 GROUP BY user_id + COUNT(DISTINCT ip/ua)
 -- user_agent 为 TEXT 类型无法全纳入索引，由索引过滤后仅回表读 user_agent 一列
 ALTER TABLE `v2_sub_log` ADD INDEX `idx_risk` (`user_id`, `created_at`, `ip_city`);
+ALTER TABLE `v2_sub_log` ADD INDEX `idx_user_id` (`user_id`);

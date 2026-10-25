@@ -136,7 +136,9 @@ class V2boardInstall extends Command
             $pattern = '/^' . preg_quote($key, '/') . '=.*$/m';
 
             if (preg_match($pattern, $contents)) {
-                $contents = preg_replace($pattern, $key . '=' . $value, $contents, 1);
+                $contents = preg_replace_callback($pattern, static function () use ($key, $value) {
+                    return $key . '=' . $value;
+                }, $contents, 1);
             } else {
                 $contents = $contents . "\n{$key}={$value}\n";
             }

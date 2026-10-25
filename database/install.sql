@@ -350,7 +350,7 @@ DROP TABLE IF EXISTS `v2_sub_log`;
 CREATE TABLE `v2_sub_log` (
                             `id` int(11) NOT NULL AUTO_INCREMENT,
                             `user_id` int(11) NOT NULL DEFAULT '0',
-                            `ip` varchar(45) NOT NULL DEFAULT '',
+                            `ip` varchar(128) DEFAULT NULL,
                             `user_agent` text,
                             `ip_country` varchar(128) DEFAULT NULL,
                             `ip_region` varchar(128) DEFAULT NULL,
@@ -360,7 +360,7 @@ CREATE TABLE `v2_sub_log` (
                             `updated_at` int(11) NOT NULL,
                             PRIMARY KEY (`id`),
                             KEY `idx_risk` (`user_id`,`created_at`,`ip_city`),
-                            KEY `user_id` (`user_id`)
+                            KEY `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
