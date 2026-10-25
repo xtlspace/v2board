@@ -40610,6 +40610,7 @@
           , m = n("/MKj")
           , g = n("wd/R")
           , v = n.n(g)
+          , w = n("kLXV")
           , y = n("v32e");
         class b extends d.a.Component {
             constructor(e) {
@@ -40631,6 +40632,21 @@
                 this.props.dispatch({
                     type: "ticket/close",
                     id: e
+                })
+            }
+            drop(e) {
+                var t = this;
+                w["a"].confirm({
+                    title: "\u5220\u9664\u5de5\u5355",
+                    content: "\u786e\u5b9a\u8981\u5220\u9664\u8be5\u5de5\u5355\u5417\uff1f",
+                    onOk() {
+                        t.props.dispatch({
+                            type: "ticket/drop",
+                            id: e
+                        })
+                    },
+                    okText: "\u786e\u5b9a",
+                    cancelText: "\u53d6\u6d88"
                 })
             }
             tableOnChange(e, t, n) {
@@ -40738,8 +40754,10 @@
                             onClick: ()=>this.toChat(t.id)
                         }, "\u67e5\u770b"), d.a.createElement(u["a"], {
                             type: "vertical"
-                        }), d.a.createElement("a", {
-                            disabled: t.status,
+                        }), t.status ? d.a.createElement("a", {
+                            href: "javascript:void(0);",
+                            onClick: ()=>this.drop(t.id)
+                        }, "\u5220\u9664") : d.a.createElement("a", {
                             href: "javascript:void(0);",
                             onClick: ()=>this.close(t.id)
                         }, "\u5173\u95ed"))
@@ -72500,6 +72518,39 @@
                                 case 5:
                                     return e.next = 7,
                                     r({
+                                        type: "fetch"
+                                    });
+                                case 7:
+                                case "end":
+                                    return e.stop()
+                                }
+                        }, e)
+                    })()
+                },
+                drop(e, t) {
+                    var n = e.id
+                      , i = t.put;
+                    return s().mark(function e() {
+                        var t;
+                        return s().wrap(function(e) {
+                            while (1)
+                                switch (e.prev = e.next) {
+                                case 0:
+                                    return e.next = 2,
+                                    Object(a["b"])("/" + window.settings.secure_path + "/ticket/drop", {
+                                        id: n
+                                    });
+                                case 2:
+                                    if (t = e.sent,
+                                    200 === t.code) {
+                                        e.next = 5;
+                                        break
+                                    }
+                                    return e.abrupt("return");
+                                case 5:
+                                    return r["a"].success("\u5220\u9664\u6210\u529f"),
+                                    e.next = 7,
+                                    i({
                                         type: "fetch"
                                     });
                                 case 7:

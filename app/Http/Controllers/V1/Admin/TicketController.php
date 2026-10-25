@@ -120,4 +120,32 @@ class TicketController extends Controller
             'data' => true
         ]);
     }
+
+    public function drop(Request $request)
+    {
+        if (empty($request->input('id'))) {
+            abort(500, '参数错误');
+        }
+        $ticket = Ticket::where('id', $request->input('id'))->first();
+        if (!$ticket) {
+            abort(500, '工单不存在');
+        }
+        if ((int) $ticket->status !== 1) {
+            abort(500, '仅可删除已关闭的工单');
+        }
+
+        DB::beginTransaction();
+        try {
+            TicketMessage::where('ticket_id', $ticket->id)->delete();
+            $ticket->delete();
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            abort(500, '删除失败');
+        }
+
+        return response([
+            'data' => true
+        ]);
+    }
 }
