@@ -80385,10 +80385,14 @@
                 })
             }
             priceOnChange(e, t) {
+                var n = d()({}, this.state.record, {
+                    [e]: "" !== t ? t : null
+                })
+                  , r = ["month_price", "quarter_price", "half_year_price", "year_price", "two_year_price", "three_year_price"];
+                return "" !== t && ("onetime_price" === e ? (r.forEach(e=>n[e] = null),
+                n.reset_price = null) : (-1 !== r.indexOf(e) || "reset_price" === e) && null !== n.onetime_price && (n.onetime_price = null)),
                 this.setState({
-                    record: d()({}, this.state.record, {
-                        [e]: "" !== t ? t : null
-                    })
+                    record: n
                 })
             }
             save() {
@@ -80455,7 +80459,9 @@
                     title: "\u5c06\u91d1\u989d\u7559\u7a7a\u5219\u4e0d\u4f1a\u8fdb\u884c\u51fa\u552e"
                 }, m.a.createElement(h["a"], {
                     type: "info-circle"
-                }))), m.a.createElement(E["a"], {
+                }))), m.a.createElement("div", {
+                    className: "text-muted font-size-sm mb-3"
+                }, "\u4e00\u6b21\u6027\u4e0e\u5468\u671f\u4ef7\u683c\u3001\u91cd\u7f6e\u5305\u4e92\u65a5\uff1b\u5468\u671f\u4e4b\u95f4\u3001\u5468\u671f\u4e0e\u91cd\u7f6e\u5305\u53ef\u5171\u5b58\u3002"), m.a.createElement(E["a"], {
                     gutter: 10
                 }, m.a.createElement(S["a"], {
                     md: 4

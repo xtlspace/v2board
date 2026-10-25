@@ -33,6 +33,41 @@ class PlanSave extends FormRequest
         ];
     }
 
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            $periods = [
+                'month_price',
+                'quarter_price',
+                'half_year_price',
+                'year_price',
+                'two_year_price',
+                'three_year_price',
+            ];
+            $hasPeriod = false;
+            foreach ($periods as $period) {
+                if ($this->hasPrice($period)) {
+                    $hasPeriod = true;
+                    break;
+                }
+            }
+
+            $hasOnetime = $this->hasPrice('onetime_price');
+            if ($hasOnetime && $hasPeriod) {
+                $validator->errors()->add('onetime_price', '一次性不能与月付、季付、半年、年付、两年付、三年付同时配置');
+            }
+            if ($hasOnetime && $this->hasPrice('reset_price')) {
+                $validator->errors()->add('onetime_price', '一次性不能与流量重置包同时配置');
+            }
+        });
+    }
+
+    private function hasPrice(string $key): bool
+    {
+        $value = $this->input($key);
+        return $value !== null && $value !== '';
+    }
+
     public function messages()
     {
         return [
@@ -49,6 +84,7 @@ class PlanSave extends FormRequest
             'two_year_price.integer' => '两年付金额格式有误',
             'three_year_price.integer' => '三年付金额格式有误',
             'onetime_price.integer' => '一次性金额有误',
+            'onetime_price.after' => '一次性只能与周期价格或重置包互斥配置',
             'reset_price.integer' => '流量重置包金额有误',
             'reset_traffic_method.integer' => '流量重置方式格式有误',
             'reset_traffic_method.in' => '流量重置方式格式有误',

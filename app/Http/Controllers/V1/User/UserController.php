@@ -347,8 +347,18 @@ class UserController extends Controller
         $user['subscribe_url'] = Helper::getSubscribeUrl($user['token']);
 
         $userService = new UserService();
-        $user['reset_day'] = $userService->getResetDay($user);
+        $resetDay = $userService->getResetDay($user);
+        $user['reset_day'] = $resetDay;
+        $user['reset_hour'] = $resetDay === 0
+            ? max(1, (int)ceil((strtotime('tomorrow') - time()) / 3600))
+            : null;
+        $user['reset_at'] = $resetDay === null
+            ? null
+            : ($resetDay === 0
+                ? strtotime('tomorrow')
+                : strtotime("+{$resetDay} days", strtotime('today')));
         $user['allow_new_period'] = (int)config('v2board.allow_new_period', 0);
+        $user['renew_reset_traffic'] = (int)config('v2board.renew_order_event_id', 0) === 1;
         return response([
             'data' => $user
         ]);

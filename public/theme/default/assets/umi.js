@@ -17819,6 +17819,10 @@
                     }))
                 }
                 ),
+                void 0 === t.price && null !== e.reset_price && (t = {
+                    tag: f["a"].periodText.reset_price && f["a"].periodText.reset_price(),
+                    price: e.reset_price
+                }),
                 t
             }
             render() {
@@ -18890,13 +18894,19 @@
                     className: "v2board-order-info"
                 }, t.plan.id == 0 ? (f.a.createElement("div", null, f.a.createElement("span", null, Object(b["formatMessage"])({
                     id: "\u4ea7\u54c1\u540d\u79f0"
-                }), "\uff1a"), f.a.createElement("span", null, "\u5145\u503c"))) : (f.a.createElement("div", null, f.a.createElement("span", null, Object(b["formatMessage"])({
+                }), "\uff1a"), f.a.createElement("span", null, "\u5145\u503c"))) : [f.a.createElement("div", null, f.a.createElement("span", null, Object(b["formatMessage"])({
                     id: "\u4ea7\u54c1\u540d\u79f0"
                 }), "\uff1a"), f.a.createElement("span", null, t.plan.name)), f.a.createElement("div", null, f.a.createElement("span", null, Object(b["formatMessage"])({
                     id: "\u7c7b\u578b/\u5468\u671f"
                 }), "\uff1a"), f.a.createElement("span", null, h["a"].periodText[t.period] && h["a"].periodText[t.period]())), f.a.createElement("div", null, f.a.createElement("span", null, Object(b["formatMessage"])({
                     id: "\u4ea7\u54c1\u6d41\u91cf"
-                }), "\uff1a"), f.a.createElement("span", null, t.plan.transfer_enable, " GB")))))), f.a.createElement("div", {
+                }), "\uff1a"), f.a.createElement("span", null, t.plan.transfer_enable, " GB"))], t.period === "reset_price" && f.a.createElement("div", null, f.a.createElement("span", null, Object(b["formatMessage"])({
+                    id: "\u6ce8\u610f\u4e8b\u9879"
+                }), "\uff1a"), f.a.createElement("span", {
+                    className: "text-warning"
+                }, Object(b["formatMessage"])({
+                    id: "\u8d2d\u4e70\u540e\u4ec5\u91cd\u7f6e\u672c\u5468\u671f\u4f7f\u7528\u6d41\u91cf\uff0c\u4e0d\u4f1a\u5ef6\u957f\u5230\u671f\u65f6\u95f4"
+                })))))), f.a.createElement("div", {
                     className: "block block-rounded"
                 }, f.a.createElement("div", {
                     className: "block-header block-header-default"
@@ -19921,10 +19931,11 @@
                                     return s["router"].push("/plan"),
                                     n.abrupt("return");
                                 case 16:
-                                    return f || Object.keys(p.data).reverse().map(e=>{
-                                        -1 !== Object.keys(a["a"].periodText).indexOf(e) && null !== p.data[e] && (f = e)
+                                    return f || (Object.keys(p.data).reverse().map(e=>{
+                                        "reset_price" !== e && -1 !== Object.keys(a["a"].periodText).indexOf(e) && null !== p.data[e] && (f = e)
                                     }
                                     ),
+                                    !f && null !== p.data.reset_price && (f = "reset_price")),
                                     n.next = 19,
                                     o({
                                         type: "setState",
@@ -30896,7 +30907,7 @@
                 })
             }
             render() {
-                var e, t, n, r, s = this.props.user, u = s.stat, d = s.subscribe, m = this.props.notice.notices, y = Math.round(Object(p["f"])(d.u + d.d, d.transfer_enable) * 100) / 100, x = [];
+                var e, t, n, r, s = this.props.user, u = s.stat, d = s.subscribe, m = this.props.notice.notices, y = Math.round(Object(p["f"])(d.u + d.d, d.transfer_enable) * 100) / 100, expireSeconds = d.expired_at ? Math.max(0, d.expired_at - v()().format("X")) : 0, expireDay = Math.floor(expireSeconds / 86400), expireHour = Math.max(1, Math.ceil(expireSeconds / 3600)), onetime = !!(d.plan && null != d.plan.onetime_price), resetAvailable = !onetime && !!(d.plan && null != d.plan.reset_price), exhausted = d.transfer_enable > 0 && d.u + d.d >= d.transfer_enable, resetVisible = null !== d.reset_day && !!d.reset_at && d.reset_at <= d.expired_at, renewAvailable = !onetime && !resetAvailable && !!d.renew_reset_traffic && !!(d.plan && d.plan.renew), x = [];
                 (void 0 !== u[0] && u[0] && x.push(l.a.createElement("div", {
                     className: "alert alert-danger",
                     role: "alert"
@@ -30925,18 +30936,22 @@
                 }, Object(b["formatMessage"])({
                     id: "\u7acb\u5373\u67e5\u770b"
                 }))))),
-                y >= 80 && y < 100 && !Object(p["h"])(d.expired_at)) && x.push(l.a.createElement("div", {
-                    className: "alert alert-info",
+                exhausted && !Object(p["h"])(d.expired_at)) && x.push(l.a.createElement("div", {
+                    className: "alert alert-warning",
                     role: "alert"
                 }, l.a.createElement("p", {
                     className: "mb-0"
                 }, Object(b["formatMessage"])({
-                    id: "\u5f53\u524d\u5df2\u4f7f\u7528\u6d41\u91cf\u8fbe{rate}%"
-                }, {
-                    rate: y
-                }), " ", (null === (r = d.plan) || void 0 === r ? void 0 : r.reset_price) && l.a.createElement("a", {
+                    id: renewAvailable ? "\u6d41\u91cf\u5df2\u7528\u5c3d\uff0c\u7eed\u8d39\u53ef\u91cd\u7f6e\u6d41\u91cf" : "\u6d41\u91cf\u5df2\u7528\u5c3d"
+                }), resetAvailable && l.a.createElement("a", {
                     onClick: ()=>this.resetPackage()
-                }, l.a.createElement("strong", null, "\u8d2d\u4e70\u6d41\u91cf\u91cd\u7f6e\u5305")))));
+                }, " ", l.a.createElement("strong", null, Object(b["formatMessage"])({
+                    id: "\u8d2d\u4e70\u6d41\u91cf\u91cd\u7f6e\u5305"
+                }))), renewAvailable && l.a.createElement("a", {
+                    onClick: ()=>h.a.push("/plan/".concat(d.plan_id))
+                }, " ", l.a.createElement("strong", null, Object(b["formatMessage"])({
+                    id: "\u7eed\u8d39\u8ba2\u9605"
+                }))))));
                 return l.a.createElement(f["a"], o()({}, this.props, {
                     title: Object(b["formatMessage"])({
                         id: "\u4eea\u8868\u76d8"
@@ -30986,14 +31001,21 @@
                 }, Object(b["formatMessage"])({
                     id: "\u5df2\u8fc7\u671f"
                 })) : l.a.createElement("span", null, Object(b["formatMessage"])({
-                    id: "\u4e8e {date} \u5230\u671f\uff0c\u8ddd\u79bb\u5230\u671f\u8fd8\u6709 {day} \u5929\u3002"
-                }, {
+                    id: expireDay > 0 ? "\u4e8e {date} \u5230\u671f\uff0c\u8ddd\u79bb\u5230\u671f\u8fd8\u6709 {day} \u5929\u3002" : "\u4e8e {date} \u5230\u671f\uff0c\u8ddd\u79bb\u5230\u671f\u8fd8\u6709 {hour} \u5c0f\u65f6\u3002"
+                }, expireDay > 0 ? {
                     date: v()(1e3 * d.expired_at).format("YYYY/MM/DD"),
-                    day: ((d.expired_at - v()().format("X")) / 86400).toFixed(0)
-                }), null !== d.reset_day ? 0 !== d.reset_day ? Object(b["formatMessage"])({
+                    day: expireDay
+                } : {
+                    date: v()(1e3 * d.expired_at).format("YYYY/MM/DD"),
+                    hour: expireHour
+                }), resetVisible ? 0 !== d.reset_day ? Object(b["formatMessage"])({
                     id: "\u5df2\u7528\u6d41\u91cf\u5c06\u5728 {reset_day} \u65e5\u540e\u91cd\u7f6e"
                 }, {
                     reset_day: d.reset_day
+                }) : d.reset_hour ? Object(b["formatMessage"])({
+                    id: "\u5df2\u7528\u6d41\u91cf\u5c06\u5728 {reset_hour} \u5c0f\u65f6\u540e\u91cd\u7f6e"
+                }, {
+                    reset_hour: d.reset_hour
                 }) : Object(b["formatMessage"])({
                     id: "\u5df2\u7528\u6d41\u91cf\u5df2\u5728\u4eca\u65e5\u91cd\u7f6e"
                 }) : "")), l.a.createElement("div", {
@@ -31027,14 +31049,7 @@
                 }, {
                     alive_ip: d.alive_ip,
                     device_limit: d.device_limit == null ? "∞" : d.device_limit
-                })))), y >= 80 && !Object(p["h"])(d.expired_at) && (null === d || void 0 === d ? void 0 : null === (e = d.plan) || void 0 === e ? void 0 : e.reset_price) && l.a.createElement("div", {
-                    className: "mb-4"
-                }, l.a.createElement(i["a"], {
-                    type: "primary",
-                    onClick: ()=>this.resetPackage()
-                }, Object(b["formatMessage"])({
-                    id: "\u8d2d\u4e70\u6d41\u91cf\u91cd\u7f6e\u5305"
-                }))), d.allow_new_period && y >= 100 && !Object(p["h"])(d.expired_at) ? l.a.createElement("div", {
+                })))), d.allow_new_period && y >= 100 && !Object(p["h"])(d.expired_at) && !onetime ? l.a.createElement("div", {
                     className: "mb-4"
                 }, l.a.createElement(i["a"], {
                     type: "primary",
