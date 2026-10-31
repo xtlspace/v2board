@@ -66,7 +66,7 @@ class AuthController extends Controller
             if (!is_string($inputCode) || !preg_match('/^\d{6}$/', $inputCode)) {
                 abort(500, __('Incorrect email verification code'));
             }
-            $cachedCode = Cache::get(CacheKey::get('EMAIL_VERIFY_CODE', $cacheKeyEmail));
+            $cachedCode = Cache::get(CacheKey::get('EMAIL_VERIFY_CODE', 'register_' . $cacheKeyEmail));
             if ($cachedCode === null || $cachedCode === '' || !hash_equals((string)$cachedCode, $inputCode)) {
                 abort(500, __('Incorrect email verification code'));
             }
@@ -117,7 +117,7 @@ class AuthController extends Controller
             abort(500, __('Register failed'));
         }
         if ((int)config('v2board.email_verify', 0)) {
-            Cache::forget(CacheKey::get('EMAIL_VERIFY_CODE', $cacheKeyEmail));
+            Cache::forget(CacheKey::get('EMAIL_VERIFY_CODE', 'register_' . $cacheKeyEmail));
         }
 
         $user->last_login_at = time();
@@ -250,29 +250,30 @@ class AuthController extends Controller
             abort(500, __('Incorrect email verification code'));
         }
 
-        $cacheKeyEmail         = strtolower(trim($email));
-        $forgetRequestLimitKey = CacheKey::get('FORGET_REQUEST_LIMIT', $cacheKeyEmail);
+        $user = User::where('email', $email)->first();
+
+        $cacheKeyEmail = strtolower(trim($email));
+        // 找回失败次数按账号维度统计，避免通过大小写/重音变体绕过限制
+        $forgetRequestLimitKey = CacheKey::get('FORGET_REQUEST_LIMIT', $user ? 'user_' . $user->id : $cacheKeyEmail);
         $forgetRequestLimit    = (int)Cache::get($forgetRequestLimitKey);
         if ($forgetRequestLimit >= 3) {
             abort(500, __('Reset failed, Please try again later'));
         }
 
-        $cachedCode = Cache::get(CacheKey::get('EMAIL_VERIFY_CODE', $cacheKeyEmail));
-        if ($cachedCode === null || $cachedCode === '' || !hash_equals((string)$cachedCode, $inputCode)) {
+        // 只接受“找回”用途的验证码，注册验证码不能用于改密
+        $codeKey    = $user ? CacheKey::get('EMAIL_VERIFY_CODE', 'recovery_' . $user->id) : null;
+        $cachedCode = $codeKey ? Cache::get($codeKey) : null;
+        if (!$user || $cachedCode === null || $cachedCode === '' || !hash_equals((string)$cachedCode, $inputCode)) {
             Cache::put($forgetRequestLimitKey, $forgetRequestLimit + 1, 300);
             abort(500, __('Incorrect email verification code'));
         }
-        $user = User::where('email', $email)->first();
-        if (!$user) {
-            abort(500, __('This email is not registered in the system'));
-        }
+        Cache::forget($codeKey);
         $user->password      = password_hash($password, PASSWORD_DEFAULT);
         $user->password_algo = null;
         $user->password_salt = null;
         if (!$user->save()) {
             abort(500, __('Reset failed'));
         }
-        Cache::forget(CacheKey::get('EMAIL_VERIFY_CODE', $cacheKeyEmail));
         (new AuthService($user))->removeAllSession();
         return response([
             'data' => true

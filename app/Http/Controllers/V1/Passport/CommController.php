@@ -44,9 +44,10 @@ class CommController extends Controller
             }
         }
         $email = $request->input('email');
-        $cacheKeyEmail = strtolower(trim((string)$email));
-        $isforget = $request->input('isforget');
-        $email_exists = User::where('email', $email)->exists();
+        $cacheKeyEmail = strtolower(trim($email));
+        // 0=注册 1=找回，缺省按注册处理，避免省略参数时绕过存在性检查
+        $mode = (int) $request->input('isforget', 0);
+        $user = User::where('email', $email)->first();
         //检查是否在白名单内
         if ((int)config('v2board.email_whitelist_enable', 0)) {
             if (!Helper::emailSuffixVerify(
@@ -63,13 +64,12 @@ class CommController extends Controller
                 abort(500, __('Gmail alias is not supported'));
             }
         }
-        if (isset($isforget)) {
-            if ($isforget == 0 && $email_exists) {
-                abort(500, __('This email is registered'));
-            } 
-            if ($isforget == 1 && !$email_exists) {
+        if ($mode === 1) {
+            if (!$user) {
                 abort(500, __('This email is not registered in the system'));
             }
+        } else if ($user) {
+            abort(500, __('This email is registered'));
         }
         if (Cache::get(CacheKey::get('LAST_SEND_EMAIL_VERIFY_TIMESTAMP', $cacheKeyEmail))) {
             abort(500, __('Email verification code has been sent, please request again later'));
@@ -77,8 +77,14 @@ class CommController extends Controller
         $code = (string)rand(100000, 999999);
         $subject = config('v2board.app_name', 'V2Board') . __('Email verification code');
 
+        // 找回验证码只投递到账号在数据库中存储的邮箱，绝不使用请求参数里的字符串
+        $recipient = $mode === 1 ? $user->email : $email;
+        $codeKey = $mode === 1
+            ? CacheKey::get('EMAIL_VERIFY_CODE', 'recovery_' . $user->id)
+            : CacheKey::get('EMAIL_VERIFY_CODE', 'register_' . $cacheKeyEmail);
+
         SendEmailJob::dispatch([
-            'email' => $email,
+            'email' => $recipient,
             'subject' => $subject,
             'template_name' => 'verify',
             'template_value' => [
@@ -88,7 +94,7 @@ class CommController extends Controller
             ]
         ]);
 
-        Cache::put(CacheKey::get('EMAIL_VERIFY_CODE', $cacheKeyEmail), $code, 300);
+        Cache::put($codeKey, $code, 300);
         Cache::put(CacheKey::get('LAST_SEND_EMAIL_VERIFY_TIMESTAMP', $cacheKeyEmail), time(), 60);
         return response([
             'data' => true
