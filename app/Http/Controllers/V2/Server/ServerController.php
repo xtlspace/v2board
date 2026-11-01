@@ -68,6 +68,7 @@ class ServerController extends Controller
             'zero_rtt_handshake' => $this->nodeInfo->zero_rtt_handshake ? true : false,
             'up_mbps' => $this->nodeInfo->up_mbps,
             'down_mbps' => $this->nodeInfo->down_mbps,
+            'speed_limit' => (int)$this->nodeInfo->speed_limit,
             'obfs' => $this->nodeInfo->obfs,
             'obfs_password' => $this->nodeInfo->obfs_password,
             'padding_scheme' => $this->nodeInfo->padding_scheme

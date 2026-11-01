@@ -102782,6 +102782,7 @@
                     server: this.props.record || {
                         tls: 0,
                         rate: 1,
+                        speed_limit: 0,
                         network: "tcp",
                         disable_sni: 0,
                         zero_rtt_handshake: 0,
@@ -103014,6 +103015,14 @@
                     value: e.rate,
                     onChange: e=>this.formChange("rate", e.target.value)
                 }))), y.a.createElement("div", {
+                    className: "form-group"
+                },
+                y.a.createElement("label", null, "\u8282\u70b9\u9650\u901f"), y.a.createElement(s["a"], {
+                    addonAfter: "Mbps",
+                    placeholder: "0 \u6216\u7559\u7a7a\u8868\u793a\u4e0d\u9650\u901f",
+                    value: e.speed_limit,
+                    onChange: e=>this.formChange("speed_limit", e.target.value)
+                })), y.a.createElement("div", {
                     className: "form-group"
                 },
                 y.a.createElement("label", null, "\u8282\u70b9\u6807\u7b7e"), y.a.createElement(N["a"], {

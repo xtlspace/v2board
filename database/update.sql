@@ -831,6 +831,7 @@ CREATE TABLE `v2_server_v2node` (
                                     `server_port` int(11) NOT NULL,
                                     `tags` varchar(255) DEFAULT NULL,
                                     `rate` varchar(11) NOT NULL,
+                                    `speed_limit` int(11) NOT NULL DEFAULT '0' COMMENT '节点限速(Mbps)',
                                     `show` tinyint(1) NOT NULL DEFAULT '0',
                                     `sort` int(11) DEFAULT NULL,
                                     `protocol` varchar(24) NOT NULL COMMENT '协议类型',
@@ -905,3 +906,7 @@ CREATE TABLE IF NOT EXISTS `v2_sub_rule` (
 -- user_agent 为 TEXT 类型无法全纳入索引，由索引过滤后仅回表读 user_agent 一列
 ALTER TABLE `v2_sub_log` ADD INDEX `idx_risk` (`user_id`, `created_at`, `ip_city`);
 ALTER TABLE `v2_sub_log` ADD INDEX `idx_user_id` (`user_id`);
+
+-- 节点限速：v2node 下发配置 speed_limit，单位 Mbps，0 表示不限速
+ALTER TABLE `v2_server_v2node`
+ADD `speed_limit` int(11) NOT NULL DEFAULT '0' COMMENT '节点限速(Mbps)' AFTER `rate`;

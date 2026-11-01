@@ -263,6 +263,7 @@ CREATE TABLE `v2_server_v2node` (
                                     `server_port` int(11) NOT NULL,
                                     `tags` varchar(255) DEFAULT NULL,
                                     `rate` varchar(11) NOT NULL,
+                                    `speed_limit` int(11) NOT NULL DEFAULT '0' COMMENT '节点限速(Mbps)',
                                     `show` tinyint(1) NOT NULL DEFAULT '0',
                                     `sort` int(11) DEFAULT NULL,
                                     `protocol` varchar(24) NOT NULL COMMENT '鍗忚绫诲瀷',

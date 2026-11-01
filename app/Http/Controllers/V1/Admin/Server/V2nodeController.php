@@ -41,6 +41,7 @@ class V2nodeController extends Controller
             'padding_scheme' => 'nullable',
             'tags' => 'nullable|array',
             'rate' => 'required',
+            'speed_limit' => 'nullable|integer',
             'show' => 'nullable|in:0,1',
             'sort' => 'nullable'
         ]);
@@ -157,6 +158,9 @@ class V2nodeController extends Controller
         }
         if (!isset($params['down_mbps'])) {
             $params['down_mbps'] = 0;
+        }
+        if (!isset($params['speed_limit'])) {
+            $params['speed_limit'] = 0;
         }
 
         if(isset($params['obfs'])) {
