@@ -21,7 +21,7 @@ class V2nodeController extends Controller
             'listen_ip' => 'nullable',
             'port' => 'required',
             'server_port' => 'required',
-            'protocol' => 'required|in:shadowsocks,vmess,vless,trojan,tuic,hysteria2,anytls',
+            'protocol' => 'required|in:shadowsocks,vless,tuic,hysteria2,anytls',
             'tls' => 'required|in:0,1,2',
             'tls_settings' => 'nullable|array',
             'flow' => 'nullable|in:xtls-rprx-vision',
@@ -48,7 +48,7 @@ class V2nodeController extends Controller
         if ($params['protocol'] == 'anytls' && $params['tls'] === 0) {
             $params['tls'] = 1;
         }
-        if (in_array($params['protocol'], ['hysteria2', 'trojan', 'tuic'])) {
+        if (in_array($params['protocol'], ['hysteria2', 'tuic'])) {
             $params['tls'] = 1;
         }
         if (isset($params['tls']) && (int)$params['tls'] === 2) {

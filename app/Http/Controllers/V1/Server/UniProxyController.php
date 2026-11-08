@@ -28,7 +28,6 @@ class UniProxyController extends Controller
             abort(500, 'token is error');
         }
         $this->nodeType = $request->input('node_type');
-        if ($this->nodeType === 'v2ray') $this->nodeType = 'vmess';
         if ($this->nodeType === 'hysteria2') $this->nodeType = 'hysteria';
         $this->nodeId = $request->input('node_id');
         $this->serverService = new ServerService();
@@ -223,14 +222,6 @@ class UniProxyController extends Controller
                     $response['server_key'] = Helper::getServerKey($this->nodeInfo->created_at, 32);
                 }
                 break;
-            case 'vmess':
-                $response = [
-                    'server_port' => $this->nodeInfo->server_port,
-                    'network' => $this->nodeInfo->network,
-                    'networkSettings' => $this->nodeInfo->networkSettings,
-                    'tls' => $this->nodeInfo->tls
-                ];
-                break;
             case 'vless':
                 $response = [
                     'server_port' => $this->nodeInfo->server_port,
@@ -241,15 +232,6 @@ class UniProxyController extends Controller
                     'tls_settings' => $this->nodeInfo->tls_settings,
                     'encryption' => $this->nodeInfo->encryption,
                     'encryption_settings' => $this->nodeInfo->encryption_settings
-                ];
-                break;
-            case 'trojan':
-                $response = [
-                    'host' => $this->nodeInfo->host,
-                    'network' => $this->nodeInfo->network,
-                    'networkSettings' => $this->nodeInfo->network_settings,
-                    'server_port' => $this->nodeInfo->server_port,
-                    'server_name' => $this->nodeInfo->server_name,
                 ];
                 break;
             case 'tuic':

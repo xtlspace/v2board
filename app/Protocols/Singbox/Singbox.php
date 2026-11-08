@@ -55,14 +55,6 @@ class Singbox
                     $ssConfig = $this->buildShadowsocks($this->user['uuid'], $item);
                     $proxies[] = $ssConfig;
                     break;
-                case 'trojan':
-                    $trojanConfig = $this->buildTrojan($this->user['uuid'], $item);
-                    $proxies[] = $trojanConfig;
-                    break;
-                case 'vmess':
-                    $vmessConfig = $this->buildVmess($this->user['uuid'], $item);
-                    $proxies[] = $vmessConfig;
-                    break;
                 case 'vless':
                     $vlessConfig = $this->buildVless($this->user['uuid'], $item);
                     $proxies[] = $vlessConfig;
@@ -142,63 +134,6 @@ class Singbox
     }
 
 
-    protected function buildVmess($uuid, $server)
-    {
-        $array = [];
-        $array['tag'] = $server['name'];
-        $array['type'] = 'vmess';
-        $array['server'] = $server['host'];
-        $array['server_port'] = $server['port'];
-        $array['uuid'] = $uuid;
-        $array['security'] = 'auto';
-        $array['alter_id'] = 0;
-        $array['transport']= [];
-        $array['domain_resolver'] = 'local';
-
-        if ($server['tls']) {
-            $tlsConfig = [];
-            $tlsConfig['enabled'] = true;
-            $tlsSettings = $server['tls_settings'] ?? $server['tlsSettings'] ?? [];
-            $tlsConfig['insecure'] = ($tlsSettings['allow_insecure'] ?? ($tlsSettings['allowInsecure'] ?? 0)) == 1 ? true : false;
-            $tlsConfig['server_name'] = $tlsSettings['server_name'] ?? $tlsSettings['serverName'] ?? '';
-            if (!empty($tlsSettings['ech'])) {
-                if ($tlsSettings['ech'] === 'cloudflare') {
-                    $tlsConfig['ech'] = [
-                        'enabled' => true,
-                        'query_server_name' => 'cloudflare-ech.com'
-                    ];
-                } elseif ($tlsSettings['ech'] === 'custom' && !empty($tlsSettings['ech_config'])) {
-                    $tlsConfig['ech'] = [
-                        'enabled' => true,
-                        'config' => is_array($tlsSettings['ech_config']) ? $tlsSettings['ech_config'] : [$tlsSettings['ech_config']]
-                    ];
-                }
-            }
-            $array['tls'] = $tlsConfig;
-        }
-        if ($server['network'] === 'tcp') {
-            $tcpSettings = $server['networkSettings'] ?? ($server['network_settings'] ?? []);
-            if (isset($tcpSettings['header']['type']) && $tcpSettings['header']['type'] == 'http') $array['transport']['type'] = $tcpSettings['header']['type'];
-            if (isset($tcpSettings['header']['request']['headers']['Host'])) $array['transport']['host'] = $tcpSettings['header']['request']['headers']['Host'];
-            if (isset($tcpSettings['header']['request']['path'][0])) $array['transport']['path'] = $tcpSettings['header']['request']['path'][0];
-        }
-        if ($server['network'] === 'ws') {
-            $array['transport']['type'] ='ws';
-            $wsSettings = $server['networkSettings'] ?? ($server['network_settings'] ?? []);
-            $array['transport']['path'] = $wsSettings['path'] ?? '/';
-            if (isset($wsSettings['headers']['Host']) && !empty($wsSettings['headers']['Host'])) $array['transport']['headers'] = ['Host' => array($wsSettings['headers']['Host'])];
-            $array['transport']['max_early_data'] = 2048;
-            $array['transport']['early_data_header_name'] = 'Sec-WebSocket-Protocol';
-        }
-        if ($server['network'] === 'grpc') {
-            $array['transport']['type'] ='grpc';
-            $grpcSettings = $server['networkSettings'] ?? ($server['network_settings'] ?? []);
-            if (isset($grpcSettings['serviceName'])) $array['transport']['service_name'] = $grpcSettings['serviceName'];
-        }
-
-        return $array;
-    }
-
     protected function buildVless($password, $server)
     {
         $array = [
@@ -273,59 +208,6 @@ class Singbox
                 if (isset($grpcSettings['serviceName'])) $array['transport']['service_name'] = $grpcSettings['serviceName'];
             }
         }
-
-        return $array;
-    }
-
-    protected function buildTrojan($password, $server) 
-    {
-        $array = [];
-        $array['tag'] = $server['name'];
-        $array['type'] = 'trojan';
-        $array['server'] = $server['host'];
-        $array['server_port'] = $server['port'];
-        $array['password'] = $password;
-        $array['domain_resolver'] = 'local';
-
-        $tlsSettings = $server['tls_settings'] ?? [];
-        $tlsConfig = [
-            'enabled' => true,
-            'insecure' => ($server['allow_insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0)) == 1 ? true : false,
-            'server_name' => $server['server_name'] ?? ($tlsSettings['server_name'] ?? '')
-        ];
-        if (!empty($tlsSettings['ech'])) {
-            if ($tlsSettings['ech'] === 'cloudflare') {
-                $tlsConfig['ech'] = [
-                    'enabled' => true,
-                    'query_server_name' => 'cloudflare-ech.com'
-                ];
-            } elseif ($tlsSettings['ech'] === 'custom' && !empty($tlsSettings['ech_config'])) {
-                $tlsConfig['ech'] = [
-                    'enabled' => true,
-                    'config' => is_array($tlsSettings['ech_config']) ? $tlsSettings['ech_config'] : [$tlsSettings['ech_config']]
-                ];
-            }
-        }
-        $array['tls'] = $tlsConfig;
-
-        if(isset($server['network']) && in_array($server['network'], ["grpc", "ws"])){
-            $array['transport']['type'] = $server['network'];
-            // grpc配置
-            if($server['network'] === "grpc" && isset($server['network_settings']['serviceName'])) {
-                $array['transport']['service_name'] = $server['network_settings']['serviceName'];
-            }
-            // ws配置
-            if($server['network'] === "ws") {
-                if(isset($server['network_settings']['path'])) {
-                    $array['transport']['path'] = $server['network_settings']['path'] ?? '/';
-                }
-                if(isset($server['network_settings']['headers']['Host'])){
-                    $array['transport']['headers'] = ['Host' => array($server['network_settings']['headers']['Host'])];
-                }
-                $array['transport']['max_early_data'] = 2048;
-                $array['transport']['early_data_header_name'] = 'Sec-WebSocket-Protocol';
-            }
-        };
 
         return $array;
     }

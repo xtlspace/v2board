@@ -37,16 +37,6 @@ class Surge
                 $proxies .= self::buildShadowsocks($user['uuid'], $item);
                 // [Proxy Group]
                 $proxyGroup .= $item['name'] . ', ';
-            }elseif ($item['type'] === 'vmess') {
-                // [Proxy]
-                $proxies .= self::buildVmess($user['uuid'], $item);
-                // [Proxy Group]
-                $proxyGroup .= $item['name'] . ', ';
-            }elseif ($item['type'] === 'trojan') {
-                // [Proxy]
-                $proxies .= self::buildTrojan($user['uuid'], $item);
-                // [Proxy Group]
-                $proxyGroup .= $item['name'] . ', ';
             }elseif ($item['type'] === 'tuic') {
                 // [Proxy]
                 $proxies .= self::buildTuic($user['uuid'], $item);
@@ -130,65 +120,6 @@ class Surge
         return $uri;
     }
 
-    // https://manual.nssurge.com/policies/vmess.html
-    public static function buildVmess($uuid, $server)
-    {
-        $config = [
-            "{$server['name']}=vmess",
-            "{$server['host']}",
-            "{$server['port']}",
-            "username={$uuid}",
-            "vmess-aead=true",
-            'tfo=true'
-        ];
-
-        if (!empty($server['tls'])) {
-            $config[] = 'tls=true';
-            self::appendTlsParams($config, $server);
-        }
-        if (($server['network'] ?? null) === 'ws') {
-            $config[] = 'ws=true';
-            $wsSettings = self::getNetworkSettings($server);
-            if (isset($wsSettings['path']) && !empty($wsSettings['path']))
-                $config[] = "ws-path={$wsSettings['path']}";
-            if (isset($wsSettings['headers']['Host']) && !empty($wsSettings['headers']['Host']))
-                $config[] = "ws-headers=Host:{$wsSettings['headers']['Host']}";
-            if (isset($wsSettings['security']) && !empty($wsSettings['security']))
-                $config[] = "encrypt-method={$wsSettings['security']}";
-        }
-
-        $config = array_filter($config);
-        $uri = implode(',', $config);
-        $uri .= "\r\n";
-        return $uri;
-    }
-
-    // https://manual.nssurge.com/policies/trojan.html
-    public static function buildTrojan($password, $server)
-    {
-        $config = [
-            "{$server['name']}=trojan",
-            "{$server['host']}",
-            "{$server['port']}",
-            "password={$password}",
-            'tfo=true'
-        ];
-        self::appendTlsParams($config, $server);
-
-        if (($server['network'] ?? null) === 'ws') {
-            $config[] = 'ws=true';
-            $wsSettings = self::getNetworkSettings($server);
-            if (isset($wsSettings['path']) && !empty($wsSettings['path']))
-                $config[] = "ws-path={$wsSettings['path']}";
-            if (isset($wsSettings['headers']['Host']) && !empty($wsSettings['headers']['Host']))
-                $config[] = "ws-headers=Host:{$wsSettings['headers']['Host']}";
-        }
-        $config = array_filter($config);
-        $uri = implode(',', $config);
-        $uri .= "\r\n";
-        return $uri;
-    }
-
     // https://manual.nssurge.com/policies/tuic.html
     public static function buildTuic($password, $server)
     {
@@ -255,11 +186,6 @@ class Surge
     private static function getTlsSettings($server)
     {
         return $server['tls_settings'] ?? ($server['tlsSettings'] ?? []);
-    }
-
-    private static function getNetworkSettings($server)
-    {
-        return $server['network_settings'] ?? ($server['networkSettings'] ?? []);
     }
 
     private static function firstPort($port)

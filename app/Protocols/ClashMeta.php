@@ -46,16 +46,8 @@ class ClashMeta
                     $proxy[] = self::buildShadowsocks($user['uuid'], $item);
                     $proxies[] = $item['name'];
                     break;
-                case 'vmess':
-                    $proxy[] = self::buildVmess($user['uuid'], $item);
-                    $proxies[] = $item['name'];
-                    break;
                 case 'vless':
                     $proxy[] = self::buildVless($user['uuid'], $item);
-                    $proxies[] = $item['name'];
-                    break;
-                case 'trojan':
-                    $proxy[] = self::buildTrojan($user['uuid'], $item);
                     $proxies[] = $item['name'];
                     break;
                 case 'tuic':
@@ -158,75 +150,6 @@ class ClashMeta
             }
             $array['plugin-opts'] = $plugin_opts;
         }
-        return $array;
-    }
-
-    public static function buildVmess($uuid, $server)
-    {
-        $array = [];
-        $array['name'] = $server['name'];
-        $array['type'] = 'vmess';
-        $array['server'] = $server['host'];
-        $array['port'] = $server['port'];
-        $array['uuid'] = $uuid;
-        $array['alterId'] = 0;
-        $array['cipher'] = 'auto';
-        $array['udp'] = true;
-
-        if (!empty($server['tls'])) {
-            $array['tls'] = true;
-            $tlsSettings = $server['tlsSettings'] ?? ($server['tls_settings'] ?? null);
-            if ($tlsSettings) {
-                if (isset($tlsSettings['allowInsecure']) && !empty($tlsSettings['allowInsecure']))
-                    $array['skip-cert-verify'] = ($tlsSettings['allowInsecure'] ? true : false);
-                if (isset($tlsSettings['serverName']) && !empty($tlsSettings['serverName']))
-                    $array['servername'] = $tlsSettings['serverName'];
-                if (!empty($tlsSettings['ech'])) {
-                    if ($tlsSettings['ech'] === 'cloudflare') {
-                        $array['ech-opts'] = [
-                            'enable' => true,
-                            'query-server-name' => 'cloudflare-ech.com'
-                        ];
-                    } elseif ($tlsSettings['ech'] === 'custom' && !empty($tlsSettings['ech_config'])) {
-                        $array['ech-opts'] = [
-                            'enable' => true,
-                            'config' => is_array($tlsSettings['ech_config']) ? $tlsSettings['ech_config'] : [$tlsSettings['ech_config']]
-                        ];
-                    }
-                }
-            }
-        }
-        $network = $server['network'] ?? null;
-        if ($network === 'tcp') {
-            $tcpSettings = $server['networkSettings'] ?? ($server['network_settings'] ?? []);
-            if (isset($tcpSettings['header']['type']) && $tcpSettings['header']['type'] == 'http') {
-                $array['network'] = $tcpSettings['header']['type'];
-                if (isset($tcpSettings['header']['request']['headers']['Host'])) $array['http-opts']['headers']['Host'] = $tcpSettings['header']['request']['headers']['Host'];
-                if (isset($tcpSettings['header']['request']['path'])) $array['http-opts']['path'] = $tcpSettings['header']['request']['path'];
-            }
-        }
-        if ($network === 'ws') {
-            $array['network'] = 'ws';
-            $wsSettings = $server['networkSettings'] ?? ($server['network_settings'] ?? null);
-            if ($wsSettings) {
-                $array['ws-opts'] = [];
-                if (isset($wsSettings['path']) && !empty($wsSettings['path']))
-                    $array['ws-opts']['path'] = $wsSettings['path'];
-                if (isset($wsSettings['headers']['Host']) && !empty($wsSettings['headers']['Host']))
-                    $array['ws-opts']['headers'] = ['Host' => $wsSettings['headers']['Host']];
-                if (isset($wsSettings['security'])) 
-                    $array['cipher'] = $wsSettings['security'];
-            }
-        }
-        if ($network === 'grpc') {
-            $array['network'] = 'grpc';
-            $grpcSettings = $server['networkSettings'] ?? ($server['network_settings'] ?? null);
-            if ($grpcSettings) {
-                $array['grpc-opts'] = [];
-                if (isset($grpcSettings['serviceName'])) $array['grpc-opts']['grpc-service-name'] = $grpcSettings['serviceName'];
-            }
-        }
-
         return $array;
     }
 
@@ -333,50 +256,6 @@ class ClashMeta
             $array['encryption'] .= '.' . $encryptionSettings['password'] ?? '';
         }
 
-        return $array;
-    }
-
-    public static function buildTrojan($password, $server)
-    {
-        $array = [];
-        $array['name'] = $server['name'];
-        $array['type'] = 'trojan';
-        $array['server'] = $server['host'];
-        $array['port'] = $server['port'];
-        $array['password'] = $password;
-        $array['udp'] = true;
-        if(isset($server['network']) && in_array($server['network'], ["grpc", "ws"])){
-            $array['network'] = $server['network'];
-            // grpc配置
-            if($server['network'] === "grpc" && isset($server['network_settings']['serviceName'])) {
-                $array['grpc-opts']['grpc-service-name'] = $server['network_settings']['serviceName'];
-            }
-            // ws配置
-            if($server['network'] === "ws") {
-                if(isset($server['network_settings']['path'])) {
-                    $array['ws-opts']['path'] = $server['network_settings']['path'];
-                }
-                if(isset($server['network_settings']['headers']['Host'])){
-                    $array['ws-opts']['headers']['Host'] = $server['network_settings']['headers']['Host'];
-                }
-            }
-        };
-        $tlsSettings = $server['tls_settings'] ?? [];
-        $array['sni'] = $server['server_name'] ?? ($tlsSettings['server_name'] ?? '');
-        $array['skip-cert-verify'] = ($server['allow_insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0)) == 1 ? true : false;
-        if (!empty($tlsSettings['ech'])) {
-            if ($tlsSettings['ech'] === 'cloudflare') {
-                $array['ech-opts'] = [
-                    'enable' => true,
-                    'query-server-name' => 'cloudflare-ech.com'
-                ];
-            } elseif ($tlsSettings['ech'] === 'custom' && !empty($tlsSettings['ech_config'])) {
-                $array['ech-opts'] = [
-                    'enable' => true,
-                    'config' => is_array($tlsSettings['ech_config']) ? $tlsSettings['ech_config'] : [$tlsSettings['ech_config']]
-                ];
-            }
-        }
         return $array;
     }
 

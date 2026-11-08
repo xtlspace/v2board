@@ -220,75 +220,6 @@ class Helper
         return $uri."#{$name}\r\n";
     }
 
-    public static function buildVmessUri($uuid, $server)
-    {
-        $config = [
-            "v" => "2",
-            "ps" => $server['name'],
-            "add" => self::formatHost($server['host']),
-            "port" => (string)$server['port'],
-            "id" => $uuid,
-            "aid" => '0',
-            "scy" => 'auto',
-            "net" => $server['network'],
-            "type" => 'none',
-            "host" => '',
-            "path" => '',
-            "tls" => $server['tls'] ? "tls" : "",
-            "fp" => 'chrome',
-        ];
-
-        if ($server['tls']) {
-            $tlsSettings = $server['tls_settings'] ?? $server['tlsSettings'] ?? [];
-            $config['allowInsecure'] = (int)($tlsSettings['allow_insecure'] ?? $tlsSettings['allowInsecure'] ?? 0);
-            $config['sni'] = $tlsSettings['server_name'] ?? $tlsSettings['serverName'] ?? '';
-        }
-        
-        $network = (string)$server['network'];
-        $networkSettings = $server['networkSettings'] ?? ($server['network_settings'] ?? []);
-    
-        switch ($network) {
-            case 'tcp':
-                if (!empty($networkSettings['header']['type']) && $networkSettings['header']['type'] === 'http') {
-                    $config['type'] = $networkSettings['header']['type'];
-                    $config['host'] = $networkSettings['header']['request']['headers']['Host'][0] ?? null;
-                    $config['path'] = $networkSettings['header']['request']['path'][0] ?? null;
-                }
-                break;
-    
-            case 'ws':
-                $config['path'] = $networkSettings['path'] ?? null;
-                $config['host'] = $networkSettings['headers']['Host'] ?? null;
-                isset($networkSettings['security']) && $config['scy'] = $networkSettings['security'];
-                break;
-    
-            case 'grpc':
-                $config['path'] = $networkSettings['serviceName'] ?? null;
-                break;
-
-            case 'kcp':
-                if (isset($networkSettings['seed'])) {
-                    $config['path'] = $networkSettings['seed'];
-                }
-                $config['type'] = $networkSettings['header']['type'] ?? 'none';
-                break;
-
-            case 'httpupgrade':
-                $config['path'] = $networkSettings['path'] ?? null;
-                $config['host'] = $networkSettings['host'] ?? null;
-                break;
-            
-            case 'xhttp':
-                $config['path'] = $networkSettings['path'] ?? null;
-                $config['host'] = $networkSettings['host'] ?? null;
-                $config['mode'] = $networkSettings['mode'] ?? 'auto';
-                $config['extra'] = isset($networkSettings['extra']) ? json_encode($networkSettings['extra'], JSON_UNESCAPED_SLASHES) : null;
-                break;
-        }
-
-        return "vmess://" . base64_encode(json_encode($config)) . "\r\n";
-    }
-
     public static function buildVlessUri($uuid, $server)
     {
         $name = self::encodeURIComponent($server['name']);
@@ -336,40 +267,6 @@ class Helper
         self::configureNetworkSettings($server, $config);
 
         return self::buildUriString('vless', $uuid, $server, $name, $config);
-    }
-
-    public static function buildTrojanUri($password, $server)
-    {
-        $tlsSettings = $server['tls_settings'] ?? [];
-        $config = [
-            'allowInsecure' => $server['allow_insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0),
-            'peer' => $server['server_name'] ?? ($tlsSettings['server_name'] ?? ''),
-            'sni' => $server['server_name'] ?? ($tlsSettings['server_name'] ?? ''),
-            'type'=> $server['network'],
-        ];
-
-        if(isset($server['network']) && in_array($server['network'], ["grpc", "ws"])){
-            if($server['network'] === "grpc" && isset($server['network_settings']['serviceName'])) {
-                $config['serviceName'] = $server['network_settings']['serviceName'];
-            }
-            if($server['network'] === "ws") {
-                if(isset($server['network_settings']['path'])) {
-                    $config['path'] = $server['network_settings']['path'];
-                }
-                if(isset($server['network_settings']['headers']['Host'])) {
-                    $config['host'] = $server['network_settings']['headers']['Host'];
-                }
-            }
-        }
-        if (!empty($tlsSettings['ech'])) {
-            if ($tlsSettings['ech'] === 'cloudflare') {
-                $config['ech'] = 'cloudflare-ech.com+https://doh.pub/dns-query';
-            } elseif ($tlsSettings['ech'] === 'custom' && !empty($tlsSettings['ech_config'])) {
-                $config['ech'] = is_array($tlsSettings['ech_config']) ? $tlsSettings['ech_config'][0] : $tlsSettings['ech_config'];
-            }
-        }
-        $query = http_build_query($config);
-        return "trojan://{$password}@" . self::formatHost($server['host']) . ":{$server['port']}?{$query}#". rawurlencode($server['name']) . "\r\n";
     }
 
     public static function buildHysteriaUri($password, $server)
