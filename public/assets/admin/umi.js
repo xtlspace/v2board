@@ -102887,9 +102887,49 @@
                 })
             }
             getTypeTag(e, t) {
-                return y.a.createElement(g["a"], {
-                    color: "#FF0000"
-                }, t)
+                switch (e) {
+                case "shadowsocks":
+                    return y.a.createElement(g["a"], {
+                        color: "#489851"
+                    }, t);
+                case "vless":
+                    return y.a.createElement(g["a"], {
+                        color: "#4080FF"
+                    }, t);
+                case "hysteria":
+                case "hysteria2":
+                    return y.a.createElement(g["a"], {
+                        color: "#1A1A1A"
+                    }, t);
+                case "tuic":
+                    return y.a.createElement(g["a"], {
+                        color: "#9400D3"
+                    }, t);
+                case "anytls":
+                    return y.a.createElement(g["a"], {
+                        color: "#FF8C00"
+                    }, t);
+                default:
+                    return y.a.createElement(g["a"], {
+                        color: "#FF0000"
+                    }, t)
+                }
+            }
+            getProtocolName(e) {
+                switch (e) {
+                case "shadowsocks":
+                    return "Shadowsocks";
+                case "vless":
+                    return "VLess";
+                case "hysteria2":
+                    return "Hysteria2";
+                case "tuic":
+                    return "Tuic";
+                case "anytls":
+                    return "AnyTLS";
+                default:
+                    return e
+                }
             }
             getDispatchTypeByType(e, t) {
                 return "serverV2node/".concat(t);
@@ -102957,7 +102997,7 @@
                     })),
                     onFilter: (e,t)=>t.type === e.toLowerCase(),
                     render: (e,t)=>{
-                        return y.a.createElement("span", null, this.getTypeTag(t.type, t.parent_id ? e + " => " + t.parent_id : e))
+                        return y.a.createElement("span", null, this.getTypeTag(t.protocol || t.type, t.parent_id ? e + " => " + t.parent_id : e))
                     }
                 }, {
                     title: "\u663e\u9690",
@@ -102989,6 +103029,14 @@
                         return y.a.createElement(y.a.Fragment, null, y.a.createElement(h["a"], {
                             status: D[t.available_status]
                         }), y.a.createElement("span", null, e))
+                    }
+                }, {
+                    title: "\u534f\u8bae",
+                    dataIndex: "protocol",
+                    key: "protocol",
+                    width: 120,
+                    render: (e,t)=>{
+                        return this.getProtocolName(t.protocol || t.type)
                     }
                 }, {
                     title: "\u5730\u5740",
@@ -103120,7 +103168,7 @@
                     dataSource: N ? E.filter(e=>-1 !== JSON.stringify(e).indexOf(N)) : E,
                     renderItem: e=>y.a.createElement(o["a"].Item, {
                         className: "v2board_node_mobile ".concat(e.parent_id ? "child_node" : ""),
-                        actions: [y.a.createElement(y.a.Fragment, null, this.getTypeTag(e.type, e.parent_id ? e.id + " => " + e.parent_id : e.id), y.a.createElement(g["a"], null, y.a.createElement(m["a"], {
+                        actions: [y.a.createElement(y.a.Fragment, null, this.getTypeTag(e.protocol || e.type, e.parent_id ? e.id + " => " + e.parent_id : e.id), y.a.createElement(g["a"], null, y.a.createElement(m["a"], {
                             type: "user"
                         }), " ", e.online || 0), y.a.createElement(g["a"], null, e.rate, " x"))],
                         extra: y.a.createElement(y.a.Fragment, null, y.a.createElement(f["a"], {
@@ -103134,7 +103182,7 @@
                         title: y.a.createElement(y.a.Fragment, null, y.a.createElement(h["a"], {
                             status: D[e.available_status]
                         }), e.name),
-                        description: "".concat(e.host, ":").concat(e.port)
+                        description: "".concat(this.getProtocolName(e.protocol || e.type), " \u00b7 ").concat(e.host, ":").concat(e.port)
                     }))
                 }) : y.a.createElement(x["a"], {
                     onDragEnd: (e,t)=>{
@@ -103178,12 +103226,20 @@
                         key: "id",
                         width: 150,
                         render: (e,t)=>{
-                            return y.a.createElement("span", null, this.getTypeTag(t.type, t.parent_id ? e + " => " + t.parent_id : e))
+                            return y.a.createElement("span", null, this.getTypeTag(t.protocol || t.type, t.parent_id ? e + " => " + t.parent_id : e))
                         }
                     }, {
                         title: "\u8282\u70b9",
                         dataIndex: "name",
                         key: "name"
+                    }, {
+                        title: "\u534f\u8bae",
+                        dataIndex: "protocol",
+                        key: "protocol",
+                        width: 120,
+                        render: (e,t)=>{
+                            return this.getProtocolName(t.protocol || t.type)
+                        }
                     }] : $,
                     pagination: !A && {
                         pageSize: this.state.pageSize,
@@ -103199,7 +103255,7 @@
                         }
                     },
                     scroll: {
-                        x: 1300
+                        x: 1440
                     },
                     rowClassName: e=>e.parent_id ? "child_node" : ""
                 }, y.a.createElement("ul", {
