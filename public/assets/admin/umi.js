@@ -100863,8 +100863,6 @@
                 "{}" !== JSON.stringify(t) && t || (t = {
                     server_name: "",
                     cert_mode: "self",
-                    provider: "",
-                    dns_env: "",
                     reject_unknown_sni: "0",
                     allow_insecure: "0"
                 }),
@@ -100914,27 +100912,8 @@
                 }, "\u81ea\u7b7e\u540d"), y.a.createElement(N["a"].Option, {
                     value: "http"
                 }, "HTTP\u7533\u8bf7"), y.a.createElement(N["a"].Option, {
-                    value: "dns"
-                }, "DNS\u7533\u8bf7"), y.a.createElement(N["a"].Option, {
                     value: "none"
-                }, "\u65e0\u8bc1\u4e66(\u5173\u95edTLS)"))), e.cert_mode == "dns" && cert_apply && y.a.createElement("div", {
-                    className: "form-group"
-                }, y.a.createElement("label", null, "DNS\u89e3\u6790\u63d0\u4f9b\u5546Provider ", y.a.createElement("a", {
-                    target: "_blank",
-                    href: "https://go-acme.github.io/lego/dns/index.html",
-                    rel: "noreferrer"
-                },
-                "\u586b\u5199\u53c2\u8003")), y.a.createElement(s["a"], {
-                    value: e.provider,
-                    onChange: e=>this.change("provider", e.target.value),
-                    placeholder: "\u4e66\u5199\u683c\u5f0fcloudflare"
-                })), e.cert_mode == "dns" && cert_apply && y.a.createElement("div", {
-                    className: "form-group"
-                }, y.a.createElement("label", null, "DNS env"), y.a.createElement(s["a"], {
-                    value: e.dns_env,
-                    onChange: e=>this.change("dns_env", e.target.value),
-                    placeholder: "\u4e66\u5199\u683c\u5f0fCF_DNS_API_TOKEN=xxxxxxx\u5982\u6709\u591a\u6761\u4f7f\u7528\u9017\u53f7\u002c\u5206\u9694"
-                })), tls == 1 && e.cert_mode != "none" && cert_apply && y.a.createElement("div", {
+                }, "\u65e0\u8bc1\u4e66(\u5173\u95edTLS)"))), tls == 1 && e.cert_mode != "none" && cert_apply && y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "\u8bc1\u4e66\u516c\u94a5\u6587\u4ef6\u5730\u5740Cert File Path"), y.a.createElement(s["a"], {
                     value: e.cert_file,
