@@ -59,10 +59,7 @@
     "outbounds": [
         {
             "tag": "DIRECT",
-            "type": "direct",
-            "domain_resolver": {
-                "server": "local"
-            }
+            "type": "direct"
         },
         {
             "tag": "节点选择",
