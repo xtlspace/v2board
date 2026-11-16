@@ -533,6 +533,37 @@ function shortProvinceName(name) {
     return name.replace(/(省|市)$/, '');
 }
 
+function polygonBBoxArea(polygon) {
+    var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    (function walk(coords) {
+        if (typeof coords[0] === 'number') {
+            var x = coords[0], y = coords[1];
+            if (x < minX) minX = x;
+            if (y < minY) minY = y;
+            if (x > maxX) maxX = x;
+            if (y > maxY) maxY = y;
+            return;
+        }
+        for (var i = 0; i < coords.length; i++) walk(coords[i]);
+    })(polygon);
+    return Math.max(0, maxX - minX) * Math.max(0, maxY - minY);
+}
+
+// 海南要素包含 133 个多边形（含南海岛礁），只保留面积最大的主岛
+function keepMainIsland(feature) {
+    var geometry = feature.geometry;
+    if (!geometry || geometry.type !== 'MultiPolygon' || !geometry.coordinates || !geometry.coordinates.length) return;
+    var best = 0, bestArea = -1;
+    for (var i = 0; i < geometry.coordinates.length; i++) {
+        var area = polygonBBoxArea(geometry.coordinates[i]);
+        if (area > bestArea) {
+            bestArea = area;
+            best = i;
+        }
+    }
+    geometry.coordinates = [geometry.coordinates[best]];
+}
+
 function ensureChinaMap() {
     if (chinaMapPromise) return chinaMapPromise;
     if (typeof echarts === 'undefined') {
@@ -553,9 +584,13 @@ function ensureChinaMap() {
                     return false;
                 }
                 feature.properties.name = name;
+                if (name === '海南') {
+                    keepMainIsland(feature);
+                }
                 return true;
             });
-            echarts.registerMap('china', geo);
+            // 不使用 'china' 作为地图名，避免 ECharts 自动注入内置的“南海诸岛”小图
+            echarts.registerMap('china-mainland', geo);
             return geo;
         })
         .catch(function(error) {
@@ -615,7 +650,7 @@ function renderChinaMap(rank) {
         series: [{
             name: '用户分布',
             type: 'map',
-            map: 'china',
+            map: 'china-mainland',
             roam: false,
             layoutCenter: ['50%', '50%'],
             layoutSize: '110%',
