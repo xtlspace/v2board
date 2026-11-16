@@ -63,7 +63,7 @@ class UserDistributionService
         }
 
         foreach (array_chunk($rows, 500) as $chunk) {
-            DB::table('alive_ip_history')->upsert(
+            DB::table('v2_alive_ip_history')->upsert(
                 $chunk,
                 ['user_id', 'ip'],
                 ['country', 'province', 'city', 'isp', 'provider', 'last_seen_at', 'updated_at']

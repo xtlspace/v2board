@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class AliveIpHistory extends Model
 {
-    protected $table = 'alive_ip_history';
+    protected $table = 'v2_alive_ip_history';
     protected $guarded = ['id'];
     protected $dateFormat = 'U';
     protected $casts = [

@@ -366,8 +366,8 @@ CREATE TABLE `v2_sub_log` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
-DROP TABLE IF EXISTS `alive_ip_history`;
-CREATE TABLE `alive_ip_history` (
+DROP TABLE IF EXISTS `v2_alive_ip_history`;
+CREATE TABLE `v2_alive_ip_history` (
                             `id` int(11) NOT NULL AUTO_INCREMENT,
                             `user_id` int(11) NOT NULL,
                             `ip` varchar(64) NOT NULL,

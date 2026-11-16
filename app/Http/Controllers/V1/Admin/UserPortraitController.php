@@ -201,7 +201,7 @@ class UserPortraitController extends Controller
         $data = Cache::remember($cacheKey, 60, function () use ($range, $seconds) {
             $since = time() - $seconds;
             $query = function () use ($since) {
-                return DB::table('alive_ip_history')
+                return DB::table('v2_alive_ip_history')
                     ->where('last_seen_at', '>=', $since)
                     ->whereNotNull('province')
                     ->where('province', '!=', '');
