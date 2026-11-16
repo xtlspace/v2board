@@ -41,21 +41,45 @@ class UserPortraitController extends Controller
 
     public function getFilterOptions(Request $request)
     {
-        $countries = SubLog::whereNotNull('ip_country')
-            ->where('ip_country', '!=', '')
-            ->distinct()->orderBy('ip_country')->pluck('ip_country');
-        $regions = SubLog::whereNotNull('ip_region')
+        $mainlandRegions = SubLog::where('ip_country', '中国')
+            ->whereNotNull('ip_region')
             ->where('ip_region', '!=', '')
+            ->whereNotIn('ip_region', ['香港', '澳门', '台湾'])
             ->distinct()->orderBy('ip_region')->pluck('ip_region');
-        $isps = SubLog::whereNotNull('ip_isp')
-            ->where('ip_isp', '!=', '')
-            ->distinct()->orderBy('ip_isp')->pluck('ip_isp');
+
+        $otherRegions = [];
+        $otherCountries = SubLog::whereNotNull('ip_country')
+            ->where('ip_country', '!=', '')
+            ->where('ip_country', '!=', '中国')
+            ->distinct()->orderBy('ip_country')->pluck('ip_country');
+        foreach ($otherCountries as $country) {
+            $otherRegions[] = [
+                'value' => 'country:' . $country,
+                'label' => $country,
+            ];
+        }
+
+        $specialRegions = SubLog::where('ip_country', '中国')
+            ->whereIn('ip_region', ['香港', '澳门', '台湾'])
+            ->distinct()->pluck('ip_region')->all();
+        $specialLabels = [
+            '香港' => '中国香港',
+            '澳门' => '中国澳门',
+            '台湾' => '中国台湾',
+        ];
+        foreach (['香港', '澳门', '台湾'] as $region) {
+            if (in_array($region, $specialRegions, true)) {
+                $otherRegions[] = [
+                    'value' => 'region:' . $region,
+                    'label' => $specialLabels[$region],
+                ];
+            }
+        }
 
         return response([
             'data' => [
-                'countries' => $countries,
-                'regions' => $regions,
-                'isps' => $isps,
+                'mainland_regions' => $mainlandRegions,
+                'other_regions' => $otherRegions,
             ]
         ]);
     }
@@ -320,17 +344,52 @@ class UserPortraitController extends Controller
         if ($request->filled('ip')) {
             $builder->where('ip', 'like', '%' . $request->input('ip') . '%');
         }
-        if ($request->filled('ip_country')) {
-            $builder->where('ip_country', $request->input('ip_country'));
-        }
-        if ($request->filled('ip_region')) {
-            $builder->where('ip_region', $request->input('ip_region'));
+        $countryGroup = $request->input('country_group');
+        $countryGroup = is_string($countryGroup) ? $countryGroup : null;
+        $area = $request->input('area', '');
+        $area = is_string($area) ? $area : '';
+        if ($countryGroup === 'mainland') {
+            $builder->where('ip_country', '中国')
+                ->whereNotNull('ip_region')
+                ->where('ip_region', '!=', '')
+                ->whereNotIn('ip_region', ['香港', '澳门', '台湾']);
+            if ($area !== '') {
+                $builder->where('ip_region', $area);
+            }
+        } elseif ($countryGroup === 'other') {
+            $builder->where(function ($query) {
+                $query->where(function ($q) {
+                    $q->whereNotNull('ip_country')
+                        ->where('ip_country', '!=', '')
+                        ->where('ip_country', '!=', '中国');
+                })->orWhere(function ($q) {
+                    $q->where('ip_country', '中国')
+                        ->whereIn('ip_region', ['香港', '澳门', '台湾']);
+                });
+            });
+            if ($area !== '') {
+                if (str_starts_with($area, 'region:')) {
+                    $builder->where('ip_country', '中国')
+                        ->where('ip_region', substr($area, 7));
+                } else {
+                    $country = str_starts_with($area, 'country:') ? substr($area, 8) : $area;
+                    $builder->where('ip_country', $country);
+                }
+            }
+        } else {
+            // 兼容旧 URL 中的 ip_country / ip_region 参数
+            if ($request->filled('ip_country')) {
+                $builder->where('ip_country', $request->input('ip_country'));
+            }
+            if ($request->filled('ip_region')) {
+                $builder->where('ip_region', $request->input('ip_region'));
+            }
         }
         if ($request->filled('ip_city')) {
             $builder->where('ip_city', 'like', '%' . $request->input('ip_city') . '%');
         }
         if ($request->filled('ip_isp')) {
-            $builder->where('ip_isp', $request->input('ip_isp'));
+            $builder->where('ip_isp', 'like', '%' . $request->input('ip_isp') . '%');
         }
     }
 }

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no">
     <title>{{$title}} - 用户画像</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.1/echarts.min.js"></script>
+    <script src="/assets/admin/vendor/echarts.min.js?v={{$version}}"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f0f2f5; color: #333; }
@@ -191,11 +191,17 @@
                     </div>
                     <div class="filter-group">
                         <label>国家</label>
-                        <select id="filterCountry"><option value="">全部</option></select>
+                        <select id="filterCountry">
+                            <option value="">全部</option>
+                            <option value="mainland">中国大陆</option>
+                            <option value="other">其他</option>
+                        </select>
                     </div>
                     <div class="filter-group">
-                        <label>省份</label>
-                        <select id="filterRegion"><option value="">全部</option></select>
+                        <label>地区</label>
+                        <select id="filterRegion" disabled>
+                            <option value="">请先选择国家</option>
+                        </select>
                     </div>
                     <div class="filter-group">
                         <label>城市</label>
@@ -203,7 +209,7 @@
                     </div>
                     <div class="filter-group">
                         <label>运营商</label>
-                        <select id="filterIsp"><option value="">全部</option></select>
+                        <input type="text" id="filterIsp" placeholder="输入运营商关键字，如 电信 / 联通 / 移动">
                     </div>
                     <div class="filter-group" style="padding-bottom:1px">
                         <label>&nbsp;</label>
@@ -223,7 +229,7 @@
                                 <th class="col-user sortable" data-sort="user_id">User <i class="fas fa-sort"></i></th>
                                 <th class="col-ip sortable" data-sort="ip">IP <i class="fas fa-sort"></i></th>
                                 <th class="sortable" data-sort="ip_country">国家 <i class="fas fa-sort"></i></th>
-                                <th class="sortable" data-sort="ip_region">省份 <i class="fas fa-sort"></i></th>
+                                <th class="sortable" data-sort="ip_region">地区 <i class="fas fa-sort"></i></th>
                                 <th class="sortable" data-sort="ip_city">城市 <i class="fas fa-sort"></i></th>
                                 <th class="sortable" data-sort="ip_isp">运营商 <i class="fas fa-sort"></i></th>
                                 <th class="sortable" data-sort="user_agent">User-Agent <i class="fas fa-sort"></i></th>
@@ -734,8 +740,8 @@ var filterControlMap = {
     user_id: 'filterUserId',
     user_agent: 'filterUserAgent',
     ip: 'filterIp',
-    ip_country: 'filterCountry',
-    ip_region: 'filterRegion',
+    country_group: 'filterCountry',
+    area: 'filterRegion',
     ip_city: 'filterCity',
     ip_isp: 'filterIsp',
     date_range: 'filterDateRange'
@@ -744,13 +750,16 @@ var filterLabels = {
     user_id: 'User ID',
     user_agent: 'UA',
     ip: 'IP',
-    ip_country: '国家',
-    ip_region: '省份',
+    country_group: '国家',
+    area: '地区',
     ip_city: '城市',
     ip_isp: '运营商',
     date_range: '时间'
 };
 var dateRangeLabels = { today: '今天', '7d': '近7天', '30d': '近30天' };
+var countryGroupLabels = { mainland: '中国大陆', other: '其他' };
+var filterOptionsData = { mainland_regions: [], other_regions: [] };
+var areaLabelMap = {};
 
 function escapeHtml(value) {
     return String(value == null ? '' : value).replace(/[&<>"']/g, function(ch) {
@@ -773,13 +782,43 @@ function syncUrlFromState() {
 
 function restoreStateFromUrl() {
     var params = new URLSearchParams(window.location.search);
-    Object.keys(filterControlMap).forEach(function(key) {
+    ['user_id', 'user_agent', 'ip', 'ip_city', 'ip_isp', 'date_range'].forEach(function(key) {
         var value = params.get(key);
         if (value) {
             var control = document.getElementById(filterControlMap[key]);
             if (control) control.value = value;
         }
     });
+
+    var countryGroup = params.get('country_group') || '';
+    var area = params.get('area') || '';
+    if (!countryGroup) {
+        var oldCountry = params.get('ip_country') || '';
+        var oldRegion = params.get('ip_region') || '';
+        if (oldCountry === '中国') {
+            if (['香港', '澳门', '台湾'].indexOf(oldRegion) !== -1) {
+                countryGroup = 'other';
+                area = 'region:' + oldRegion;
+            } else {
+                countryGroup = 'mainland';
+                area = oldRegion;
+            }
+        } else if (oldCountry) {
+            countryGroup = 'other';
+            area = 'country:' + oldCountry;
+        } else if (oldRegion) {
+            if (['香港', '澳门', '台湾'].indexOf(oldRegion) !== -1) {
+                countryGroup = 'other';
+                area = 'region:' + oldRegion;
+            } else {
+                countryGroup = 'mainland';
+                area = oldRegion;
+            }
+        }
+    }
+    document.getElementById('filterCountry').value = countryGroup;
+    populateRegionOptions(area);
+
     var current = parseInt(params.get('current'), 10);
     if (current > 0) state.current = current;
     var pageSize = parseInt(params.get('pageSize'), 10);
@@ -810,7 +849,13 @@ function renderFilterChips() {
     var html = '';
     keys.forEach(function(key) {
         var value = filters[key];
-        if (key === 'date_range') value = dateRangeLabels[value] || value;
+        if (key === 'date_range') {
+            value = dateRangeLabels[value] || value;
+        } else if (key === 'country_group') {
+            value = countryGroupLabels[value] || value;
+        } else if (key === 'area') {
+            value = areaLabelMap[value] || value.replace(/^(country|region):/, '');
+        }
         html += '<span class="filter-chip">'
             + escapeHtml((filterLabels[key] || key) + ': ' + value)
             + '<span class="remove" data-key="' + escapeHtml(key) + '">&times;</span>'
@@ -838,34 +883,57 @@ function truncate(str, len) {
     return str.length > len ? str.substring(0, len) + '...' : str;
 }
 
+function populateRegionOptions(preserveValue) {
+    var country = document.getElementById('filterCountry').value;
+    var regionSel = document.getElementById('filterRegion');
+    var previous = preserveValue !== undefined ? preserveValue : regionSel.value;
+    while (regionSel.options.length) {
+        regionSel.remove(0);
+    }
+    if (!country) {
+        regionSel.disabled = true;
+        regionSel.add(new Option('请先选择国家', ''));
+        return;
+    }
+    regionSel.disabled = false;
+    regionSel.add(new Option('全部', ''));
+    var list = country === 'mainland' ? filterOptionsData.mainland_regions : filterOptionsData.other_regions;
+    list.forEach(function(item) {
+        if (typeof item === 'string') {
+            regionSel.add(new Option(item, item));
+        } else {
+            regionSel.add(new Option(item.label, item.value));
+        }
+    });
+    if (previous) {
+        var exists = Array.prototype.some.call(regionSel.options, function(option) {
+            return option.value === previous;
+        });
+        if (!exists) {
+            var label = areaLabelMap[previous] || previous.replace(/^(country|region):/, '');
+            regionSel.add(new Option(label, previous));
+        }
+        regionSel.value = previous;
+    }
+}
+
 function loadFilterOptions() {
     return apiFetch(apiBase + '/user_portrait/getFilterOptions')
         .then(function(r) { return r.json(); })
         .then(function(res) {
             if (!res.data) return;
-            var countrySel = document.getElementById('filterCountry');
-            var regionSel = document.getElementById('filterRegion');
-            var ispSel = document.getElementById('filterIsp');
-            [countrySel, regionSel, ispSel].forEach(function(select) {
-                while (select.options.length > 1) {
-                    select.remove(1);
-                }
+            filterOptionsData = {
+                mainland_regions: res.data.mainland_regions || [],
+                other_regions: res.data.other_regions || []
+            };
+            areaLabelMap = {};
+            filterOptionsData.mainland_regions.forEach(function(region) {
+                areaLabelMap[region] = region;
             });
-            res.data.countries.forEach(function(c) {
-                var opt = document.createElement('option');
-                opt.value = c; opt.textContent = c;
-                countrySel.appendChild(opt);
+            filterOptionsData.other_regions.forEach(function(item) {
+                areaLabelMap[item.value] = item.label;
             });
-            res.data.regions.forEach(function(r) {
-                var opt = document.createElement('option');
-                opt.value = r; opt.textContent = r;
-                regionSel.appendChild(opt);
-            });
-            res.data.isps.forEach(function(i) {
-                var opt = document.createElement('option');
-                opt.value = i; opt.textContent = i;
-                ispSel.appendChild(opt);
-            });
+            populateRegionOptions();
         }).catch(function() {});
 }
 
@@ -879,13 +947,13 @@ function buildFilters() {
     if (ua) f.user_agent = ua;
     var ip = document.getElementById('filterIp').value.trim();
     if (ip) f.ip = ip;
-    var country = document.getElementById('filterCountry').value;
-    if (country) f.ip_country = country;
-    var region = document.getElementById('filterRegion').value;
-    if (region) f.ip_region = region;
+    var countryGroup = document.getElementById('filterCountry').value;
+    if (countryGroup) f.country_group = countryGroup;
+    var area = document.getElementById('filterRegion').value;
+    if (countryGroup && area) f.area = area;
     var city = document.getElementById('filterCity').value.trim();
     if (city) f.ip_city = city;
-    var isp = document.getElementById('filterIsp').value;
+    var isp = document.getElementById('filterIsp').value.trim();
     if (isp) f.ip_isp = isp;
     return f;
 }
@@ -945,8 +1013,8 @@ function renderLogTable(data) {
             + '<td class="col-id">' + escapeHtml(row.id) + '</td>'
             + '<td class="col-user"><a href="javascript:void(0)" onclick="filterByUser(' + parseInt(row.user_id, 10) + ')" style="color:#1890ff">' + escapeHtml(row.user_id) + '</a></td>'
             + '<td class="col-ip">' + (ip ? '<a href="javascript:void(0)" class="quick-filter" data-filter="ip" data-value="' + escapeHtml(ip) + '">' + escapeHtml(ip) + '</a>' : '-') + '</td>'
-            + '<td>' + (row.ip_country ? '<a href="javascript:void(0)" class="quick-filter badge badge-country" data-filter="ip_country" data-value="' + escapeHtml(row.ip_country) + '">' + escapeHtml(row.ip_country) + '</a>' : '<span class="text-muted">-</span>') + '</td>'
-            + '<td>' + (region ? '<a href="javascript:void(0)" class="quick-filter" data-filter="ip_region" data-value="' + escapeHtml(region) + '">' + escapeHtml(region) + '</a>' : '-') + '</td>'
+            + '<td>' + (row.ip_country ? '<a href="javascript:void(0)" class="quick-filter badge badge-country" data-filter="country" data-country="' + escapeHtml(row.ip_country) + '" data-region="' + escapeHtml(region) + '">' + escapeHtml(row.ip_country) + '</a>' : '<span class="text-muted">-</span>') + '</td>'
+            + '<td>' + (region ? '<a href="javascript:void(0)" class="quick-filter" data-filter="region" data-country="' + escapeHtml(row.ip_country || '') + '" data-region="' + escapeHtml(region) + '">' + escapeHtml(region) + '</a>' : '-') + '</td>'
             + '<td>' + (city ? '<a href="javascript:void(0)" class="quick-filter" data-filter="ip_city" data-value="' + escapeHtml(city) + '">' + escapeHtml(city) + '</a>' : '-') + '</td>'
             + '<td>' + (row.ip_isp ? '<a href="javascript:void(0)" class="quick-filter badge badge-isp" data-filter="ip_isp" data-value="' + escapeHtml(row.ip_isp) + '">' + escapeHtml(row.ip_isp) + '</a>' : '<span class="text-muted">-</span>') + '</td>'
             + '<td class="user-agent-cell" title="' + escapeHtml(ua) + '">' + (ua ? '<a href="javascript:void(0)" class="quick-filter" data-filter="user_agent" data-value="' + escapeHtml(ua) + '">' + escapeHtml(truncate(ua, 40)) + '</a>' : '-') + '</td>'
@@ -996,6 +1064,31 @@ function quickFilter(key, value) {
     loadLogData();
 }
 
+function quickLocationFilter(country, region, isCountry) {
+    var countryGroup = '';
+    var area = '';
+    if (country === '中国') {
+        if (['香港', '澳门', '台湾'].indexOf(region) !== -1) {
+            countryGroup = 'other';
+            area = 'region:' + region;
+        } else {
+            countryGroup = 'mainland';
+            area = isCountry ? '' : region;
+        }
+    } else if (country) {
+        countryGroup = 'other';
+        area = 'country:' + country;
+    }
+    if (!countryGroup) return;
+
+    document.getElementById('filterCountry').value = countryGroup;
+    populateRegionOptions(area);
+    state.current = 1;
+    state.filters = buildFilters();
+    renderFilterChips();
+    loadLogData();
+}
+
 function resetFilters() {
     clearTimeout(filterDebounceTimer);
     document.getElementById('filterDateRange').value = '';
@@ -1003,7 +1096,7 @@ function resetFilters() {
     document.getElementById('filterUserAgent').value = '';
     document.getElementById('filterIp').value = '';
     document.getElementById('filterCountry').value = '';
-    document.getElementById('filterRegion').value = '';
+    populateRegionOptions('');
     document.getElementById('filterCity').value = '';
     document.getElementById('filterIsp').value = '';
     state.current = 1;
@@ -1236,7 +1329,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('searchBtn').addEventListener('click', searchLogs);
     document.getElementById('resetBtn').addEventListener('click', resetFilters);
 
-    ['filterUserId', 'filterUserAgent', 'filterIp', 'filterCity'].forEach(function(id) {
+    ['filterUserId', 'filterUserAgent', 'filterIp', 'filterCity', 'filterIsp'].forEach(function(id) {
         var input = document.getElementById(id);
         input.addEventListener('input', scheduleLogSearch);
         input.addEventListener('keydown', function(e) {
@@ -1246,8 +1339,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-    ['filterDateRange', 'filterCountry', 'filterRegion', 'filterIsp'].forEach(function(id) {
+    ['filterDateRange', 'filterRegion', 'filterIsp'].forEach(function(id) {
         document.getElementById(id).addEventListener('change', searchLogs);
+    });
+    document.getElementById('filterCountry').addEventListener('change', function() {
+        populateRegionOptions('');
+        searchLogs();
     });
 
     document.getElementById('filterChips').addEventListener('click', function(e) {
@@ -1258,7 +1355,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.target.classList.contains('remove')) {
             var key = e.target.getAttribute('data-key');
             var controlId = filterControlMap[key];
-            if (controlId) {
+            if (key === 'country_group') {
+                document.getElementById(controlId).value = '';
+                populateRegionOptions('');
+            } else if (controlId) {
                 document.getElementById(controlId).value = '';
             }
             searchLogs();
@@ -1269,7 +1369,16 @@ document.addEventListener('DOMContentLoaded', function() {
         var link = e.target.closest('.quick-filter');
         if (!link) return;
         e.preventDefault();
-        quickFilter(link.getAttribute('data-filter'), link.getAttribute('data-value'));
+        var filter = link.getAttribute('data-filter');
+        if (filter === 'country' || filter === 'region') {
+            quickLocationFilter(
+                link.getAttribute('data-country') || '',
+                link.getAttribute('data-region') || '',
+                filter === 'country'
+            );
+        } else {
+            quickFilter(filter, link.getAttribute('data-value'));
+        }
     });
 
     document.getElementById('prevPage').addEventListener('click', function() {
