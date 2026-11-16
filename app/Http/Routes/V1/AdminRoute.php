@@ -114,15 +114,16 @@ class AdminRoute
             $router->get ('/theme/getThemes', 'V1\\Admin\\ThemeController@getThemes');
             $router->post('/theme/saveThemeConfig', 'V1\\Admin\\ThemeController@saveThemeConfig');
             $router->post('/theme/getThemeConfig', 'V1\\Admin\\ThemeController@getThemeConfig');
-            // Sub Log
-            $router->get ('/sub_log/fetch', 'V1\\Admin\\SubLogController@fetch');
-            $router->get ('/sub_log/getFilterOptions', 'V1\\Admin\\SubLogController@getFilterOptions');
-            $router->get ('/sub_log/getServers', 'V1\\Admin\\SubLogController@getServers');
-            $router->get ('/sub_log/getRules', 'V1\\Admin\\SubLogController@getRules');
-            $router->post('/sub_log/saveRule', 'V1\\Admin\\SubLogController@saveRule');
-            $router->post('/sub_log/dropRule', 'V1\\Admin\\SubLogController@dropRule');
-            $router->post('/sub_log/clearLogs', 'V1\\Admin\\SubLogController@clearLogs');
-            $router->get ('/sub_log/riskCheck', 'V1\\Admin\\SubLogController@riskCheck');
+            // User Portrait
+            $router->get ('/user_portrait/fetch', 'V1\\Admin\\UserPortraitController@fetch');
+            $router->get ('/user_portrait/getFilterOptions', 'V1\\Admin\\UserPortraitController@getFilterOptions');
+            $router->get ('/user_portrait/getRules', 'V1\\Admin\\UserPortraitController@getRules');
+            $router->post('/user_portrait/saveRule', 'V1\\Admin\\UserPortraitController@saveRule');
+            $router->post('/user_portrait/dropRule', 'V1\\Admin\\UserPortraitController@dropRule');
+            $router->post('/user_portrait/clearLogs', 'V1\\Admin\\UserPortraitController@clearLogs');
+            $router->get ('/user_portrait/riskCheck', 'V1\\Admin\\UserPortraitController@riskCheck');
+            $router->get ('/user_portrait/distribution', 'V1\\Admin\\UserPortraitController@distribution');
+            $router->post('/user_portrait/distributionClear', 'V1\\Admin\\UserPortraitController@distributionClear');
         });
     }
 }

@@ -3,27 +3,38 @@
 namespace App\Http\Controllers\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AliveIpHistory;
 use App\Models\SubLog;
 use App\Models\SubRule;
-use App\Models\ServerV2node;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
-class SubLogController extends Controller
+class UserPortraitController extends Controller
 {
     public function fetch(Request $request)
     {
-        $current = $request->input('current') ?: 1;
-        $pageSize = $request->input('pageSize') >= 10 ? $request->input('pageSize') : 10;
+        $current = max(1, (int) $request->input('current', 1));
+        $pageSize = (int) $request->input('pageSize', 10);
+        if ($pageSize < 10) {
+            $pageSize = 10;
+        }
+        if ($pageSize > 100) {
+            $pageSize = 100;
+        }
         $sortType = in_array($request->input('sort_type'), ['ASC', 'DESC']) ? $request->input('sort_type') : 'DESC';
-        $sort = $request->input('sort') ?: 'id';
+        $sortWhitelist = [
+            'id', 'user_id', 'ip', 'ip_country', 'ip_region', 'ip_city',
+            'ip_isp', 'user_agent', 'created_at',
+        ];
+        $sort = in_array($request->input('sort'), $sortWhitelist, true) ? $request->input('sort') : 'created_at';
 
         $builder = SubLog::orderBy($sort, $sortType);
 
         $this->applyFilters($request, $builder);
 
         $total = $builder->count();
-        $res = $builder->forPage((int)$current, (int)$pageSize)->get();
+        $res = $builder->forPage($current, $pageSize)->get();
 
         return response(['data' => $res, 'total' => $total]);
     }
@@ -47,23 +58,6 @@ class SubLogController extends Controller
                 'isps' => $isps,
             ]
         ]);
-    }
-
-    public function getServers(Request $request)
-    {
-        $servers = [];
-        $rows = ServerV2node::where('show', 1)->orderBy('sort')->get(['id', 'name', 'host', 'port', 'group_id']);
-        foreach ($rows as $row) {
-            $servers[] = [
-                'type' => 'v2node',
-                'id' => $row->id,
-                'name' => $row->name,
-                'host' => $row->host,
-                'port' => $row->port,
-                'group_id' => $row->group_id,
-            ];
-        }
-        return response(['data' => $servers]);
     }
 
     public function getRules(Request $request)
@@ -165,8 +159,146 @@ class SubLogController extends Controller
         return response($result);
     }
 
+    public function distribution(Request $request)
+    {
+        $rangeMap = [
+            '1h' => 3600,
+            '1d' => 86400,
+            '7d' => 604800,
+            '30d' => 2592000,
+        ];
+        $range = $request->input('range', '1h');
+        if (!isset($rangeMap[$range])) {
+            $range = '1h';
+        }
+        $seconds = $rangeMap[$range];
+        $cacheKey = 'user_portrait_distribution|' . $range;
+
+        $data = Cache::remember($cacheKey, 60, function () use ($range, $seconds) {
+            $since = time() - $seconds;
+            $query = function () use ($since) {
+                return DB::table('alive_ip_history')
+                    ->where('last_seen_at', '>=', $since)
+                    ->whereNotNull('province')
+                    ->where('province', '!=', '');
+            };
+
+            $totalRow = $query()
+                ->selectRaw('COUNT(DISTINCT user_id) as total')
+                ->first();
+            $total = (int) ($totalRow->total ?? 0);
+
+            $provinceRows = $query()
+                ->select('province')
+                ->selectRaw('COUNT(DISTINCT user_id) as total')
+                ->groupBy('province')
+                ->get();
+
+            $provinceProviderRows = $query()
+                ->select('province', 'provider')
+                ->selectRaw('COUNT(DISTINCT user_id) as total')
+                ->groupBy('province', 'provider')
+                ->get();
+
+            $providerRows = $query()
+                ->select('provider')
+                ->selectRaw('COUNT(DISTINCT user_id) as total')
+                ->groupBy('provider')
+                ->get();
+
+            $providers = [
+                'telecom' => 0,
+                'unicom' => 0,
+                'mobile' => 0,
+                'other' => 0,
+            ];
+            foreach ($providerRows as $row) {
+                $provider = $row->provider ?: 'other';
+                if (!array_key_exists($provider, $providers)) {
+                    $providers[$provider] = 0;
+                }
+                $providers[$provider] = (int) $row->total;
+            }
+
+            $regions = [];
+            foreach ($provinceRows as $row) {
+                $regions[$row->province] = [
+                    'name' => $row->province,
+                    'total' => (int) $row->total,
+                    'telecom' => 0,
+                    'unicom' => 0,
+                    'mobile' => 0,
+                    'other' => 0,
+                ];
+            }
+            foreach ($provinceProviderRows as $row) {
+                $province = $row->province;
+                if (!isset($regions[$province])) {
+                    $regions[$province] = [
+                        'name' => $province,
+                        'total' => 0,
+                        'telecom' => 0,
+                        'unicom' => 0,
+                        'mobile' => 0,
+                        'other' => 0,
+                    ];
+                }
+                $provider = $row->provider ?: 'other';
+                if (!array_key_exists($provider, $regions[$province])) {
+                    $regions[$province][$provider] = 0;
+                }
+                $regions[$province][$provider] = (int) $row->total;
+            }
+
+            $regions = array_values($regions);
+            usort($regions, function ($a, $b) {
+                return $b['total'] <=> $a['total'];
+            });
+
+            return [
+                'range' => $range,
+                'total' => $total,
+                'providers' => $providers,
+                'regions' => $regions,
+            ];
+        });
+
+        return response(['data' => $data]);
+    }
+
+    public function distributionClear(Request $request)
+    {
+        $days = (int) $request->input('days', 30);
+        if ($days < 1) {
+            $days = 30;
+        }
+        if ($days > 3650) {
+            $days = 3650;
+        }
+        $before = time() - $days * 86400;
+        $count = AliveIpHistory::where('last_seen_at', '<', $before)->delete();
+        foreach (['1h', '1d', '7d', '30d'] as $range) {
+            Cache::forget('user_portrait_distribution|' . $range);
+        }
+
+        return response([
+            'data' => true,
+            'count' => $count,
+        ]);
+    }
+
     private function applyFilters(Request $request, $builder)
     {
+        if ($request->filled('date_range')) {
+            $range = $request->input('date_range');
+            if ($range === 'today') {
+                $builder->where('created_at', '>=', strtotime('today'));
+            } elseif ($range === '7d') {
+                $builder->where('created_at', '>=', strtotime('-7 days'));
+            } elseif ($range === '30d') {
+                $builder->where('created_at', '>=', strtotime('-30 days'));
+            }
+        }
         if ($request->filled('user_id')) {
             $userId = $request->input('user_id');
             if (preg_match('/^(>=|<=|>|<)(\d+)$/', $userId, $m)) {

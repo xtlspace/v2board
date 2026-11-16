@@ -910,3 +910,23 @@ ALTER TABLE `v2_sub_log` ADD INDEX `idx_user_id` (`user_id`);
 -- 节点限速：v2node 下发配置 speed_limit，单位 Mbps，0 表示不限速
 ALTER TABLE `v2_server_v2node`
 ADD `speed_limit` int(11) NOT NULL DEFAULT '0' COMMENT '节点限速(Mbps)' AFTER `rate`;
+
+CREATE TABLE IF NOT EXISTS `alive_ip_history` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `ip` varchar(64) NOT NULL,
+  `country` varchar(64) DEFAULT NULL,
+  `province` varchar(64) DEFAULT NULL,
+  `city` varchar(64) DEFAULT NULL,
+  `isp` varchar(128) DEFAULT NULL,
+  `provider` varchar(16) NOT NULL DEFAULT 'other',
+  `last_seen_at` int(11) NOT NULL,
+  `created_at` int(11) NOT NULL,
+  `updated_at` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_user_ip` (`user_id`,`ip`),
+  KEY `idx_province_provider` (`province`,`provider`,`user_id`),
+  KEY `idx_last_seen` (`last_seen_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+ALTER TABLE `v2_sub_log` ADD INDEX `idx_created_at` (`created_at`);

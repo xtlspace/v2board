@@ -263,7 +263,7 @@ CREATE TABLE `v2_server_v2node` (
                                     `server_port` int(11) NOT NULL,
                                     `tags` varchar(255) DEFAULT NULL,
                                     `rate` varchar(11) NOT NULL,
-                                    `speed_limit` int(11) NOT NULL DEFAULT '0' COMMENT 'Ω⁄µ„œﬁÀŸ(Mbps)',
+                                    `speed_limit` int(11) NOT NULL DEFAULT '0' COMMENT 'ÔøΩ⁄µÔøΩÔøΩÔøΩÔøΩÔøΩ(Mbps)',
                                     `show` tinyint(1) NOT NULL DEFAULT '0',
                                     `sort` int(11) DEFAULT NULL,
                                     `protocol` varchar(24) NOT NULL COMMENT 'ÂçèËÆÆÁ±ªÂûã',
@@ -361,7 +361,28 @@ CREATE TABLE `v2_sub_log` (
                             `updated_at` int(11) NOT NULL,
                             PRIMARY KEY (`id`),
                             KEY `idx_risk` (`user_id`,`created_at`,`ip_city`),
-                            KEY `idx_user_id` (`user_id`)
+                            KEY `idx_user_id` (`user_id`),
+                            KEY `idx_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+DROP TABLE IF EXISTS `alive_ip_history`;
+CREATE TABLE `alive_ip_history` (
+                            `id` int(11) NOT NULL AUTO_INCREMENT,
+                            `user_id` int(11) NOT NULL,
+                            `ip` varchar(64) NOT NULL,
+                            `country` varchar(64) DEFAULT NULL,
+                            `province` varchar(64) DEFAULT NULL,
+                            `city` varchar(64) DEFAULT NULL,
+                            `isp` varchar(128) DEFAULT NULL,
+                            `provider` varchar(16) NOT NULL DEFAULT 'other',
+                            `last_seen_at` int(11) NOT NULL,
+                            `created_at` int(11) NOT NULL,
+                            `updated_at` int(11) NOT NULL,
+                            PRIMARY KEY (`id`),
+                            UNIQUE KEY `uniq_user_ip` (`user_id`,`ip`),
+                            KEY `idx_province_provider` (`province`,`provider`,`user_id`),
+                            KEY `idx_last_seen` (`last_seen_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 

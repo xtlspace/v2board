@@ -22,14 +22,24 @@ class ClientController extends Controller
         $flag = strtolower($flag);
         $user = $request->user;
         // 记录订阅请求日志
-        $subLog = new SubLog();
-        $subLog->user_id = $user->id;
-        $subLog->ip = $_SERVER['REMOTE_ADDR'] ?? $request->ip();
-        $subLog->user_agent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+        $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? $request->ip() ?? '');
+        $userAgent = (string) ($_SERVER['HTTP_USER_AGENT'] ?? '');
+        $subLog = SubLog::where('user_id', $user->id)
+            ->where('ip', $ip)
+            ->whereRaw('BINARY user_agent = ?', [$userAgent])
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->first();
+        if (!$subLog) {
+            $subLog = new SubLog();
+            $subLog->user_id = $user->id;
+            $subLog->ip = $ip;
+            $subLog->user_agent = $userAgent;
+        }
         $location = null;
         try {
             $ipLocation = new IPLocation();
-            $location = $ipLocation->find($subLog->ip);
+            $location = $ipLocation->find($ip);
             if ($location) {
                 $subLog->ip_country = $location['country'] ?: null;
                 $subLog->ip_region = $location['region'] ?: null;
@@ -39,6 +49,8 @@ class ClientController extends Controller
         } catch (\Exception $e) {
             // IP定位失败不影响订阅功能
         }
+        $subLog->created_at = time();
+        $subLog->updated_at = time();
         $subLog->save();
 
         // account is banned

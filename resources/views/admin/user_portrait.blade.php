@@ -3,8 +3,9 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no">
-    <title>{{$title}} - 订阅日志</title>
+    <title>{{$title}} - 用户画像</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.1/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f0f2f5; color: #333; }
@@ -33,6 +34,13 @@
         .filter-group input:focus,
         .filter-group select:focus { border-color: #1890ff; box-shadow: 0 0 0 2px rgba(24,144,255,0.2); }
         .filter-group input { min-width: 120px; }
+        .filter-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: -4px 0 14px; }
+        .filter-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border: 1px solid #91d5ff; border-radius: 14px; background: #e6f7ff; color: #096dd9; font-size: 12px; }
+        .filter-chip .remove { cursor: pointer; font-weight: 700; line-height: 1; }
+        .filter-chip .remove:hover { color: #ff4d4f; }
+        .filter-chip.clear-all { border-color: #d9d9d9; background: #fff; color: #666; cursor: pointer; }
+        .quick-filter { color: #1890ff; cursor: pointer; }
+        .quick-filter:hover { text-decoration: underline; }
         .btn { padding: 7px 16px; border: none; border-radius: 4px; font-size: 13px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
         .btn-primary { background: #1890ff; color: #fff; }
         .btn-primary:hover { background: #40a9ff; }
@@ -112,6 +120,30 @@
         .risk-sortable i.fa-sort { margin-left: 4px; opacity: 0.3; font-size: 11px; }
         .risk-sortable.active i.fa-sort { opacity: 1; color: #1890ff; }
 
+        .distribution-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 16px; }
+        .distribution-toolbar .group { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+        .distribution-toolbar label { font-size: 13px; color: #666; margin: 0; }
+        .distribution-toolbar .btn.active { background: #1890ff; color: #fff; border-color: #1890ff; }
+        .distribution-toolbar input[type="number"] { width: 90px; padding: 6px 8px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 13px; outline: none; }
+        .distribution-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 16px; }
+        .summary-card { background: #fafafa; border: 1px solid #f0f0f0; border-radius: 6px; padding: 14px 16px; }
+        .summary-card .label { font-size: 12px; color: #888; }
+        .summary-card .value { font-size: 22px; font-weight: 600; color: #333; margin-top: 4px; }
+        .distribution-map-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; }
+        .china-map { width: 100%; height: 600px; }
+        .province-rank { max-height: 600px; overflow: auto; border: 1px solid #f0f0f0; border-radius: 6px; }
+        .province-rank-item { display: flex; justify-content: space-between; padding: 9px 12px; border-bottom: 1px solid #f5f5f5; font-size: 13px; }
+        .province-rank-item:last-child { border-bottom: none; }
+        .province-rank-item:hover { background: #fafafa; }
+        .province-rank-item .name { color: #555; }
+        .province-rank-item .count { color: #1890ff; font-weight: 600; }
+
+        @media (max-width: 900px) {
+            .distribution-map-wrap { grid-template-columns: 1fr; }
+            .china-map { height: 420px; }
+            .province-rank { max-height: 360px; }
+        }
+
         @media (max-width: 768px) {
             .filter-group input, .filter-group select { min-width: 100px; }
             .modal { width: 95vw; }
@@ -121,7 +153,7 @@
 </head>
 <body>
 <header class="header">
-    <h1>订阅管理</h1>
+    <h1>用户画像</h1>
 </header>
 
 <div class="content">
@@ -129,13 +161,22 @@
         <div class="card-body">
             <div class="tabs">
                 <button class="tab-btn active" data-tab="tabLogs">订阅日志</button>
-                <button class="tab-btn" data-tab="tabServers">节点地址汇总</button>
+                <button class="tab-btn" data-tab="tabDistribution">用户分布</button>
                 <button class="tab-btn" data-tab="tabRules">替换规则</button>
                 <button class="tab-btn" data-tab="tabRisk">风险筛查</button>
             </div>
 
             <div id="tabLogs" class="tab-content active">
                 <div class="filter-form" id="filterForm">
+                    <div class="filter-group">
+                        <label>时间范围</label>
+                        <select id="filterDateRange">
+                            <option value="">全部</option>
+                            <option value="today">今天</option>
+                            <option value="7d">近7天</option>
+                            <option value="30d">近30天</option>
+                        </select>
+                    </div>
                     <div class="filter-group">
                         <label>User ID</label>
                         <input type="text" id="filterUserId" placeholder="精确搜索，支持 > < >= <=">
@@ -173,6 +214,7 @@
                         </div>
                     </div>
                 </div>
+                <div class="filter-chips" id="filterChips"></div>
                 <div class="table-wrapper">
                     <table>
                         <thead>
@@ -180,12 +222,12 @@
                                 <th class="col-id sortable" data-sort="id">ID <i class="fas fa-sort"></i></th>
                                 <th class="col-user sortable" data-sort="user_id">User <i class="fas fa-sort"></i></th>
                                 <th class="col-ip sortable" data-sort="ip">IP <i class="fas fa-sort"></i></th>
-                                <th data-sort="ip_country">国家</th>
-                                <th data-sort="ip_region">省份</th>
-                                <th data-sort="ip_city">城市</th>
-                                <th data-sort="ip_isp">运营商</th>
-                                <th data-sort="user_agent">User-Agent</th>
-                                <th class="col-time sortable" data-sort="created_at">时间 <i class="fas fa-sort"></i></th>
+                                <th class="sortable" data-sort="ip_country">国家 <i class="fas fa-sort"></i></th>
+                                <th class="sortable" data-sort="ip_region">省份 <i class="fas fa-sort"></i></th>
+                                <th class="sortable" data-sort="ip_city">城市 <i class="fas fa-sort"></i></th>
+                                <th class="sortable" data-sort="ip_isp">运营商 <i class="fas fa-sort"></i></th>
+                                <th class="sortable" data-sort="user_agent">User-Agent <i class="fas fa-sort"></i></th>
+                                <th class="col-time sortable active" data-sort="created_at">时间 <i class="fas fa-sort"></i></th>
                             </tr>
                         </thead>
                         <tbody id="tableBody">
@@ -211,26 +253,63 @@
                 </div>
             </div>
 
-            <div id="tabServers" class="tab-content">
-                <div class="toolbar">
-                    <span class="toolbar-title">所有节点地址</span>
-                    <button class="btn btn-default btn-sm" id="refreshServersBtn"><i class="fas fa-sync"></i>刷新</button>
+            <div id="tabDistribution" class="tab-content">
+                <div class="distribution-toolbar">
+                    <div class="group" id="distributionRangeGroup">
+                        <label>数据范围</label>
+                        <button class="btn btn-default btn-sm active" data-range="1h">1小时</button>
+                        <button class="btn btn-default btn-sm" data-range="1d">1天</button>
+                        <button class="btn btn-default btn-sm" data-range="7d">7天</button>
+                        <button class="btn btn-default btn-sm" data-range="30d">30天</button>
+                    </div>
+                    <div class="group" id="distributionProviderGroup">
+                        <label>运营商</label>
+                        <button class="btn btn-default btn-sm active" data-provider="all">全部</button>
+                        <button class="btn btn-default btn-sm" data-provider="telecom">电信</button>
+                        <button class="btn btn-default btn-sm" data-provider="unicom">联通</button>
+                        <button class="btn btn-default btn-sm" data-provider="mobile">移动</button>
+                        <button class="btn btn-default btn-sm" data-provider="other">其他</button>
+                    </div>
+                    <div class="group">
+                        <label>保留</label>
+                        <input type="number" id="cleanupDays" value="30" min="1" max="3650">
+                        <label>天</label>
+                        <button class="btn btn-danger btn-sm" id="cleanupHistoryBtn"><i class="fas fa-trash"></i>清理历史数据</button>
+                    </div>
                 </div>
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>类型</th>
-                                <th>节点名</th>
-                                <th>Host</th>
-                                <th>端口</th>
-                                <th>分组</th>
-                            </tr>
-                        </thead>
-                        <tbody id="serversBody">
-                            <tr><td colspan="5"><div class="loading"><i class="fas fa-spinner"></i><p>加载中...</p></div></td></tr>
-                        </tbody>
-                    </table>
+
+                <div class="distribution-summary">
+                    <div class="summary-card">
+                        <div class="label" id="distTotalLabel">去重用户</div>
+                        <div class="value" id="distTotal">0</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="label">覆盖省份</div>
+                        <div class="value" id="distProvinces">0</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="label">电信</div>
+                        <div class="value" id="distTelecom">0</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="label">联通</div>
+                        <div class="value" id="distUnicom">0</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="label">移动</div>
+                        <div class="value" id="distMobile">0</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="label">其他</div>
+                        <div class="value" id="distOther">0</div>
+                    </div>
+                </div>
+
+                <div class="distribution-map-wrap">
+                    <div id="chinaMap" class="china-map"></div>
+                    <div class="province-rank" id="provinceRank">
+                        <div class="empty-state"><i class="fas fa-spinner"></i><p>加载中...</p></div>
+                    </div>
                 </div>
             </div>
 
@@ -417,6 +496,226 @@ function apiFetch(url, options) {
     return fetch(url, options);
 }
 
+// =========== Distribution ===========
+var distributionState = { range: '1h', provider: 'all', data: null, chart: null };
+var chinaMapPromise = null;
+
+function providerLabel(provider) {
+    var labels = { telecom: '电信', unicom: '联通', mobile: '移动', other: '其他' };
+    return labels[provider] || provider;
+}
+
+function shortProvinceName(name) {
+    var aliases = {
+        '内蒙古自治区': '内蒙古',
+        '广西壮族自治区': '广西',
+        '西藏自治区': '西藏',
+        '宁夏回族自治区': '宁夏',
+        '新疆维吾尔自治区': '新疆',
+        '香港特别行政区': '香港',
+        '澳门特别行政区': '澳门'
+    };
+    if (aliases[name]) return aliases[name];
+    if (!name) return '';
+    return name.replace(/(省|市)$/, '');
+}
+
+function ensureChinaMap() {
+    if (chinaMapPromise) return chinaMapPromise;
+    if (typeof echarts === 'undefined') {
+        return Promise.reject(new Error('echarts not loaded'));
+    }
+    chinaMapPromise = fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
+        .then(function(response) {
+            if (!response.ok) throw new Error('map http error');
+            return response.json();
+        })
+        .then(function(geo) {
+            (geo.features || []).forEach(function(feature) {
+                if (feature.properties && feature.properties.name) {
+                    feature.properties.name = shortProvinceName(feature.properties.name);
+                }
+            });
+            echarts.registerMap('china', geo);
+            return geo;
+        })
+        .catch(function(error) {
+            chinaMapPromise = null;
+            throw error;
+        });
+    return chinaMapPromise;
+}
+
+function setDistributionActive(selector, attr, value) {
+    document.querySelectorAll(selector + ' .btn').forEach(function(btn) {
+        btn.classList.toggle('active', btn.getAttribute(attr) === value);
+    });
+}
+
+function renderProvinceRank(rank) {
+    var box = document.getElementById('provinceRank');
+    if (!rank.length) {
+        box.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>暂无数据</p></div>';
+        return;
+    }
+    var html = '';
+    rank.forEach(function(item) {
+        html += '<div class="province-rank-item">'
+            + '<span class="name">' + item.name + '</span>'
+            + '<span class="count">' + item.total + '</span>'
+            + '</div>';
+    });
+    box.innerHTML = html;
+}
+
+function renderChinaMap(rank) {
+    var chart = distributionState.chart;
+    if (!chart) {
+        var mapElement = document.getElementById('chinaMap');
+        mapElement.innerHTML = '';
+        chart = echarts.init(mapElement);
+        distributionState.chart = chart;
+    }
+    var max = Math.max.apply(null, [1].concat(rank.map(function(item) { return item.total; })));
+    chart.setOption({
+        tooltip: {
+            trigger: 'item',
+            formatter: function(params) {
+                return params.name + '<br/>' + (params.value || 0) + ' 用户';
+            }
+        },
+        visualMap: {
+            min: 0,
+            max: max,
+            left: 'left',
+            bottom: 20,
+            text: ['高', '低'],
+            calculable: true,
+            inRange: { color: ['#e6f7ff', '#1890ff'] }
+        },
+        series: [{
+            name: '用户分布',
+            type: 'map',
+            map: 'china',
+            roam: false,
+            label: { show: false },
+            emphasis: { label: { show: true } },
+            data: rank.map(function(item) {
+                return { name: item.name, value: item.total };
+            })
+        }]
+    }, true);
+    setTimeout(function() { chart.resize(); }, 0);
+}
+
+function renderDistribution() {
+    var data = distributionState.data;
+    if (!data) return;
+    var provider = distributionState.provider;
+    var providers = data.providers || {};
+    var regions = data.regions || [];
+    var selectedTotal = provider === 'all' ? (data.total || 0) : (providers[provider] || 0);
+    document.getElementById('distTotal').textContent = selectedTotal;
+    document.getElementById('distTotalLabel').textContent = provider === 'all' ? '去重用户' : '去重用户 · ' + providerLabel(provider);
+    document.getElementById('distTelecom').textContent = providers.telecom || 0;
+    document.getElementById('distUnicom').textContent = providers.unicom || 0;
+    document.getElementById('distMobile').textContent = providers.mobile || 0;
+    document.getElementById('distOther').textContent = providers.other || 0;
+
+    var rank = regions.map(function(item) {
+        return {
+            name: item.name,
+            total: provider === 'all' ? (item.total || 0) : (item[provider] || 0)
+        };
+    }).filter(function(item) {
+        return item.total > 0;
+    }).sort(function(a, b) {
+        return b.total - a.total;
+    });
+
+    document.getElementById('distProvinces').textContent = rank.length;
+    renderProvinceRank(rank);
+
+    ensureChinaMap().then(function() {
+        renderChinaMap(rank);
+    }).catch(function() {
+        var mapBox = document.getElementById('chinaMap');
+        mapBox.innerHTML = '<div class="error-state"><i class="fas fa-exclamation-triangle"></i><p>地图加载失败，请查看右侧省份排行</p></div>';
+    });
+}
+
+function loadDistribution() {
+    var rankBox = document.getElementById('provinceRank');
+    rankBox.innerHTML = '<div class="empty-state"><i class="fas fa-spinner"></i><p>加载中...</p></div>';
+    apiFetch(apiBase + '/user_portrait/distribution?range=' + encodeURIComponent(distributionState.range))
+        .then(function(response) { return response.json(); })
+        .then(function(result) {
+            distributionState.data = result.data || { total: 0, providers: {}, regions: [] };
+            renderDistribution();
+        })
+        .catch(function() {
+            rankBox.innerHTML = '<div class="error-state"><i class="fas fa-exclamation-triangle"></i><p>加载失败</p></div>';
+        });
+}
+
+document.querySelectorAll('#distributionRangeGroup .btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        distributionState.range = this.getAttribute('data-range');
+        setDistributionActive('#distributionRangeGroup', 'data-range', distributionState.range);
+        loadDistribution();
+    });
+});
+
+document.querySelectorAll('#distributionProviderGroup .btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        distributionState.provider = this.getAttribute('data-provider');
+        setDistributionActive('#distributionProviderGroup', 'data-provider', distributionState.provider);
+        renderDistribution();
+    });
+});
+
+var cleanupDaysInput = document.getElementById('cleanupDays');
+var savedCleanupDays = window.localStorage.getItem('user_portrait_cleanup_days');
+if (savedCleanupDays) {
+    cleanupDaysInput.value = savedCleanupDays;
+}
+cleanupDaysInput.addEventListener('change', function() {
+    window.localStorage.setItem('user_portrait_cleanup_days', this.value);
+});
+
+document.getElementById('cleanupHistoryBtn').addEventListener('click', function() {
+    var days = parseInt(cleanupDaysInput.value, 10);
+    if (!days || days < 1) {
+        alert('请输入大于 0 的天数');
+        return;
+    }
+    if (days > 3650) {
+        alert('天数不能超过 3650');
+        return;
+    }
+    if (!confirm('确认清理 ' + days + ' 天前的用户分布历史数据？此操作不可恢复。')) {
+        return;
+    }
+    apiFetch(apiBase + '/user_portrait/distributionClear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ days: days })
+    }).then(function(response) { return response.json(); })
+        .then(function(result) {
+            alert('已清理 ' + (result.count || 0) + ' 条历史记录');
+            loadDistribution();
+        })
+        .catch(function() {
+            alert('清理失败');
+        });
+});
+
+window.addEventListener('resize', function() {
+    if (distributionState.chart) {
+        distributionState.chart.resize();
+    }
+});
+
 // =========== Tab switching ===========
 document.querySelectorAll('.tab-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
@@ -428,7 +727,103 @@ document.querySelectorAll('.tab-btn').forEach(function(btn) {
 });
 
 // =========== Log state & functions ===========
-var state = { current: 1, pageSize: 10, sort: 'id', sortType: 'DESC', filters: {}, total: 0 };
+var state = { current: 1, pageSize: 10, sort: 'created_at', sortType: 'DESC', filters: {}, total: 0 };
+var logRequestId = 0;
+var filterDebounceTimer = null;
+var filterControlMap = {
+    user_id: 'filterUserId',
+    user_agent: 'filterUserAgent',
+    ip: 'filterIp',
+    ip_country: 'filterCountry',
+    ip_region: 'filterRegion',
+    ip_city: 'filterCity',
+    ip_isp: 'filterIsp',
+    date_range: 'filterDateRange'
+};
+var filterLabels = {
+    user_id: 'User ID',
+    user_agent: 'UA',
+    ip: 'IP',
+    ip_country: '国家',
+    ip_region: '省份',
+    ip_city: '城市',
+    ip_isp: '运营商',
+    date_range: '时间'
+};
+var dateRangeLabels = { today: '今天', '7d': '近7天', '30d': '近30天' };
+
+function escapeHtml(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function(ch) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+    });
+}
+
+function syncUrlFromState() {
+    var params = new URLSearchParams();
+    params.set('current', state.current);
+    params.set('pageSize', state.pageSize);
+    params.set('sort', state.sort);
+    params.set('sort_type', state.sortType);
+    Object.keys(state.filters || {}).forEach(function(key) {
+        if (state.filters[key]) params.set(key, state.filters[key]);
+    });
+    var query = params.toString();
+    window.history.replaceState(null, '', window.location.pathname + (query ? '?' + query : ''));
+}
+
+function restoreStateFromUrl() {
+    var params = new URLSearchParams(window.location.search);
+    Object.keys(filterControlMap).forEach(function(key) {
+        var value = params.get(key);
+        if (value) {
+            var control = document.getElementById(filterControlMap[key]);
+            if (control) control.value = value;
+        }
+    });
+    var current = parseInt(params.get('current'), 10);
+    if (current > 0) state.current = current;
+    var pageSize = parseInt(params.get('pageSize'), 10);
+    if ([10, 20, 50, 100].indexOf(pageSize) !== -1) {
+        state.pageSize = pageSize;
+        document.getElementById('pageSizeSelect').value = pageSize;
+    }
+    var sortWhitelist = ['id', 'user_id', 'ip', 'ip_country', 'ip_region', 'ip_city', 'ip_isp', 'user_agent', 'created_at'];
+    var sort = params.get('sort');
+    if (sortWhitelist.indexOf(sort) !== -1) state.sort = sort;
+    var sortType = params.get('sort_type');
+    if (sortType === 'ASC' || sortType === 'DESC') state.sortType = sortType;
+    state.filters = buildFilters();
+    document.querySelectorAll('th.sortable').forEach(function(th) {
+        th.classList.toggle('active', th.getAttribute('data-sort') === state.sort);
+    });
+}
+
+function renderFilterChips() {
+    var box = document.getElementById('filterChips');
+    if (!box) return;
+    var filters = state.filters || {};
+    var keys = Object.keys(filters).filter(function(key) { return filters[key]; });
+    if (!keys.length) {
+        box.innerHTML = '';
+        return;
+    }
+    var html = '';
+    keys.forEach(function(key) {
+        var value = filters[key];
+        if (key === 'date_range') value = dateRangeLabels[value] || value;
+        html += '<span class="filter-chip">'
+            + escapeHtml((filterLabels[key] || key) + ': ' + value)
+            + '<span class="remove" data-key="' + escapeHtml(key) + '">&times;</span>'
+            + '</span>';
+    });
+    html += '<span class="filter-chip clear-all" id="clearAllFilters">清空全部</span>';
+    box.innerHTML = html;
+}
+
+function scheduleLogSearch() {
+    clearTimeout(filterDebounceTimer);
+    filterDebounceTimer = setTimeout(searchLogs, 500);
+}
 
 function fmtTime(ts) {
     if (!ts) return '-';
@@ -444,13 +839,18 @@ function truncate(str, len) {
 }
 
 function loadFilterOptions() {
-    apiFetch(apiBase + '/sub_log/getFilterOptions')
+    return apiFetch(apiBase + '/user_portrait/getFilterOptions')
         .then(function(r) { return r.json(); })
         .then(function(res) {
             if (!res.data) return;
             var countrySel = document.getElementById('filterCountry');
             var regionSel = document.getElementById('filterRegion');
             var ispSel = document.getElementById('filterIsp');
+            [countrySel, regionSel, ispSel].forEach(function(select) {
+                while (select.options.length > 1) {
+                    select.remove(1);
+                }
+            });
             res.data.countries.forEach(function(c) {
                 var opt = document.createElement('option');
                 opt.value = c; opt.textContent = c;
@@ -471,6 +871,8 @@ function loadFilterOptions() {
 
 function buildFilters() {
     var f = {};
+    var dateRange = document.getElementById('filterDateRange').value;
+    if (dateRange) f.date_range = dateRange;
     var userId = document.getElementById('filterUserId').value.trim();
     if (userId) f.user_id = userId;
     var ua = document.getElementById('filterUserAgent').value.trim();
@@ -489,6 +891,7 @@ function buildFilters() {
 }
 
 function loadLogData() {
+    var requestId = ++logRequestId;
     var params = new URLSearchParams();
     params.set('current', state.current);
     params.set('pageSize', state.pageSize);
@@ -498,17 +901,30 @@ function loadLogData() {
     Object.keys(filters).forEach(function(k) {
         if (filters[k]) params.set(k, filters[k]);
     });
+    syncUrlFromState();
+
+    var searchBtn = document.getElementById('searchBtn');
+    searchBtn.disabled = true;
+    searchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>搜索中';
 
     document.getElementById('tableBody').innerHTML = '<tr><td colspan="9"><div class="loading"><i class="fas fa-spinner"></i><p>加载中...</p></div></td></tr>';
 
-    apiFetch(apiBase + '/sub_log/fetch?' + params.toString())
+    apiFetch(apiBase + '/user_portrait/fetch?' + params.toString())
         .then(function(r) { return r.json(); })
         .then(function(res) {
+            if (requestId !== logRequestId) return;
             state.total = res.total || 0;
             renderLogTable(res.data || []);
         })
         .catch(function(err) {
+            if (requestId !== logRequestId) return;
             document.getElementById('tableBody').innerHTML = '<tr><td colspan="9"><div class="error-state"><i class="fas fa-exclamation-triangle"></i><p>加载失败</p></div></td></tr>';
+        })
+        .finally(function() {
+            if (requestId === logRequestId) {
+                searchBtn.disabled = false;
+                searchBtn.innerHTML = '<i class="fas fa-search"></i>搜索';
+            }
         });
 }
 
@@ -521,15 +937,19 @@ function renderLogTable(data) {
     }
     var html = '';
     data.forEach(function(row) {
+        var ip = row.ip || '';
+        var ua = row.user_agent || '';
+        var region = row.ip_region || '';
+        var city = row.ip_city || '';
         html += '<tr>'
-            + '<td class="col-id">' + row.id + '</td>'
-            + '<td class="col-user"><a href="javascript:void(0)" onclick="filterByUser(' + row.user_id + ')" style="color:#1890ff">' + row.user_id + '</a></td>'
-            + '<td class="col-ip">' + (row.ip || '-') + '</td>'
-            + '<td>' + (row.ip_country ? '<span class="badge badge-country">' + row.ip_country + '</span>' : '<span class="text-muted">-</span>') + '</td>'
-            + '<td>' + (row.ip_region || '-') + '</td>'
-            + '<td>' + (row.ip_city || '-') + '</td>'
-            + '<td>' + (row.ip_isp ? '<span class="badge badge-isp">' + row.ip_isp + '</span>' : '<span class="text-muted">-</span>') + '</td>'
-            + '<td class="user-agent-cell" title="' + (row.user_agent || '').replace(/"/g, '&quot;') + '">' + truncate(row.user_agent, 40) + '</td>'
+            + '<td class="col-id">' + escapeHtml(row.id) + '</td>'
+            + '<td class="col-user"><a href="javascript:void(0)" onclick="filterByUser(' + parseInt(row.user_id, 10) + ')" style="color:#1890ff">' + escapeHtml(row.user_id) + '</a></td>'
+            + '<td class="col-ip">' + (ip ? '<a href="javascript:void(0)" class="quick-filter" data-filter="ip" data-value="' + escapeHtml(ip) + '">' + escapeHtml(ip) + '</a>' : '-') + '</td>'
+            + '<td>' + (row.ip_country ? '<a href="javascript:void(0)" class="quick-filter badge badge-country" data-filter="ip_country" data-value="' + escapeHtml(row.ip_country) + '">' + escapeHtml(row.ip_country) + '</a>' : '<span class="text-muted">-</span>') + '</td>'
+            + '<td>' + (region ? '<a href="javascript:void(0)" class="quick-filter" data-filter="ip_region" data-value="' + escapeHtml(region) + '">' + escapeHtml(region) + '</a>' : '-') + '</td>'
+            + '<td>' + (city ? '<a href="javascript:void(0)" class="quick-filter" data-filter="ip_city" data-value="' + escapeHtml(city) + '">' + escapeHtml(city) + '</a>' : '-') + '</td>'
+            + '<td>' + (row.ip_isp ? '<a href="javascript:void(0)" class="quick-filter badge badge-isp" data-filter="ip_isp" data-value="' + escapeHtml(row.ip_isp) + '">' + escapeHtml(row.ip_isp) + '</a>' : '<span class="text-muted">-</span>') + '</td>'
+            + '<td class="user-agent-cell" title="' + escapeHtml(ua) + '">' + (ua ? '<a href="javascript:void(0)" class="quick-filter" data-filter="user_agent" data-value="' + escapeHtml(ua) + '">' + escapeHtml(truncate(ua, 40)) + '</a>' : '-') + '</td>'
             + '<td class="col-time">' + fmtTime(row.created_at) + '</td>'
             + '</tr>';
     });
@@ -549,8 +969,10 @@ function updatePagination() {
 }
 
 function searchLogs() {
+    clearTimeout(filterDebounceTimer);
     state.current = 1;
     state.filters = buildFilters();
+    renderFilterChips();
     loadLogData();
 }
 
@@ -558,10 +980,25 @@ function filterByUser(userId) {
     document.getElementById('filterUserId').value = userId;
     state.current = 1;
     state.filters = buildFilters();
+    renderFilterChips();
+    loadLogData();
+}
+
+function quickFilter(key, value) {
+    var controlId = filterControlMap[key];
+    if (!controlId) return;
+    var control = document.getElementById(controlId);
+    if (!control) return;
+    control.value = value;
+    state.current = 1;
+    state.filters = buildFilters();
+    renderFilterChips();
     loadLogData();
 }
 
 function resetFilters() {
+    clearTimeout(filterDebounceTimer);
+    document.getElementById('filterDateRange').value = '';
     document.getElementById('filterUserId').value = '';
     document.getElementById('filterUserAgent').value = '';
     document.getElementById('filterIp').value = '';
@@ -571,35 +1008,8 @@ function resetFilters() {
     document.getElementById('filterIsp').value = '';
     state.current = 1;
     state.filters = {};
+    renderFilterChips();
     loadLogData();
-}
-
-// =========== Servers ===========
-function loadServers() {
-    document.getElementById('serversBody').innerHTML = '<tr><td colspan="5"><div class="loading"><i class="fas fa-spinner"></i><p>加载中...</p></div></td></tr>';
-    apiFetch(apiBase + '/sub_log/getServers')
-        .then(function(r) { return r.json(); })
-        .then(function(res) {
-            var data = res.data || [];
-            if (data.length === 0) {
-                document.getElementById('serversBody').innerHTML = '<tr><td colspan="5"><div class="empty-state"><i class="fas fa-inbox"></i><p>暂无节点</p></div></td></tr>';
-                return;
-            }
-            var html = '';
-            data.forEach(function(s) {
-                html += '<tr>'
-                    + '<td><span class="badge badge-type">' + s.type + '</span></td>'
-                    + '<td>' + s.name + '</td>'
-                    + '<td class="server-host">' + s.host + '</td>'
-                    + '<td>' + s.port + '</td>'
-                    + '<td>' + (s.group_id || '-') + '</td>'
-                    + '</tr>';
-            });
-            document.getElementById('serversBody').innerHTML = html;
-        })
-        .catch(function() {
-            document.getElementById('serversBody').innerHTML = '<tr><td colspan="5"><div class="error-state"><i class="fas fa-exclamation-triangle"></i><p>加载失败</p></div></td></tr>';
-        });
 }
 
 // =========== Rules ===========
@@ -607,7 +1017,7 @@ var editingRuleId = null;
 
 function loadRules() {
     document.getElementById('rulesBody').innerHTML = '<tr><td colspan="13"><div class="loading"><i class="fas fa-spinner"></i><p>加载中...</p></div></td></tr>';
-    apiFetch(apiBase + '/sub_log/getRules')
+    apiFetch(apiBase + '/user_portrait/getRules')
         .then(function(r) { return r.json(); })
         .then(function(res) {
             var data = res.data || [];
@@ -668,7 +1078,7 @@ function closeRuleModal() {
 }
 
 function editRule(id) {
-    apiFetch(apiBase + '/sub_log/getRules')
+    apiFetch(apiBase + '/user_portrait/getRules')
         .then(function(r) { return r.json(); })
         .then(function(res) {
             var rules = res.data || [];
@@ -679,7 +1089,7 @@ function editRule(id) {
 
 function deleteRule(id) {
     if (!confirm('确认删除此规则？')) return;
-    apiFetch(apiBase + '/sub_log/dropRule', {
+    apiFetch(apiBase + '/user_portrait/dropRule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: id })
@@ -709,7 +1119,7 @@ document.getElementById('saveRuleBtn').addEventListener('click', function() {
     if (!data.replace_host) { alert('替换 Host 不能为空'); return; }
     if (!data.remark) { alert('备注不能为空'); return; }
 
-    apiFetch(apiBase + '/sub_log/saveRule', {
+    apiFetch(apiBase + '/user_portrait/saveRule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -722,19 +1132,17 @@ document.getElementById('saveRuleBtn').addEventListener('click', function() {
 document.querySelectorAll('.tab-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
         var tab = this.getAttribute('data-tab');
-        if (tab === 'tabServers') loadServers();
+        if (tab === 'tabDistribution') loadDistribution();
         if (tab === 'tabRules') loadRules();
         if (tab === 'tabRisk') loadRiskData();
     });
 });
 
-document.getElementById('refreshServersBtn').addEventListener('click', loadServers);
-
 // =========== Risk Screening ===========
 var riskState = { current: 1, pageSize: 10, total: 0, sort: 'city_count', sortType: 'DESC' };
 
 function riskUserLink(userId) {
-    window.open('/' + securePath + '/sub_log?user_id=' + userId, '_blank');
+    window.open('/' + securePath + '/user_portrait?user_id=' + userId, '_blank');
 }
 
 function loadRiskData() {
@@ -751,7 +1159,7 @@ function loadRiskData() {
     params.set('sort', riskState.sort);
     params.set('sort_type', riskState.sortType);
 
-    apiFetch(apiBase + '/sub_log/riskCheck?' + params.toString())
+    apiFetch(apiBase + '/user_portrait/riskCheck?' + params.toString())
         .then(function(r) { return r.json(); })
         .then(function(res) {
             var data = res.data || [];
@@ -801,38 +1209,68 @@ function updateRiskPagination() {
 }
 
 document.getElementById('clearBtn').addEventListener('click', function() {
-    if (!confirm('\u786e\u8ba4\u6e05\u9664\u5f53\u524d\u7b5b\u9009\u6761\u4ef6\u4e0b\u7684\u6240\u6709\u8ba2\u9605\u65e5\u5fd7\uff1f\u6b64\u64cd\u4f5c\u4e0d\u53ef\u6062\u590d\u3002')) return;
-    var params = new URLSearchParams();
     var filters = buildFilters();
+    var message = Object.keys(filters).length
+        ? '确认清除当前筛选条件下的 ' + (state.total || 0) + ' 条日志？此操作不可恢复。'
+        : '当前没有筛选条件，确认清除全部订阅日志？此操作不可恢复。';
+    if (!confirm(message)) return;
+    var params = new URLSearchParams();
     Object.keys(filters).forEach(function(k) { params.set(k, filters[k]); });
-    apiFetch(apiBase + '/sub_log/clearLogs', {
+    apiFetch(apiBase + '/user_portrait/clearLogs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: params.toString()
     }).then(function(r) { return r.json(); })
-    .then(function() { loadLogData(); loadFilterOptions(); })
-    .catch(function() { alert('\u6e05\u9664\u5931\u8d25'); });
+    .then(function() { loadLogData(); })
+    .catch(function() { alert('清除失败'); });
 });
 
 // =========== Init ===========
 document.addEventListener('DOMContentLoaded', function() {
-    loadFilterOptions();
-
-    var urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('user_id')) {
-        document.getElementById('filterUserId').value = urlParams.get('user_id');
-        state.filters = buildFilters();
-    }
-
-    loadLogData();
+    loadFilterOptions().then(function() {
+        restoreStateFromUrl();
+        renderFilterChips();
+        loadLogData();
+    });
 
     document.getElementById('searchBtn').addEventListener('click', searchLogs);
     document.getElementById('resetBtn').addEventListener('click', resetFilters);
 
-    document.getElementById('filterUserId').addEventListener('keydown', function(e) { if (e.key === 'Enter') searchLogs(); });
-    document.getElementById('filterUserAgent').addEventListener('keydown', function(e) { if (e.key === 'Enter') searchLogs(); });
-    document.getElementById('filterIp').addEventListener('keydown', function(e) { if (e.key === 'Enter') searchLogs(); });
-    document.getElementById('filterCity').addEventListener('keydown', function(e) { if (e.key === 'Enter') searchLogs(); });
+    ['filterUserId', 'filterUserAgent', 'filterIp', 'filterCity'].forEach(function(id) {
+        var input = document.getElementById(id);
+        input.addEventListener('input', scheduleLogSearch);
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                searchLogs();
+            }
+        });
+    });
+    ['filterDateRange', 'filterCountry', 'filterRegion', 'filterIsp'].forEach(function(id) {
+        document.getElementById(id).addEventListener('change', searchLogs);
+    });
+
+    document.getElementById('filterChips').addEventListener('click', function(e) {
+        if (e.target.id === 'clearAllFilters') {
+            resetFilters();
+            return;
+        }
+        if (e.target.classList.contains('remove')) {
+            var key = e.target.getAttribute('data-key');
+            var controlId = filterControlMap[key];
+            if (controlId) {
+                document.getElementById(controlId).value = '';
+            }
+            searchLogs();
+        }
+    });
+
+    document.getElementById('tableBody').addEventListener('click', function(e) {
+        var link = e.target.closest('.quick-filter');
+        if (!link) return;
+        e.preventDefault();
+        quickFilter(link.getAttribute('data-filter'), link.getAttribute('data-value'));
+    });
 
     document.getElementById('prevPage').addEventListener('click', function() {
         if (state.current > 1) { state.current--; loadLogData(); }
@@ -887,6 +1325,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             document.querySelectorAll('th.sortable').forEach(function(t) { t.classList.remove('active'); });
             this.classList.add('active');
+            state.current = 1;
             loadLogData();
         });
     });

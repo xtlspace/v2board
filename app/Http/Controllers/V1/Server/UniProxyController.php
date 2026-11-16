@@ -4,11 +4,13 @@ namespace App\Http\Controllers\V1\Server;
 
 use App\Http\Controllers\Controller;
 use App\Services\ServerService;
+use App\Services\UserDistributionService;
 use App\Services\UserService;
 use App\Utils\CacheKey;
 use App\Utils\Helper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use MessagePack\Packer;
 
 class UniProxyController extends Controller
@@ -124,6 +126,11 @@ class UniProxyController extends Controller
     // 后端提交在线数据
     public function alive(Request $request)
     {
+        $remoteAddr = $_SERVER['REMOTE_ADDR'] ?? $request->ip();
+        if (!empty($remoteAddr)) {
+            Cache::put('ALIVE_NODE_IP_' . $this->nodeType . $this->nodeId, $remoteAddr, 300);
+        }
+
         $data = $request->json()->all();
         if (empty($data)) {
             $data = $_POST;
@@ -151,6 +158,8 @@ class UniProxyController extends Controller
 
         $cachedData = Cache::many($cacheKeys);
         $updates = [];
+        $chainForwardIgnore = (int) config('v2board.device_limit_chain_forward', 0) === 1;
+        $nodeIpCache = [];
 
         foreach ($data as $uid => $ips) {
             if (!is_numeric($uid) || !is_array($ips)) {
@@ -168,6 +177,20 @@ class UniProxyController extends Controller
                 }
             }
 
+            // 汇总本用户涉及节点上报的节点 IP
+            $ignoredIps = [];
+            if ($chainForwardIgnore) {
+                foreach (array_keys($ips_array) as $nodetypeid) {
+                    if ($nodetypeid === 'alive_ip') continue;
+                    if (!array_key_exists($nodetypeid, $nodeIpCache)) {
+                        $nodeIpCache[$nodetypeid] = Cache::get('ALIVE_NODE_IP_' . $nodetypeid);
+                    }
+                    if (!empty($nodeIpCache[$nodetypeid])) {
+                        $ignoredIps[$this->normalizeIpAddress($nodeIpCache[$nodetypeid])] = true;
+                    }
+                }
+            }
+
             // 计算活跃IP数量
             $count = 0;
             if (config('v2board.device_limit_mode', 0) == 1) {
@@ -176,6 +199,9 @@ class UniProxyController extends Controller
                     if ($nodetypeid !== 'alive_ip' && is_array($newdata) && isset($newdata['aliveips'])) {
                         foreach ($newdata['aliveips'] as $ip_NodeId) {
                             $ip = explode("_", $ip_NodeId)[0];
+                            if ($chainForwardIgnore && isset($ignoredIps[$this->normalizeIpAddress($ip)])) {
+                                continue;
+                            }
                             $ipmap[$ip] = 1;
                         }
                     }
@@ -184,7 +210,16 @@ class UniProxyController extends Controller
             } else {
                 foreach ($ips_array as $nodetypeid => $newdata) {
                     if ($nodetypeid !== 'alive_ip' && is_array($newdata) && isset($newdata['aliveips'])) {
-                        $count += count($newdata['aliveips']);
+                        if (!$chainForwardIgnore) {
+                            $count += count($newdata['aliveips']);
+                            continue;
+                        }
+                        foreach ($newdata['aliveips'] as $ip_NodeId) {
+                            $ip = explode("_", $ip_NodeId)[0];
+                            if (!isset($ignoredIps[$this->normalizeIpAddress($ip)])) {
+                                $count++;
+                            }
+                        }
                     }
                 }
             }
@@ -198,9 +233,25 @@ class UniProxyController extends Controller
             Cache::put($key, $value, 120);
         }
 
+        try {
+            (new UserDistributionService())->record($data);
+        } catch (\Throwable $e) {
+            Log::warning('record alive ip history failed: ' . $e->getMessage());
+        }
+
         return response([
             'data' => true
         ]);
+    }
+
+    private function normalizeIpAddress($ip)
+    {
+        $ip = trim((string) $ip);
+        if (preg_match('/^\[(.+)\]$/', $ip, $matches)) {
+            $ip = $matches[1];
+        }
+        $packed = @inet_pton($ip);
+        return $packed === false ? $ip : $packed;
     }
 
     // 后端获取配置

@@ -6342,6 +6342,12 @@
                 }, f.a.createElement(l["a"], {
                     checked: parseInt(u.device_limit_mode),
                     onChange: e=>this.set("server", "device_limit_mode", e ? 1 : 0)
+                })), f.a.createElement(m, {
+                    title: "\u94fe\u5f0f\u8f6c\u53d1\u8bbe\u5907\u6570\u91cf\u91cd\u590d\u7edf\u8ba1",
+                    description: "\u5f00\u542f\u540e\u7edf\u8ba1\u8bbe\u5907\u65f6\u5c06\u5ffd\u7565\u5bf9\u63a5\u8282\u70b9\u7684IP\u5730\u5740"
+                }, f.a.createElement(l["a"], {
+                    checked: parseInt(u.device_limit_chain_forward),
+                    onChange: e=>this.set("server", "device_limit_chain_forward", e ? 1 : 0)
                 }))), f.a.createElement(s["a"].TabPane, {
                     tab: "\u90ae\u4ef6",
                     key: "email"
@@ -20538,13 +20544,6 @@
                             className: "nav-main-link-icon si si-shuffle"
                         })
                     }, {
-                        title: "\u8ba2\u9605\u89c4\u5219\u7ba1\u7406",
-                        type: "href",
-                        href: "/" + window.settings.secure_path + "/sub_log",
-                        icon: o.a.createElement("i", {
-                            className: "nav-main-link-icon si si-notebook"
-                        })
-                    }, {
                         title: "\u8d22\u52a1",
                         type: "heading"
                     }, {
@@ -20584,6 +20583,13 @@
                         href: "/user",
                         icon: o.a.createElement("i", {
                             className: "nav-main-link-icon si si-users"
+                        })
+                    }, {
+                        title: "\u7528\u6237\u753b\u50cf",
+                        type: "href",
+                        href: "/" + window.settings.secure_path + "/user_portrait",
+                        icon: o.a.createElement("i", {
+                            className: "nav-main-link-icon si si-notebook"
                         })
                     }, {
                         title: "\u516c\u544a\u7ba1\u7406",
@@ -21787,7 +21793,7 @@
                 }, p.a.createElement("label", {
                     for: "example-text-input-alt"
                 }, "ID: "), p.a.createElement("a", {
-                    href: "/" + window.settings.secure_path + "/sub_log?user_id=" + t.id,
+                    href: "/" + window.settings.secure_path + "/user_portrait?user_id=" + t.id,
                     target: "_blank"
                 }, t.id)), p.a.createElement("div", {
                     className: "form-group"
