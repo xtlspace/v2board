@@ -511,6 +511,13 @@ function providerLabel(provider) {
     return labels[provider] || provider;
 }
 
+var mainlandProvinceNames = [
+    '北京', '天津', '河北', '山西', '内蒙古', '辽宁', '吉林', '黑龙江',
+    '上海', '江苏', '浙江', '安徽', '福建', '江西', '山东', '河南',
+    '湖北', '湖南', '广东', '广西', '海南', '重庆', '四川', '贵州',
+    '云南', '西藏', '陕西', '甘肃', '青海', '宁夏', '新疆'
+];
+
 function shortProvinceName(name) {
     var aliases = {
         '内蒙古自治区': '内蒙古',
@@ -537,10 +544,16 @@ function ensureChinaMap() {
             return response.json();
         })
         .then(function(geo) {
-            (geo.features || []).forEach(function(feature) {
-                if (feature.properties && feature.properties.name) {
-                    feature.properties.name = shortProvinceName(feature.properties.name);
+            geo.features = (geo.features || []).filter(function(feature) {
+                if (!feature.properties || !feature.properties.name) {
+                    return false;
                 }
+                var name = shortProvinceName(feature.properties.name);
+                if (mainlandProvinceNames.indexOf(name) === -1) {
+                    return false;
+                }
+                feature.properties.name = name;
+                return true;
             });
             echarts.registerMap('china', geo);
             return geo;
@@ -604,6 +617,9 @@ function renderChinaMap(rank) {
             type: 'map',
             map: 'china',
             roam: false,
+            layoutCenter: ['50%', '50%'],
+            layoutSize: '110%',
+            aspectScale: 0.75,
             label: { show: false },
             emphasis: { label: { show: true } },
             data: rank.map(function(item) {
