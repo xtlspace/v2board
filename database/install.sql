@@ -353,6 +353,7 @@ CREATE TABLE `v2_sub_log` (
                             `user_id` int(11) NOT NULL DEFAULT '0',
                             `ip` varchar(128) DEFAULT NULL,
                             `user_agent` text,
+                            `dedupe_key` char(32) NOT NULL DEFAULT '',
                             `ip_country` varchar(128) DEFAULT NULL,
                             `ip_region` varchar(128) DEFAULT NULL,
                             `ip_city` varchar(128) DEFAULT NULL,
@@ -360,6 +361,7 @@ CREATE TABLE `v2_sub_log` (
                             `created_at` int(11) NOT NULL,
                             `updated_at` int(11) NOT NULL,
                             PRIMARY KEY (`id`),
+                            UNIQUE KEY `uk_dedupe_key` (`dedupe_key`),
                             KEY `idx_risk` (`user_id`,`created_at`,`ip_city`),
                             KEY `idx_user_id` (`user_id`),
                             KEY `idx_created_at` (`created_at`)

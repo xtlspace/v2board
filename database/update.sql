@@ -625,6 +625,7 @@ CREATE TABLE IF NOT EXISTS `v2_sub_log` (
   `user_id` int(11) NOT NULL DEFAULT '0',
   `ip` varchar(128) DEFAULT NULL,
   `user_agent` text,
+  `dedupe_key` char(32) NOT NULL DEFAULT '',
   `ip_country` varchar(128) DEFAULT NULL,
   `ip_region` varchar(128) DEFAULT NULL,
   `ip_city` varchar(128) DEFAULT NULL,
@@ -632,6 +633,7 @@ CREATE TABLE IF NOT EXISTS `v2_sub_log` (
   `created_at` int(11) NOT NULL,
   `updated_at` int(11) NOT NULL,
   PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_dedupe_key` (`dedupe_key`),
   KEY `idx_risk` (`user_id`, `created_at`, `ip_city`),
   KEY `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -666,6 +668,19 @@ CREATE TABLE IF NOT EXISTS `v2_sub_rule` (
 -- user_agent 为 TEXT 类型无法全纳入索引，由索引过滤后仅回表读 user_agent 一列
 ALTER TABLE `v2_sub_log` ADD INDEX `idx_risk` (`user_id`, `created_at`, `ip_city`);
 ALTER TABLE `v2_sub_log` ADD INDEX `idx_user_id` (`user_id`);
+
+-- 订阅日志去重：dedupe_key 唯一索引，配合 upsert 防止并发请求插入完全相同的记录
+ALTER TABLE `v2_sub_log` ADD `dedupe_key` char(32) NOT NULL DEFAULT '' AFTER `user_agent`;
+
+UPDATE `v2_sub_log`
+SET `dedupe_key` = MD5(CONCAT(`user_id`, '|', IFNULL(`ip`, ''), '|', IFNULL(`user_agent`, '')))
+WHERE `dedupe_key` = '';
+
+DELETE t1 FROM `v2_sub_log` t1
+JOIN `v2_sub_log` t2
+  ON t1.`dedupe_key` = t2.`dedupe_key` AND t1.`id` < t2.`id`;
+
+ALTER TABLE `v2_sub_log` ADD UNIQUE KEY `uk_dedupe_key` (`dedupe_key`);
 
 -- 节点限速：v2node 下发配置 speed_limit，单位 Mbps，0 表示不限速
 ALTER TABLE `v2_server_v2node`

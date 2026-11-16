@@ -22,36 +22,33 @@ class ClientController extends Controller
         $flag = strtolower($flag);
         $user = $request->user;
         // 记录订阅请求日志
+        // 使用 dedupe_key 唯一索引 + upsert 原子写入，避免并发请求各插一行
         $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? $request->ip() ?? '');
         $userAgent = (string) ($_SERVER['HTTP_USER_AGENT'] ?? '');
-        $subLog = SubLog::where('user_id', $user->id)
-            ->where('ip', $ip)
-            ->whereRaw('BINARY user_agent = ?', [$userAgent])
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->first();
-        if (!$subLog) {
-            $subLog = new SubLog();
-            $subLog->user_id = $user->id;
-            $subLog->ip = $ip;
-            $subLog->user_agent = $userAgent;
-        }
         $location = null;
         try {
             $ipLocation = new IPLocation();
             $location = $ipLocation->find($ip);
-            if ($location) {
-                $subLog->ip_country = $location['country'] ?: null;
-                $subLog->ip_region = $location['region'] ?: null;
-                $subLog->ip_city = $location['city'] ?: null;
-                $subLog->ip_isp = $location['isp'] ?: null;
-            }
         } catch (\Exception $e) {
             // IP定位失败不影响订阅功能
         }
-        $subLog->created_at = time();
-        $subLog->updated_at = time();
-        $subLog->save();
+        $now = time();
+        $subLogData = [
+            'dedupe_key' => md5($user->id . '|' . $ip . '|' . $userAgent),
+            'user_id' => $user->id,
+            'ip' => $ip,
+            'user_agent' => $userAgent,
+            'ip_country' => $location ? ($location['country'] ?: null) : null,
+            'ip_region' => $location ? ($location['region'] ?: null) : null,
+            'ip_city' => $location ? ($location['city'] ?: null) : null,
+            'ip_isp' => $location ? ($location['isp'] ?: null) : null,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ];
+        SubLog::upsert([$subLogData], ['dedupe_key'], [
+            'ip_country', 'ip_region', 'ip_city', 'ip_isp', 'created_at', 'updated_at'
+        ]);
+        $subLog = new SubLog($subLogData);
 
         // account is banned
         if ($user->banned) {
