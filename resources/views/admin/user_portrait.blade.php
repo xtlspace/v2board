@@ -531,7 +531,7 @@ function ensureChinaMap() {
     if (typeof echarts === 'undefined') {
         return Promise.reject(new Error('echarts not loaded'));
     }
-    chinaMapPromise = fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
+    chinaMapPromise = fetch('/assets/admin/vendor/china.json?v={{$version}}')
         .then(function(response) {
             if (!response.ok) throw new Error('map http error');
             return response.json();
