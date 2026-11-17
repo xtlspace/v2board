@@ -140,7 +140,7 @@
         .mismatch-row td { background: #fff1f0; }
         .mismatch-province { color: #ff4d4f; font-weight: 600; }
         .overseas-row td { background: #fff1f0; color: #ff4d4f; }
-        .province-highlight { background: #fffbe6; color: #d48806; padding: 0 4px; border-radius: 3px; }
+        .province-diff-row td { background: #fffbe6; color: #d48806; }
         .danger-link { color: #ff4d4f; }
         .danger-link:hover { color: #ff7875; }
 
@@ -1358,16 +1358,9 @@ function isOverseasLocation(country, region) {
     return country.indexOf('中国') === -1;
 }
 
-function detailRegionHtml(row) {
-    var parts = regionParts(row);
-    if (!parts.length) return '-';
-    return parts.map(function(part) {
-        var text = escapeHtml(part.text);
-        if (part.filter === 'region') {
-            return '<span class="province-highlight">' + text + '</span>';
-        }
-        return text;
-    }).join(' ');
+function mainlandProvinceKey(name) {
+    var short = shortProvinceName((name || '').trim());
+    return mainlandProvinceNames.indexOf(short) !== -1 ? short : '';
 }
 
 function renderLogTable(data) {
@@ -1605,18 +1598,17 @@ function renderDetail(data) {
     document.getElementById('detailSubTip').textContent = detailTip(subLogs.length, data.sub_total);
     document.getElementById('detailAliveTip').textContent = detailTip(aliveIps.length, data.alive_total);
 
-    // 省份对比：两边都有记录时才标红
+    // 省份对比：只标记两侧不重叠的大陆省份
     var subProvinceSet = {};
-    (data.sub_provinces || []).forEach(function(p) { subProvinceSet[p] = true; });
+    (data.sub_provinces || []).forEach(function(p) {
+        var key = mainlandProvinceKey(p);
+        if (key) subProvinceSet[key] = true;
+    });
     var aliveProvinceSet = {};
-    (data.alive_provinces || []).forEach(function(p) { aliveProvinceSet[p] = true; });
-    var canCompare = Object.keys(subProvinceSet).length > 0 && Object.keys(aliveProvinceSet).length > 0;
-
-    function isMismatch(province, otherSet, country) {
-        if (!canCompare || !province || specialRegionMap[province]) return false;
-        if (country && country !== '中国') return false;
-        return !otherSet[province];
-    }
+    (data.alive_provinces || []).forEach(function(p) {
+        var key = mainlandProvinceKey(p);
+        if (key) aliveProvinceSet[key] = true;
+    });
 
     var subBody = document.getElementById('detailSubBody');
     if (!subLogs.length) {
@@ -1625,12 +1617,12 @@ function renderDetail(data) {
         subBody.innerHTML = subLogs.map(function(row) {
             var ua = row.user_agent || '';
             var overseas = isOverseasLocation(row.ip_country, row.ip_region);
-            var mismatch = !overseas && isMismatch((row.ip_region || '').trim(), aliveProvinceSet, (row.ip_country || '').trim());
-            var regionHtml = overseas ? escapeHtml(regionText(row)) : detailRegionHtml(row);
-            var rowClass = overseas ? ' class="overseas-row"' : (mismatch ? ' class="mismatch-row"' : '');
+            var provinceKey = mainlandProvinceKey(row.ip_region);
+            var diff = !overseas && provinceKey !== '' && !aliveProvinceSet[provinceKey];
+            var rowClass = overseas ? ' class="overseas-row"' : (diff ? ' class="province-diff-row"' : '');
             return '<tr' + rowClass + '>'
                 + '<td class="col-ip">' + detailIpCell(row.ip) + '</td>'
-                + '<td class="col-region">' + regionHtml + '</td>'
+                + '<td class="col-region">' + escapeHtml(regionText(row)) + '</td>'
                 + '<td class="user-agent-cell" title="' + escapeHtml(ua) + '">' + escapeHtml(ua ? truncate(ua, 60) : '-') + '</td>'
                 + '<td class="col-time">' + fmtTime(row.created_at) + '</td>'
                 + '<td class="col-actions"><a href="javascript:void(0)" class="danger-link" title="删除这条订阅记录" onclick="deleteDetailRecord(\'sub\', ' + parseInt(row.id, 10) + ')"><i class="fas fa-trash"></i></a></td>'
@@ -1650,12 +1642,12 @@ function renderDetail(data) {
                 ip_isp: row.isp
             };
             var overseas = isOverseasLocation(row.country, row.province);
-            var mismatch = !overseas && isMismatch((row.province || '').trim(), subProvinceSet, (row.country || '').trim());
-            var regionHtml = overseas ? escapeHtml(regionText(regionRow)) : detailRegionHtml(regionRow);
-            var rowClass = overseas ? ' class="overseas-row"' : (mismatch ? ' class="mismatch-row"' : '');
+            var provinceKey = mainlandProvinceKey(row.province);
+            var diff = !overseas && provinceKey !== '' && !subProvinceSet[provinceKey];
+            var rowClass = overseas ? ' class="overseas-row"' : (diff ? ' class="province-diff-row"' : '');
             return '<tr' + rowClass + '>'
                 + '<td class="col-ip">' + detailIpCell(row.ip) + '</td>'
-                + '<td class="col-region">' + regionHtml + '</td>'
+                + '<td class="col-region">' + escapeHtml(regionText(regionRow)) + '</td>'
                 + '<td class="col-time">' + fmtTime(row.last_seen_at) + '</td>'
                 + '<td class="col-actions"><a href="javascript:void(0)" class="danger-link" title="删除这条在线记录" onclick="deleteDetailRecord(\'alive\', ' + parseInt(row.id, 10) + ')"><i class="fas fa-trash"></i></a></td>'
                 + '</tr>';
