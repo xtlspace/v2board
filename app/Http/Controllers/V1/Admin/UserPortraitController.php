@@ -62,6 +62,25 @@ class UserPortraitController extends Controller
         return response(['data' => $res, 'total' => $total]);
     }
 
+    public function deleteRecord(Request $request)
+    {
+        $type = $request->input('type');
+        $id = (int) $request->input('id');
+        if ($id <= 0) {
+            abort(500, '参数错误');
+        }
+
+        if ($type === 'sub') {
+            $count = DB::table('v2_sub_log')->where('id', $id)->delete();
+        } elseif ($type === 'alive') {
+            $count = DB::table('v2_alive_ip_history')->where('id', $id)->delete();
+        } else {
+            abort(500, '参数错误');
+        }
+
+        return response(['data' => true, 'count' => $count]);
+    }
+
     public function detail(Request $request)
     {
         $userId = (int) $request->input('user_id');

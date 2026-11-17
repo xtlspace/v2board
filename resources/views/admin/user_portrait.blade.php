@@ -131,6 +131,8 @@
         .risk-provinces { display: inline-block; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
         .mismatch-row td { background: #fff1f0; }
         .mismatch-province { color: #ff4d4f; font-weight: 600; }
+        .danger-link { color: #ff4d4f; }
+        .danger-link:hover { color: #ff7875; }
 
         .distribution-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 16px; }
         .distribution-toolbar .group { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
@@ -371,6 +373,7 @@
                                     <th class="col-region">地区</th>
                                     <th>User-Agent</th>
                                     <th class="col-time">时间</th>
+                                    <th class="col-actions">操作</th>
                                 </tr>
                             </thead>
                             <tbody id="detailSubBody"></tbody>
@@ -387,6 +390,7 @@
                                     <th class="col-ip">IP</th>
                                     <th class="col-region">地区</th>
                                     <th class="col-time">最近在线时间</th>
+                                    <th class="col-actions">操作</th>
                                 </tr>
                             </thead>
                             <tbody id="detailAliveBody"></tbody>
@@ -1367,7 +1371,7 @@ function renderDetail(data) {
 
     var subBody = document.getElementById('detailSubBody');
     if (!subLogs.length) {
-        subBody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><i class="fas fa-inbox"></i><p>暂无订阅记录</p></div></td></tr>';
+        subBody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><i class="fas fa-inbox"></i><p>暂无订阅记录</p></div></td></tr>';
     } else {
         subBody.innerHTML = subLogs.map(function(row) {
             var ua = row.user_agent || '';
@@ -1380,13 +1384,14 @@ function renderDetail(data) {
                 + '<td class="col-region">' + regionHtml + '</td>'
                 + '<td class="user-agent-cell" title="' + escapeHtml(ua) + '">' + escapeHtml(ua ? truncate(ua, 60) : '-') + '</td>'
                 + '<td class="col-time">' + fmtTime(row.created_at) + '</td>'
+                + '<td class="col-actions"><a href="javascript:void(0)" class="danger-link" title="删除这条订阅记录" onclick="deleteDetailRecord(\'sub\', ' + parseInt(row.id, 10) + ')"><i class="fas fa-trash"></i></a></td>'
                 + '</tr>';
         }).join('');
     }
 
     var aliveBody = document.getElementById('detailAliveBody');
     if (!aliveIps.length) {
-        aliveBody.innerHTML = '<tr><td colspan="3"><div class="empty-state"><i class="fas fa-inbox"></i><p>暂无在线记录</p></div></td></tr>';
+        aliveBody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><i class="fas fa-inbox"></i><p>暂无在线记录</p></div></td></tr>';
     } else {
         aliveBody.innerHTML = aliveIps.map(function(row) {
             var regionRow = {
@@ -1403,9 +1408,31 @@ function renderDetail(data) {
                 + '<td class="col-ip">' + detailIpCell(row.ip) + '</td>'
                 + '<td class="col-region">' + regionHtml + '</td>'
                 + '<td class="col-time">' + fmtTime(row.last_seen_at) + '</td>'
+                + '<td class="col-actions"><a href="javascript:void(0)" class="danger-link" title="删除这条在线记录" onclick="deleteDetailRecord(\'alive\', ' + parseInt(row.id, 10) + ')"><i class="fas fa-trash"></i></a></td>'
                 + '</tr>';
         }).join('');
     }
+}
+
+function deleteDetailRecord(type, id) {
+    var label = type === 'sub' ? '订阅记录' : '在线记录';
+    if (!confirm('确认删除这条' + label + '？此操作不可恢复。')) return;
+
+    var params = new URLSearchParams();
+    params.set('type', type);
+    params.set('id', id);
+    apiFetch(apiBase + '/user_portrait/deleteRecord', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString()
+    }).then(function(r) {
+        if (!r.ok) throw new Error('http ' + r.status);
+        return r.json();
+    }).then(function() {
+        searchDetail();
+    }).catch(function() {
+        alert('删除失败');
+    });
 }
 
 function searchLogs() {
