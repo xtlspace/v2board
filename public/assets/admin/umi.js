@@ -69961,14 +69961,6 @@
                     key: "commission_balance",
                     sorter: !0
                 }, {
-                    title: "\u52a0\u5165\u65f6\u95f4",
-                    dataIndex: "created_at",
-                    key: "created_at",
-                    sorter: !0,
-                    render: e=>{
-                        return w()(1e3 * e).format("YYYY/MM/DD HH:mm")
-                    }
-                }, {
                     title: "\u64cd\u4f5c",
                     dataIndex: "action",
                     key: "action",
