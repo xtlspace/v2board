@@ -123,6 +123,14 @@
         .risk-sortable:hover { color: #1890ff; }
         .risk-sortable i.fa-sort { margin-left: 4px; opacity: 0.3; font-size: 11px; }
         .risk-sortable.active i.fa-sort { opacity: 1; color: #1890ff; }
+        .filter-group .risk-types { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; min-height: 33px; }
+        .filter-group .risk-type { display: inline-flex; flex-direction: row; align-items: center; gap: 5px; font-size: 13px; color: #555; font-weight: 400; cursor: pointer; }
+        .filter-group .risk-type input[type="checkbox"] { margin: 0; min-width: 0; width: auto; }
+        .filter-group .risk-type .risk-threshold { width: 58px; min-width: 0; padding: 3px 6px; font-size: 12px; }
+        .risk-tags { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+        .risk-provinces { display: inline-block; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+        .mismatch-row td { background: #fff1f0; }
+        .mismatch-province { color: #ff4d4f; font-weight: 600; }
 
         .distribution-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 16px; }
         .distribution-toolbar .group { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
@@ -425,12 +433,29 @@
                 </div>
                 <div class="filter-form" id="riskFilterForm">
                     <div class="filter-group">
-                        <label>城市去重数 ≥</label>
-                        <input type="number" id="riskCityThreshold" value="5" min="1">
+                        <label>风险类型</label>
+                        <div class="risk-types">
+                            <label class="risk-type"><input type="checkbox" class="risk-type-check" value="mismatch" checked> 省份不一致</label>
+                            <label class="risk-type"><input type="checkbox" class="risk-type-check" value="online_province" checked> 在线多省 ≥
+                                <input type="number" class="risk-threshold" id="riskProvinceThreshold" value="3" min="1">
+                            </label>
+                            <label class="risk-type"><input type="checkbox" class="risk-type-check" value="online_ip" checked> 在线多 IP ≥
+                                <input type="number" class="risk-threshold" id="riskIpThreshold" value="5" min="1">
+                            </label>
+                            <label class="risk-type"><input type="checkbox" class="risk-type-check" value="sub_province"> 订阅多省 ≥
+                                <input type="number" class="risk-threshold" id="riskSubProvinceThreshold" value="3" min="1">
+                            </label>
+                            <label class="risk-type"><input type="checkbox" class="risk-type-check" value="overseas"> 境外/港澳台</label>
+                        </div>
                     </div>
                     <div class="filter-group">
-                        <label>UA 去重数 ≥</label>
-                        <input type="number" id="riskUaThreshold" value="3" min="1">
+                        <label>时间范围</label>
+                        <select id="riskDays">
+                            <option value="7">近7天</option>
+                            <option value="30" selected>近30天</option>
+                            <option value="90">近90天</option>
+                            <option value="0">全部</option>
+                        </select>
                     </div>
                     <div class="filter-group" style="padding-bottom:1px">
                         <label>&nbsp;</label>
@@ -443,16 +468,15 @@
                     <table>
                         <thead>
                             <tr>
-                                <th style="width:70px">User ID</th>
-                                <th>邮箱</th>
-                                <th class="risk-sortable" data-sort="city_count">城市去重 <i class="fas fa-sort"></i></th>
-                                <th class="risk-sortable" data-sort="ua_count">UA 去重 <i class="fas fa-sort"></i></th>
-                                <th>总请求</th>
-                                <th style="width:160px">最后时间</th>
+                                <th style="width:80px">User ID</th>
+                                <th class="risk-sortable" data-sort="risk_count">风险类型 <i class="fas fa-sort"></i></th>
+                                <th class="risk-sortable" data-sort="sub_region_count">订阅省份 <i class="fas fa-sort"></i></th>
+                                <th class="risk-sortable" data-sort="ua_count">UA种类 <i class="fas fa-sort"></i></th>
+                                <th class="risk-sortable" data-sort="alive_province_count">在线省份 <i class="fas fa-sort"></i></th>
                             </tr>
                         </thead>
                         <tbody id="riskBody">
-                            <tr><td colspan="6"><div class="empty-state"><i class="fas fa-shield-alt"></i><p>点击"筛查"开始分析</p></div></td></tr>
+                            <tr><td colspan="5"><div class="empty-state"><i class="fas fa-shield-alt"></i><p>点击"筛查"开始分析</p></div></td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -1328,15 +1352,32 @@ function renderDetail(data) {
     document.getElementById('detailSubTip').textContent = detailTip(subLogs.length, data.sub_total);
     document.getElementById('detailAliveTip').textContent = detailTip(aliveIps.length, data.alive_total);
 
+    // 省份对比：两边都有记录时才标红
+    var subProvinceSet = {};
+    (data.sub_provinces || []).forEach(function(p) { subProvinceSet[p] = true; });
+    var aliveProvinceSet = {};
+    (data.alive_provinces || []).forEach(function(p) { aliveProvinceSet[p] = true; });
+    var canCompare = Object.keys(subProvinceSet).length > 0 && Object.keys(aliveProvinceSet).length > 0;
+
+    function isMismatch(province, otherSet, country) {
+        if (!canCompare || !province || specialRegionMap[province]) return false;
+        if (country && country !== '中国') return false;
+        return !otherSet[province];
+    }
+
     var subBody = document.getElementById('detailSubBody');
     if (!subLogs.length) {
         subBody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><i class="fas fa-inbox"></i><p>暂无订阅记录</p></div></td></tr>';
     } else {
         subBody.innerHTML = subLogs.map(function(row) {
             var ua = row.user_agent || '';
-            return '<tr>'
+            var mismatch = isMismatch((row.ip_region || '').trim(), aliveProvinceSet, (row.ip_country || '').trim());
+            var regionHtml = mismatch
+                ? '<span class="mismatch-province">' + escapeHtml(regionText(row)) + '</span>'
+                : escapeHtml(regionText(row));
+            return '<tr' + (mismatch ? ' class="mismatch-row"' : '') + '>'
                 + '<td class="col-ip">' + detailIpCell(row.ip) + '</td>'
-                + '<td class="col-region">' + escapeHtml(regionText(row)) + '</td>'
+                + '<td class="col-region">' + regionHtml + '</td>'
                 + '<td class="user-agent-cell" title="' + escapeHtml(ua) + '">' + escapeHtml(ua ? truncate(ua, 60) : '-') + '</td>'
                 + '<td class="col-time">' + fmtTime(row.created_at) + '</td>'
                 + '</tr>';
@@ -1354,9 +1395,13 @@ function renderDetail(data) {
                 ip_city: row.city,
                 ip_isp: row.isp
             };
-            return '<tr>'
+            var mismatch = isMismatch((row.province || '').trim(), subProvinceSet, (row.country || '').trim());
+            var regionHtml = mismatch
+                ? '<span class="mismatch-province">' + escapeHtml(regionText(regionRow)) + '</span>'
+                : escapeHtml(regionText(regionRow));
+            return '<tr' + (mismatch ? ' class="mismatch-row"' : '') + '>'
                 + '<td class="col-ip">' + detailIpCell(row.ip) + '</td>'
-                + '<td class="col-region">' + escapeHtml(regionText(regionRow)) + '</td>'
+                + '<td class="col-region">' + regionHtml + '</td>'
                 + '<td class="col-time">' + fmtTime(row.last_seen_at) + '</td>'
                 + '</tr>';
         }).join('');
@@ -1569,23 +1614,44 @@ document.querySelectorAll('.tab-btn').forEach(function(btn) {
 });
 
 // =========== Risk Screening ===========
-var riskState = { current: 1, pageSize: 10, total: 0, sort: 'city_count', sortType: 'DESC' };
+var riskState = { current: 1, pageSize: 10, total: 0, sort: 'risk_count', sortType: 'DESC' };
+var riskTypeLabels = {
+    mismatch: { text: '省份不一致', cls: 'badge-danger' },
+    online_province: { text: '在线多省', cls: 'badge-warning' },
+    online_ip: { text: '在线多IP', cls: 'badge-warning' },
+    sub_province: { text: '订阅多省', cls: 'badge-warning' },
+    overseas: { text: '境外/港澳台', cls: 'badge-danger' }
+};
 
 function riskUserLink(userId) {
     openUserDetail(userId);
 }
 
 function loadRiskData() {
-    var cityThreshold = document.getElementById('riskCityThreshold').value || 5;
-    var uaThreshold = document.getElementById('riskUaThreshold').value || 3;
+    var types = [];
+    document.querySelectorAll('.risk-type-check:checked').forEach(function(el) {
+        types.push(el.value);
+    });
+    if (!types.length) {
+        alert('请至少选择一种风险类型');
+        return;
+    }
 
-    document.getElementById('riskBody').innerHTML = '<tr><td colspan="6"><div class="loading"><i class="fas fa-spinner"></i><p>加载中...</p></div></td></tr>';
+    var provinceThreshold = document.getElementById('riskProvinceThreshold').value || 3;
+    var ipThreshold = document.getElementById('riskIpThreshold').value || 5;
+    var subProvinceThreshold = document.getElementById('riskSubProvinceThreshold').value || 3;
+    var days = document.getElementById('riskDays').value;
+
+    document.getElementById('riskBody').innerHTML = '<tr><td colspan="5"><div class="loading"><i class="fas fa-spinner"></i><p>加载中...</p></div></td></tr>';
 
     var params = new URLSearchParams();
     params.set('current', riskState.current);
     params.set('pageSize', riskState.pageSize);
-    params.set('city_threshold', cityThreshold);
-    params.set('ua_threshold', uaThreshold);
+    params.set('types', types.join(','));
+    params.set('province_threshold', provinceThreshold);
+    params.set('ip_threshold', ipThreshold);
+    params.set('sub_province_threshold', subProvinceThreshold);
+    params.set('days', days);
     params.set('sort', riskState.sort);
     params.set('sort_type', riskState.sortType);
 
@@ -1597,33 +1663,31 @@ function loadRiskData() {
             updateRiskPagination();
 
             if (data.length === 0) {
-                document.getElementById('riskBody').innerHTML = '<tr><td colspan="6"><div class="empty-state"><i class="fas fa-check-circle"></i><p>未发现风险用户</p></div></td></tr>';
+                document.getElementById('riskBody').innerHTML = '<tr><td colspan="5"><div class="empty-state"><i class="fas fa-check-circle"></i><p>未发现风险用户</p></div></td></tr>';
                 return;
             }
 
             var html = '';
             data.forEach(function(r) {
-                var riskTag = '';
-                if (parseInt(r.city_count) >= parseInt(cityThreshold) && parseInt(r.ua_count) >= parseInt(uaThreshold)) {
-                    riskTag = ' <span class="badge badge-danger">城市+UA</span>';
-                } else if (parseInt(r.city_count) >= parseInt(cityThreshold)) {
-                    riskTag = ' <span class="badge badge-warning">城市</span>';
-                } else {
-                    riskTag = ' <span class="badge badge-warning">UA</span>';
-                }
+                var tags = r.risk_tags || [];
+                var tagHtml = tags.map(function(tag) {
+                    var meta = riskTypeLabels[tag] || { text: tag, cls: 'badge-type' };
+                    return '<span class="badge ' + meta.cls + '">' + escapeHtml(meta.text) + '</span>';
+                }).join('');
+                var subRegions = (r.sub_regions || []).join('、');
+                var aliveRegions = (r.alive_provinces || []).join('、');
                 html += '<tr>'
-                    + '<td><a href="javascript:void(0)" onclick="riskUserLink(' + r.user_id + ')" style="color:#1890ff">' + r.user_id + '</a></td>'
-                    + '<td>' + (r.email || '') + '</td>'
-                    + '<td>' + r.city_count + riskTag + '</td>'
-                    + '<td>' + r.ua_count + '</td>'
-                    + '<td>' + r.total_count + '</td>'
-                    + '<td>' + (r.last_time ? fmtTime(r.last_time) : '-') + '</td>'
+                    + '<td><a href="javascript:void(0)" onclick="riskUserLink(' + parseInt(r.user_id, 10) + ')" style="color:#1890ff">' + escapeHtml(r.user_id) + '</a></td>'
+                    + '<td><span class="risk-tags">' + tagHtml + '</span></td>'
+                    + '<td><span class="risk-provinces" title="' + escapeHtml(subRegions) + '">' + (subRegions ? escapeHtml(subRegions) : '<span class="text-muted">-</span>') + '</span></td>'
+                    + '<td>' + escapeHtml(r.ua_count || 0) + '</td>'
+                    + '<td><span class="risk-provinces" title="' + escapeHtml(aliveRegions) + '">' + (aliveRegions ? escapeHtml(aliveRegions) : '<span class="text-muted">-</span>') + '</span></td>'
                     + '</tr>';
             });
             document.getElementById('riskBody').innerHTML = html;
         })
         .catch(function() {
-            document.getElementById('riskBody').innerHTML = '<tr><td colspan="6"><div class="error-state"><i class="fas fa-exclamation-triangle"></i><p>加载失败</p></div></td></tr>';
+            document.getElementById('riskBody').innerHTML = '<tr><td colspan="5"><div class="error-state"><i class="fas fa-exclamation-triangle"></i><p>加载失败</p></div></td></tr>';
         });
 }
 
@@ -1735,8 +1799,14 @@ document.addEventListener('DOMContentLoaded', function() {
         riskState.current = 1;
         loadRiskData();
     });
-    document.getElementById('riskCityThreshold').addEventListener('keydown', function(e) { if (e.key === 'Enter') { riskState.current = 1; loadRiskData(); } });
-    document.getElementById('riskUaThreshold').addEventListener('keydown', function(e) { if (e.key === 'Enter') { riskState.current = 1; loadRiskData(); } });
+    ['riskProvinceThreshold', 'riskIpThreshold', 'riskSubProvinceThreshold'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('keydown', function(e) { if (e.key === 'Enter') { riskState.current = 1; loadRiskData(); } });
+    });
+    document.getElementById('riskDays').addEventListener('change', function() {
+        riskState.current = 1;
+        loadRiskData();
+    });
     document.getElementById('riskPrevPage').addEventListener('click', function() {
         if (riskState.current > 1) { riskState.current--; loadRiskData(); }
     });

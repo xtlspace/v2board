@@ -125,8 +125,22 @@ class UserPortraitController extends Controller
                 ],
                 'sub_logs' => $subLogs,
                 'sub_total' => $subTotal,
+                'sub_provinces' => DB::table('v2_sub_log')
+                    ->where('user_id', $userId)
+                    ->whereNotNull('ip_region')
+                    ->where('ip_region', '!=', '')
+                    ->distinct()
+                    ->pluck('ip_region')
+                    ->all(),
                 'alive_ips' => $aliveIps,
                 'alive_total' => $aliveTotal,
+                'alive_provinces' => DB::table('v2_alive_ip_history')
+                    ->where('user_id', $userId)
+                    ->whereNotNull('province')
+                    ->where('province', '!=', '')
+                    ->distinct()
+                    ->pluck('province')
+                    ->all(),
             ],
         ]);
     }
@@ -235,44 +249,155 @@ class UserPortraitController extends Controller
 
     public function riskCheck(Request $request)
     {
-        $sort = in_array($request->input('sort'), ['city_count', 'ua_count']) ? $request->input('sort') : 'city_count';
+        $typeWhitelist = ['mismatch', 'online_province', 'online_ip', 'sub_province', 'overseas'];
+        $types = array_values(array_intersect(
+            array_filter(explode(',', (string) $request->input('types', ''))),
+            $typeWhitelist
+        ));
+        if (empty($types)) {
+            $types = ['mismatch', 'online_province', 'online_ip'];
+        }
+
+        $provinceThreshold = max(1, (int) $request->input('province_threshold', 3));
+        $ipThreshold = max(1, (int) $request->input('ip_threshold', 5));
+        $subProvinceThreshold = max(1, (int) $request->input('sub_province_threshold', 3));
+        $days = (int) $request->input('days', 30);
+        if (!in_array($days, [0, 7, 30, 90], true)) {
+            $days = 30;
+        }
+
+        $sortWhitelist = ['risk_count', 'sub_region_count', 'ua_count', 'alive_province_count', 'last_at'];
+        $sort = in_array($request->input('sort'), $sortWhitelist, true) ? $request->input('sort') : 'risk_count';
         $sortType = in_array($request->input('sort_type'), ['ASC', 'DESC']) ? $request->input('sort_type') : 'DESC';
-        $cacheKey = 'sub_risk|' . md5(serialize($request->only(['city_threshold', 'ua_threshold', 'current', 'pageSize', 'sort', 'sort_type'])));
-        $result = Cache::remember($cacheKey, 60, function () use ($request, $sort, $sortType) {
-            $cityThreshold = (int)$request->input('city_threshold', 5);
-            $uaThreshold = (int)$request->input('ua_threshold', 3);
-            $current = (int)$request->input('current', 1);
-            $pageSize = (int)$request->input('pageSize', 10);
+        $current = max(1, (int) $request->input('current', 1));
+        $pageSize = (int) $request->input('pageSize', 10);
+        if ($pageSize < 10) {
+            $pageSize = 10;
+        }
+        if ($pageSize > 100) {
+            $pageSize = 100;
+        }
 
-            $builder = SubLog::select('user_id')
-                ->selectRaw('COUNT(DISTINCT ip_city) as city_count')
-                ->selectRaw('COUNT(DISTINCT user_agent) as ua_count')
-                ->selectRaw('COUNT(*) as total_count')
-                ->selectRaw('MAX(created_at) as last_time')
+        $cacheKey = 'sub_risk|' . md5(serialize([
+            $types, $provinceThreshold, $ipThreshold, $subProvinceThreshold, $days,
+        ]));
+
+        $rows = Cache::remember($cacheKey, 60, function () use ($provinceThreshold, $ipThreshold, $subProvinceThreshold, $days) {
+            $since = $days > 0 ? time() - $days * 86400 : 0;
+
+            $subRows = DB::table('v2_sub_log')
+                ->select('user_id')
+                ->selectRaw("GROUP_CONCAT(DISTINCT ip_region ORDER BY ip_region SEPARATOR ',') AS regions")
+                ->selectRaw('COUNT(DISTINCT ip_region) AS region_count')
+                ->selectRaw('COUNT(DISTINCT user_agent) AS ua_count')
+                ->selectRaw('COUNT(DISTINCT ip) AS sub_ip_count')
+                ->selectRaw('MAX(created_at) AS last_at')
+                ->selectRaw("SUM(CASE WHEN COALESCE(ip_country, '') NOT IN ('中国', '')
+                    OR ip_region IN ('香港', '澳门', '台湾') THEN 1 ELSE 0 END) AS overseas_count")
+                ->when($since > 0, function ($query) use ($since) {
+                    $query->where('created_at', '>=', $since);
+                })
                 ->groupBy('user_id')
-                ->havingRaw('city_count > ? OR ua_count > ?', [$cityThreshold, $uaThreshold])
-                ->orderBy($sort, $sortType)
-                ->orderBy('user_id', 'ASC');
+                ->get();
 
-            $sql = $builder->toSql();
-            $bindings = $builder->getBindings();
-            $total = (int)\DB::selectOne('SELECT COUNT(*) as aggregate FROM (' . $sql . ') as sub', $bindings)->aggregate;
+            $aliveRows = DB::table('v2_alive_ip_history')
+                ->select('user_id')
+                ->selectRaw("GROUP_CONCAT(DISTINCT province ORDER BY province SEPARATOR ',') AS provinces")
+                ->selectRaw('COUNT(DISTINCT province) AS province_count')
+                ->selectRaw('COUNT(DISTINCT ip) AS alive_ip_count')
+                ->selectRaw('MAX(last_seen_at) AS last_seen_at')
+                ->whereNotNull('province')
+                ->where('province', '!=', '')
+                ->when($since > 0, function ($query) use ($since) {
+                    $query->where('last_seen_at', '>=', $since);
+                })
+                ->groupBy('user_id')
+                ->get();
 
-            $data = $builder->forPage($current, $pageSize)->get();
+            $users = [];
+            $blank = [
+                'sub_regions' => [],
+                'alive_provinces' => [],
+                'sub_region_count' => 0,
+                'ua_count' => 0,
+                'sub_ip_count' => 0,
+                'alive_province_count' => 0,
+                'alive_ip_count' => 0,
+                'overseas_count' => 0,
+                'last_at' => 0,
+                'last_seen_at' => 0,
+            ];
 
-            $userIds = $data->pluck('user_id')->toArray();
-            if (!empty($userIds)) {
-                $users = \App\Models\User::whereIn('id', $userIds)->pluck('email', 'id');
-                $data->transform(function ($item) use ($users) {
-                    $item['email'] = $users->get($item->user_id, '');
-                    return $item;
-                });
+            foreach ($aliveRows as $row) {
+                $users[$row->user_id] = array_merge($blank, [
+                    'user_id' => (int) $row->user_id,
+                    'alive_provinces' => $row->provinces ? explode(',', $row->provinces) : [],
+                    'alive_province_count' => (int) $row->province_count,
+                    'alive_ip_count' => (int) $row->alive_ip_count,
+                    'last_seen_at' => (int) $row->last_seen_at,
+                ]);
             }
 
-            return ['data' => $data, 'total' => $total];
+            foreach ($subRows as $row) {
+                $id = $row->user_id;
+                if (!isset($users[$id])) {
+                    $users[$id] = array_merge($blank, ['user_id' => (int) $id]);
+                }
+                $users[$id]['sub_regions'] = $row->regions ? explode(',', $row->regions) : [];
+                $users[$id]['sub_region_count'] = (int) $row->region_count;
+                $users[$id]['ua_count'] = (int) $row->ua_count;
+                $users[$id]['sub_ip_count'] = (int) $row->sub_ip_count;
+                $users[$id]['overseas_count'] = (int) $row->overseas_count;
+                $users[$id]['last_at'] = (int) $row->last_at;
+            }
+
+            $list = [];
+            foreach ($users as $item) {
+                $tags = [];
+                if (!empty($item['sub_regions']) && !empty($item['alive_provinces'])
+                    && !array_intersect($item['sub_regions'], $item['alive_provinces'])) {
+                    $tags[] = 'mismatch';
+                }
+                if ($item['alive_province_count'] >= $provinceThreshold) {
+                    $tags[] = 'online_province';
+                }
+                if ($item['alive_ip_count'] >= $ipThreshold) {
+                    $tags[] = 'online_ip';
+                }
+                if ($item['sub_region_count'] >= $subProvinceThreshold) {
+                    $tags[] = 'sub_province';
+                }
+                if ($item['overseas_count'] > 0) {
+                    $tags[] = 'overseas';
+                }
+                if (empty($tags)) {
+                    continue;
+                }
+                $item['risk_tags'] = $tags;
+                $item['risk_count'] = count($tags);
+                $list[] = $item;
+            }
+
+            return $list;
         });
 
-        return response($result);
+        $filtered = array_values(array_filter($rows, function ($item) use ($types) {
+            return (bool) array_intersect($types, $item['risk_tags']);
+        }));
+
+        usort($filtered, function ($a, $b) use ($sort, $sortType) {
+            $left = $a[$sort] ?? 0;
+            $right = $b[$sort] ?? 0;
+            if ($left == $right) {
+                return $a['user_id'] <=> $b['user_id'];
+            }
+            return $sortType === 'ASC' ? ($left <=> $right) : ($right <=> $left);
+        });
+
+        $total = count($filtered);
+        $data = array_slice($filtered, ($current - 1) * $pageSize, $pageSize);
+
+        return response(['data' => $data, 'total' => $total]);
     }
 
     public function distribution(Request $request)
