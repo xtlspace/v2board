@@ -929,7 +929,9 @@ function syncUrlFromState() {
 
 function restoreStateFromUrl() {
     var params = new URLSearchParams(window.location.search);
+    var detailMode = params.get('tab') === 'detail';
     ['user_id', 'user_agent', 'ip', 'ip_city', 'ip_isp', 'date_range'].forEach(function(key) {
+        if (detailMode && key === 'user_id') return;
         var value = params.get(key);
         if (value) {
             var control = document.getElementById(filterControlMap[key]);
@@ -1749,9 +1751,13 @@ document.getElementById('clearBtn').addEventListener('click', function() {
 // =========== Init ===========
 document.addEventListener('DOMContentLoaded', function() {
     loadFilterOptions().then(function() {
+        var params = new URLSearchParams(window.location.search);
         restoreStateFromUrl();
         renderFilterChips();
         loadLogData();
+        if (params.get('tab') === 'detail' && params.get('user_id')) {
+            openUserDetail(params.get('user_id'));
+        }
     });
 
     document.getElementById('searchBtn').addEventListener('click', searchLogs);

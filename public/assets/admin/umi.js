@@ -21792,13 +21792,6 @@
                     className: "form-group"
                 }, p.a.createElement("label", {
                     for: "example-text-input-alt"
-                }, "ID: "), p.a.createElement("a", {
-                    href: "/" + window.settings.secure_path + "/user_portrait?user_id=" + t.id,
-                    target: "_blank"
-                }, t.id)), p.a.createElement("div", {
-                    className: "form-group"
-                }, p.a.createElement("label", {
-                    for: "example-text-input-alt"
                 }, "\u90ae\u7bb1"), p.a.createElement(u["a"], {
                     placeholder: "\u8bf7\u8f93\u5165\u90ae\u7bb1",
                     defaultValue: t.email,
@@ -70208,6 +70201,16 @@
                 }, g.a.createElement("a", null, g.a.createElement(u["a"], {
                     type: "edit"
                 }), " \u7f16\u8f91"))), g.a.createElement("li", {
+                    className: "ant-dropdown-menu-item"
+                }, g.a.createElement("a", {
+                    onClick: () => {
+                        var e;
+                        var id = null === (e = this.record) || void 0 === e ? void 0 : e.id;
+                        if (id) window.open("/" + window.settings.secure_path + "/user_portrait?tab=detail&user_id=" + id, "_blank");
+                    }
+                }, g.a.createElement(u["a"], {
+                    type: "user"
+                }), " \u7528\u6237\u753b\u50cf")), g.a.createElement("li", {
                     className: "ant-dropdown-menu-item"
                 }, g.a.createElement(S["a"], {
                     email: null === (n = this.record) || void 0 === n ? void 0 : n.email,
