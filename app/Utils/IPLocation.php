@@ -2,11 +2,191 @@
 
 namespace App\Utils;
 
+use App\Utils\OnlineIp\OnlineIpProvider;
+use App\Utils\OnlineIp\ProviderRegistry;
+use GuzzleHttp\Client;
+use Illuminate\Support\Facades\Cache;
+
 class IPLocation
 {
     private $searcher = null;
+    private $searcherError = null;
+    private $forceSource = null;
+    private $forceProviders = null;
+    private $lastError = null;
 
     public function __construct($v4Path = null, $v6Path = null)
+    {
+        $localRequired = $this->configSource(4) === 'local' || $this->configSource(6) === 'local';
+        try {
+            $this->searcher = $this->createSearcher($v4Path, $v6Path);
+        } catch (\Throwable $e) {
+            $this->searcher = null;
+            $this->searcherError = $e->getMessage();
+            if ($localRequired) {
+                throw $e;
+            }
+        }
+    }
+
+    /**
+     * 临时指定解析来源，不影响全局配置
+     *
+     * @param string $source local|online
+     * @param array|null $providers 在线模式下使用的接口 key 列表
+     */
+    public function withSource(string $source, array $providers = null): self
+    {
+        $this->forceSource = $source === 'online' ? 'online' : 'local';
+        $this->forceProviders = $providers;
+        return $this;
+    }
+
+    public function getLastError(): ?string
+    {
+        return $this->lastError;
+    }
+
+    public function find($ip)
+    {
+        $this->lastError = null;
+        $ip = trim((string) $ip);
+        if ($ip === '') {
+            $this->lastError = 'IP 为空';
+            return null;
+        }
+
+        $source = $this->sourceFor($ip);
+        if ($source === 'online') {
+            $result = $this->findOnline($ip);
+            if ($result !== null) {
+                return $result;
+            }
+            // 强制在线（单用户重新定位）时失败不回退
+            if ($this->forceSource === 'online') {
+                return null;
+            }
+        }
+
+        return $this->findLocal($ip);
+    }
+
+    private function sourceFor(string $ip): string
+    {
+        if ($this->forceSource !== null) {
+            return $this->forceSource;
+        }
+        $version = strpos($ip, ':') !== false ? 6 : 4;
+        return $this->configSource($version);
+    }
+
+    private function configSource(int $version): string
+    {
+        $key = $version === 6 ? 'ip_lookup_source_v6' : 'ip_lookup_source_v4';
+        return config("v2board.$key", 'local') === 'online' ? 'online' : 'local';
+    }
+
+    /**
+     * @return OnlineIpProvider[]
+     */
+    private function onlineProviders(): array
+    {
+        if ($this->forceProviders !== null) {
+            $providers = [];
+            foreach ($this->forceProviders as $key) {
+                $provider = ProviderRegistry::find((string) $key);
+                if ($provider !== null) {
+                    $providers[] = $provider;
+                }
+            }
+            return $providers;
+        }
+
+        return ProviderRegistry::enabled();
+    }
+
+    private function findOnline(string $ip): ?array
+    {
+        $providers = $this->onlineProviders();
+        if (empty($providers)) {
+            $this->lastError = '未配置在线查询接口';
+            return null;
+        }
+
+        $providerKeys = array_map(function (OnlineIpProvider $provider) {
+            return $provider->key();
+        }, $providers);
+
+        $cacheKey = 'ip_online_lookup|' . md5(implode('|', $providerKeys)) . '|' . md5($ip);
+        $cached = Cache::get($cacheKey, '__miss__');
+        if ($cached !== '__miss__') {
+            if (is_array($cached)) {
+                return $cached;
+            }
+            $this->lastError = '在线接口无结果（缓存）';
+            return null;
+        }
+
+        $errors = [];
+        foreach ($providers as $provider) {
+            $url = $provider->url();
+            if (strpos($url, '{ip}') !== false) {
+                $endpoint = str_replace('{ip}', rawurlencode($ip), $url);
+            } else {
+                $endpoint = rtrim($url, '/') . (strpos($url, '?') === false ? '?ip=' : '&ip=') . rawurlencode($ip);
+            }
+            try {
+                $client = new Client([
+                    'timeout' => 3,
+                    'connect_timeout' => 2,
+                    'headers' => [
+                        'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36',
+                        'Accept' => 'application/json',
+                    ],
+                ]);
+                $response = $client->get($endpoint);
+                $json = json_decode((string) $response->getBody(), true);
+                $parsed = is_array($json) ? $provider->parse($json) : null;
+                if ($parsed !== null) {
+                    Cache::put($cacheKey, $parsed, 7 * 86400);
+                    return $parsed;
+                }
+                $errors[] = $provider->name() . ' 无有效结果';
+            } catch (\Throwable $e) {
+                $errors[] = $provider->name() . ' ' . $e->getMessage();
+            }
+        }
+
+        Cache::put($cacheKey, false, 600);
+        $this->lastError = '在线接口失败：' . implode('；', array_slice($errors, 0, 3));
+        return null;
+    }
+
+    private function findLocal(string $ip): ?array
+    {
+        if ($this->searcher === null) {
+            $this->lastError = $this->searcherError ?: '本地 IP 库不可用';
+            return null;
+        }
+        try {
+            $result = $this->searcher->getIpInfo($ip);
+            if (!$result) {
+                $this->lastError = '本地 IP 库无结果';
+                return null;
+            }
+            return [
+                'country' => $result['country'] ?? '',
+                'region'  => $result['province'] ?? '',
+                'city'    => $result['city'] ?? '',
+                'isp'     => $result['isp'] ?? '',
+            ];
+        } catch (\Throwable $e) {
+            $this->lastError = '本地 IP 库解析失败：' . $e->getMessage();
+            return null;
+        }
+    }
+
+    private function createSearcher($v4Path, $v6Path)
     {
         if ($v4Path === null) {
             $configured = trim((string) config('v2board.ip_db_v4_path', ''));
@@ -32,7 +212,7 @@ class IPLocation
             throw new \RuntimeException("IPv6 IP 库不可读: {$v6Path}");
         }
 
-        $this->searcher = new \Ip2Region('file', $v4Path, $v6Path);
+        return new \Ip2Region('file', $v4Path, $v6Path);
     }
 
     /**
@@ -63,22 +243,6 @@ class IPLocation
             return null;
         }
         return $path;
-    }
-
-    public function find($ip)
-    {
-        try {
-            $result = $this->searcher->getIpInfo($ip);
-            if (!$result) return null;
-            return [
-                'country' => $result['country'] ?? '',
-                'region'  => $result['province'] ?? '',
-                'city'    => $result['city'] ?? '',
-                'isp'     => $result['isp'] ?? '',
-            ];
-        } catch (\Exception $e) {
-            return null;
-        }
     }
 
     public function close()

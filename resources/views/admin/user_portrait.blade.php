@@ -125,8 +125,16 @@
         .risk-sortable.active i.fa-sort { opacity: 1; color: #1890ff; }
         .filter-group .risk-types { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; min-height: 33px; }
         .filter-group .risk-type { display: inline-flex; flex-direction: row; align-items: center; gap: 5px; font-size: 13px; color: #555; font-weight: 400; cursor: pointer; }
-        .filter-group .risk-type input[type="checkbox"] { margin: 0; min-width: 0; width: auto; }
+        .filter-group .risk-type input[type="checkbox"],
+        .filter-group .risk-type input[type="radio"] { margin: 0; min-width: 0; width: auto; padding: 0; }
         .filter-group .risk-type .risk-threshold { width: 58px; min-width: 0; padding: 3px 6px; font-size: 12px; }
+        .api-list { display: flex; flex-direction: column; gap: 8px; }
+        .api-row { display: flex; gap: 8px; align-items: center; }
+        .api-row .api-url { flex: 1; min-width: 0; padding: 6px 10px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 13px; }
+        .api-row .btn { flex: 0 0 auto; }
+        .provider-list { display: flex; flex-wrap: wrap; gap: 10px 24px; padding: 4px 0 8px; }
+        .provider-item { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #555; cursor: pointer; }
+        .provider-item input { margin: 0; }
         .risk-tags { display: inline-flex; flex-wrap: wrap; gap: 4px; }
         .risk-provinces { display: inline-block; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
         .mismatch-row td { background: #fff1f0; }
@@ -363,6 +371,21 @@
                 <div id="detailResult" style="display:none">
                     <div class="distribution-summary detail-summary" id="detailSummary"></div>
 
+                    <div class="filter-form" style="margin-top:20px">
+                        <div class="filter-group" style="min-width:220px">
+                            <label>定位数据源</label>
+                            <select id="detailResolveSource"></select>
+                        </div>
+                        <div class="filter-group" style="padding-bottom:1px">
+                            <label>&nbsp;</label>
+                            <button class="btn btn-primary" id="detailResolveBtn"><i class="fas fa-sync"></i>重新定位全部记录</button>
+                        </div>
+                        <div class="filter-group" style="flex:1;min-width:240px">
+                            <label>状态</label>
+                            <div id="detailResolveStatus" style="font-size:13px;color:#555;padding:6px 0">选择数据源后点击重新定位</div>
+                        </div>
+                    </div>
+
                     <div class="toolbar" style="margin-top:20px">
                         <span class="toolbar-title">订阅记录 <span class="text-muted" id="detailSubTip" style="font-weight:400;font-size:12px"></span></span>
                     </div>
@@ -510,8 +533,28 @@
                 </p>
 
                 <div class="toolbar">
-                    <span class="toolbar-title">IP 归属地库</span>
+                    <span class="toolbar-title">IP 归属地来源</span>
                 </div>
+                <div class="filter-form">
+                    <div class="filter-group" style="min-width:260px">
+                        <label>IPv4</label>
+                        <div class="risk-types">
+                            <label class="risk-type"><input type="radio" name="settingSourceV4" value="local" checked> 本地 IP 库</label>
+                            <label class="risk-type"><input type="radio" name="settingSourceV4" value="online"> 在线接口</label>
+                        </div>
+                    </div>
+                    <div class="filter-group" style="min-width:260px">
+                        <label>IPv6</label>
+                        <div class="risk-types">
+                            <label class="risk-type"><input type="radio" name="settingSourceV6" value="local" checked> 本地 IP 库</label>
+                            <label class="risk-type"><input type="radio" name="settingSourceV6" value="online"> 在线接口</label>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-muted" style="font-size:12px;margin:-4px 0 16px">
+                    选择「在线接口」时优先调用下方接口，全部失败后回退本地 IP 库（单用户重新定位除外）。
+                </p>
+
                 <div class="filter-form">
                     <div class="filter-group" style="flex:1;min-width:340px">
                         <label>IPv4 库路径</label>
@@ -522,6 +565,15 @@
                         <input type="text" id="settingIpDbV6" placeholder="留空使用 ipdata6.xdb，可留空">
                     </div>
                 </div>
+                <p class="text-muted" style="font-size:12px;margin:-4px 0 24px">
+                    留空时使用程序目录下的 ipdata.xdb / ipdata6.xdb；相对路径按项目根目录解析。
+                </p>
+
+                <div class="toolbar">
+                    <span class="toolbar-title">在线查询接口 <span class="text-muted" style="font-weight:400;font-size:12px">按顺序尝试，失败自动切换下一个</span></span>
+                </div>
+                <div id="providerList" class="provider-list"></div>
+
                 <div class="filter-form" style="margin-top:12px">
                     <div class="filter-group" style="min-width:240px">
                         <label>测试 IP</label>
@@ -537,7 +589,7 @@
                     </div>
                 </div>
                 <p class="text-muted" style="font-size:12px;margin:-4px 0 24px">
-                    留空时使用程序目录下的 ipdata.xdb / ipdata6.xdb；相对路径按项目根目录解析。保存后对订阅日志、在线记录、订单、工单提醒、用户详情、重建缓存全部生效。
+                    保存后对订阅日志、在线记录、订单、工单提醒、用户详情、重建缓存全部生效。
                 </p>
 
                 <div class="toolbar">
@@ -546,8 +598,9 @@
                 <div class="filter-form">
                     <div class="filter-group">
                         <label>重建缓存</label>
-                        <div style="display:flex;gap:12px;align-items:center">
-                            <button class="btn btn-primary" id="rebuildBtn"><i class="fas fa-sync"></i>重建缓存</button>
+                        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+                            <button class="btn btn-primary" id="rebuildBtnV4"><i class="fas fa-sync"></i>重建 IPv4</button>
+                            <button class="btn btn-primary" id="rebuildBtnV6"><i class="fas fa-sync"></i>重建 IPv6</button>
                             <span id="rebuildStatus" class="text-muted" style="font-size:13px">重新解析订阅记录和在线记录中的 IP 国家 / 地区 / 省市 / 运营商</span>
                         </div>
                     </div>
@@ -1344,11 +1397,105 @@ function initDetailTab() {
     document.getElementById('detailUserId').addEventListener('keydown', function(e) {
         if (e.key === 'Enter') searchDetail();
     });
+    document.getElementById('detailResolveBtn').addEventListener('click', resolveDetailIps);
+    loadDetailSources();
     var params = new URLSearchParams(window.location.search);
     var userId = params.get('user_id');
     if (userId) {
         document.getElementById('detailUserId').value = userId;
     }
+}
+
+function loadDetailSources() {
+    apiFetch(apiBase + '/user_portrait/getSettings')
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+            var data = res.data || {};
+            var providers = data.ip_providers || [];
+            var enabled = data.ip_lookup_providers || providers.map(function(p) { return p.key; });
+            var select = document.getElementById('detailResolveSource');
+            var current = select.value;
+            select.innerHTML = '';
+            var local = document.createElement('option');
+            local.value = 'local';
+            local.textContent = '本地 IP 库';
+            select.appendChild(local);
+            providers.forEach(function(provider) {
+                if (enabled.indexOf(provider.key) === -1) return;
+                var option = document.createElement('option');
+                option.value = 'provider:' + provider.key;
+                option.textContent = provider.name;
+                select.appendChild(option);
+            });
+            if (current) select.value = current;
+        })
+        .catch(function() {});
+}
+
+var detailResolving = false;
+
+function resolveDetailIps() {
+    if (detailResolving) return;
+    var userId = parseInt(document.getElementById('detailUserId').value.trim(), 10);
+    if (!userId || userId <= 0) {
+        alert('请先查询用户');
+        return;
+    }
+    var select = document.getElementById('detailResolveSource');
+    var source = select.value || 'local';
+    var label = select.options[select.selectedIndex] ? select.options[select.selectedIndex].textContent : '本地 IP 库';
+    if (!confirm('确认用「' + label + '」重新定位该用户的订阅记录和在线记录？')) return;
+
+    detailResolving = true;
+    var btn = document.getElementById('detailResolveBtn');
+    var status = document.getElementById('detailResolveStatus');
+    btn.disabled = true;
+    status.textContent = '准备中...';
+
+    runResolve('sub', userId, source, 0, 0, 0, function() {
+        runResolve('alive', userId, source, 0, 0, 0, function() {
+            detailResolving = false;
+            btn.disabled = false;
+            status.textContent = '定位完成';
+            searchDetail();
+        });
+    });
+}
+
+function runResolve(type, userId, source, lastId, doneCount, total, onDone) {
+    var label = type === 'sub' ? '订阅记录' : '在线记录';
+    var status = document.getElementById('detailResolveStatus');
+    var params = new URLSearchParams();
+    params.set('user_id', userId);
+    params.set('type', type);
+    params.set('source', source);
+    params.set('last_id', lastId);
+    params.set('limit', 200);
+
+    apiFetch(apiBase + '/user_portrait/resolveUserIps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString()
+    }).then(function(r) {
+        if (r.ok) return r.json();
+        return r.json().catch(function() { return {}; }).then(function(err) {
+            throw new Error(err.message || ('HTTP ' + r.status));
+        });
+    }).then(function(res) {
+        var data = res.data || {};
+        if (data.total) total = data.total;
+        var newDone = doneCount + (data.processed || 0);
+        status.textContent = label + ' ' + newDone + (total ? ' / ' + total : '');
+        if (data.done) {
+            onDone();
+        } else {
+            runResolve(type, userId, source, data.last_id, newDone, total, onDone);
+        }
+    }).catch(function(err) {
+        detailResolving = false;
+        document.getElementById('detailResolveBtn').disabled = false;
+        status.textContent = '定位失败：' + (err && err.message ? err.message : '请重试');
+    });
 }
 
 function detailIpCell(ip) {
@@ -1828,6 +1975,44 @@ document.getElementById('clearBtn').addEventListener('click', function() {
 // =========== Settings ===========
 var settingsInited = false;
 var rebuildRunning = false;
+var settingsProviderOptions = [];
+var settingsEnabledProviders = [];
+
+function renderProviders() {
+    var box = document.getElementById('providerList');
+    if (!box) return;
+    box.innerHTML = '';
+    if (!settingsProviderOptions.length) {
+        box.innerHTML = '<span class="text-muted" style="font-size:13px">暂无可用接口</span>';
+        return;
+    }
+    settingsProviderOptions.forEach(function(provider) {
+        var label = document.createElement('label');
+        label.className = 'provider-item';
+        var checked = settingsEnabledProviders.indexOf(provider.key) !== -1;
+        label.innerHTML = '<input type="checkbox" value="' + escapeHtml(provider.key) + '"' + (checked ? ' checked' : '') + '> ' + escapeHtml(provider.name);
+        box.appendChild(label);
+    });
+}
+
+function collectProviders() {
+    var keys = [];
+    document.querySelectorAll('#providerList input[type="checkbox"]:checked').forEach(function(el) {
+        keys.push(el.value);
+    });
+    return keys;
+}
+
+function selectedSource(name) {
+    var checked = document.querySelector('input[name="' + name + '"]:checked');
+    return checked ? checked.value : 'local';
+}
+
+function setSource(name, value) {
+    document.querySelectorAll('input[name="' + name + '"]').forEach(function(el) {
+        el.checked = el.value === (value === 'online' ? 'online' : 'local');
+    });
+}
 
 function initSettingsTab() {
     if (settingsInited) return;
@@ -1837,13 +2022,19 @@ function initSettingsTab() {
         document.getElementById('settingIpLookup').value = defaultIpLookup;
         document.getElementById('settingIpDbV4').value = '';
         document.getElementById('settingIpDbV6').value = '';
+        setSource('settingSourceV4', 'local');
+        setSource('settingSourceV6', 'local');
+        settingsEnabledProviders = settingsProviderOptions.map(function(p) { return p.key; });
+        renderProviders();
         document.getElementById('testIpResult').textContent = '-';
     });
     document.getElementById('testIpBtn').addEventListener('click', testIpLocation);
-    document.getElementById('rebuildBtn').addEventListener('click', rebuildLocation);
+    document.getElementById('rebuildBtnV4').addEventListener('click', function() { rebuildLocation(4); });
+    document.getElementById('rebuildBtnV6').addEventListener('click', function() { rebuildLocation(6); });
     document.getElementById('settingIpLookup').addEventListener('keydown', function(e) {
         if (e.key === 'Enter') saveSettings();
     });
+    renderProviders();
     loadSettings();
 }
 
@@ -1856,6 +2047,11 @@ function loadSettings() {
             document.getElementById('settingIpLookup').value = url;
             document.getElementById('settingIpDbV4').value = data.ip_db_v4_path || '';
             document.getElementById('settingIpDbV6').value = data.ip_db_v6_path || '';
+            setSource('settingSourceV4', data.ip_lookup_source_v4 || 'local');
+            setSource('settingSourceV6', data.ip_lookup_source_v6 || 'local');
+            settingsProviderOptions = data.ip_providers || [];
+            settingsEnabledProviders = data.ip_lookup_providers || settingsProviderOptions.map(function(p) { return p.key; });
+            renderProviders();
             ipLookupBase = url;
         })
         .catch(function() {});
@@ -1873,6 +2069,9 @@ function testIpLocation() {
     params.set('ip', ip);
     params.set('ip_db_v4_path', document.getElementById('settingIpDbV4').value.trim());
     params.set('ip_db_v6_path', document.getElementById('settingIpDbV6').value.trim());
+    params.set('ip_lookup_source_v4', selectedSource('settingSourceV4'));
+    params.set('ip_lookup_source_v6', selectedSource('settingSourceV6'));
+    params.set('ip_lookup_providers', JSON.stringify(collectProviders()));
 
     resultBox.textContent = '测试中...';
     apiFetch(apiBase + '/user_portrait/testIpLocation', {
@@ -1907,6 +2106,9 @@ function saveSettings() {
     params.set('ip_lookup_url', url);
     params.set('ip_db_v4_path', document.getElementById('settingIpDbV4').value.trim());
     params.set('ip_db_v6_path', document.getElementById('settingIpDbV6').value.trim());
+    params.set('ip_lookup_source_v4', selectedSource('settingSourceV4'));
+    params.set('ip_lookup_source_v6', selectedSource('settingSourceV6'));
+    params.set('ip_lookup_providers', JSON.stringify(collectProviders()));
     apiFetch(apiBase + '/user_portrait/saveSettings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -1926,30 +2128,41 @@ function saveSettings() {
     });
 }
 
-function rebuildLocation() {
+function rebuildLocation(ipVersion) {
     if (rebuildRunning) return;
-    if (!confirm('确认重建缓存？将重新解析订阅记录和在线记录中的 IP 国家 / 地区 / 省市 / 运营商，数据量大时耗时较长。')) return;
+    if (!confirm('确认重建 IPv' + ipVersion + ' 缓存？将重新解析订阅记录和在线记录中的 IPv' + ipVersion + ' 归属地。')) return;
 
     rebuildRunning = true;
-    var btn = document.getElementById('rebuildBtn');
+    var v4Btn = document.getElementById('rebuildBtnV4');
+    var v6Btn = document.getElementById('rebuildBtnV6');
     var status = document.getElementById('rebuildStatus');
-    btn.disabled = true;
+    v4Btn.disabled = true;
+    v6Btn.disabled = true;
     status.textContent = '准备中...';
 
-    runRebuildTable('sub', 0, 0, 0, function() {
-        runRebuildTable('alive', 0, 0, 0, function() {
+    var label = 'IPv' + ipVersion;
+    runRebuildTable('sub', ipVersion, 0, 0, 0, function() {
+        runRebuildTable('alive', ipVersion, 0, 0, 0, function() {
             rebuildRunning = false;
-            btn.disabled = false;
-            status.textContent = '重建完成';
+            v4Btn.disabled = false;
+            v6Btn.disabled = false;
+            status.textContent = label + ' 重建完成';
         });
     });
 }
 
-function runRebuildTable(table, lastId, doneCount, total, onDone) {
-    var label = table === 'sub' ? '订阅记录' : '在线记录';
+function rebuildFailed() {
+    rebuildRunning = false;
+    document.getElementById('rebuildBtnV4').disabled = false;
+    document.getElementById('rebuildBtnV6').disabled = false;
+}
+
+function runRebuildTable(table, ipVersion, lastId, doneCount, total, onDone) {
+    var label = 'IPv' + ipVersion + ' ' + (table === 'sub' ? '订阅记录' : '在线记录');
     var status = document.getElementById('rebuildStatus');
     var params = new URLSearchParams();
     params.set('table', table);
+    params.set('ip_version', ipVersion);
     params.set('last_id', lastId);
     params.set('limit', 500);
 
@@ -1970,11 +2183,10 @@ function runRebuildTable(table, lastId, doneCount, total, onDone) {
         if (data.done) {
             onDone();
         } else {
-            runRebuildTable(table, data.last_id, newDone, total, onDone);
+            runRebuildTable(table, ipVersion, data.last_id, newDone, total, onDone);
         }
     }).catch(function(err) {
-        rebuildRunning = false;
-        document.getElementById('rebuildBtn').disabled = false;
+        rebuildFailed();
         status.textContent = '重建失败：' + (err && err.message ? err.message : '请重试');
     });
 }

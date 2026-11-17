@@ -9,6 +9,7 @@ use App\Models\SubRule;
 use App\Services\UserDistributionService;
 use App\Utils\ConfigCache;
 use App\Utils\IPLocation;
+use App\Utils\OnlineIp\ProviderRegistry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -84,12 +85,42 @@ class UserPortraitController extends Controller
         return response(['data' => true, 'count' => $count]);
     }
 
+    private function normalizeProviderKeys($input): array
+    {
+        if (is_string($input)) {
+            $decoded = json_decode($input, true);
+            $input = is_array($decoded) ? $decoded : [];
+        }
+        if (!is_array($input)) {
+            $input = [];
+        }
+
+        $keys = [];
+        foreach ($input as $key) {
+            if (!is_string($key)) {
+                continue;
+            }
+            $key = trim($key);
+            if ($key === '' || ProviderRegistry::find($key) === null) {
+                continue;
+            }
+            $keys[] = $key;
+        }
+        $keys = array_values(array_unique($keys));
+
+        return $keys ?: ProviderRegistry::keys();
+    }
+
     public function getSettings()
     {
         return response(['data' => [
             'ip_lookup_url' => config('v2board.ip_lookup_url', 'https://iplark.com/'),
             'ip_db_v4_path' => (string) config('v2board.ip_db_v4_path', ''),
             'ip_db_v6_path' => (string) config('v2board.ip_db_v6_path', ''),
+            'ip_lookup_source_v4' => config('v2board.ip_lookup_source_v4', 'local'),
+            'ip_lookup_source_v6' => config('v2board.ip_lookup_source_v6', 'local'),
+            'ip_lookup_providers' => ProviderRegistry::enabledKeys(),
+            'ip_providers' => ProviderRegistry::options(),
         ]]);
     }
 
@@ -119,10 +150,17 @@ class UserPortraitController extends Controller
             }
         }
 
+        $sourceV4 = $request->input('ip_lookup_source_v4', 'local') === 'online' ? 'online' : 'local';
+        $sourceV6 = $request->input('ip_lookup_source_v6', 'local') === 'online' ? 'online' : 'local';
+        $providers = $this->normalizeProviderKeys($request->input('ip_lookup_providers', '[]'));
+
         $config = config('v2board') ?? [];
         $config['ip_lookup_url'] = $url;
         $config['ip_db_v4_path'] = $v4Path;
         $config['ip_db_v6_path'] = $v6Path;
+        $config['ip_lookup_source_v4'] = $sourceV4;
+        $config['ip_lookup_source_v6'] = $sourceV6;
+        $config['ip_lookup_providers'] = $providers;
         $exported = var_export($config, 1);
         if (!ConfigCache::write(base_path() . '/config/v2board.php', "<?php\n return $exported ;")) {
             abort(500, '保存失败');
@@ -131,9 +169,12 @@ class UserPortraitController extends Controller
             'v2board.ip_lookup_url' => $url,
             'v2board.ip_db_v4_path' => $v4Path,
             'v2board.ip_db_v6_path' => $v6Path,
+            'v2board.ip_lookup_source_v4' => $sourceV4,
+            'v2board.ip_lookup_source_v6' => $sourceV6,
+            'v2board.ip_lookup_providers' => $providers,
         ]);
 
-        // IP 库可能已更换，让在线记录的归属地缓存立即失效
+        // IP 库/接口可能已更换，让在线记录的归属地缓存立即失效
         try {
             UserDistributionService::bumpLocationEpoch();
         } catch (\Throwable $e) {
@@ -152,14 +193,29 @@ class UserPortraitController extends Controller
 
         $v4Path = trim((string) $request->input('ip_db_v4_path', ''));
         $v6Path = trim((string) $request->input('ip_db_v6_path', ''));
+        $sourceV4 = $request->input('ip_lookup_source_v4', 'local') === 'online' ? 'online' : 'local';
+        $sourceV6 = $request->input('ip_lookup_source_v6', 'local') === 'online' ? 'online' : 'local';
+        $providers = $this->normalizeProviderKeys($request->input('ip_lookup_providers', '[]'));
+
+        config([
+            'v2board.ip_db_v4_path' => $v4Path,
+            'v2board.ip_db_v6_path' => $v6Path,
+            'v2board.ip_lookup_source_v4' => $sourceV4,
+            'v2board.ip_lookup_source_v6' => $sourceV6,
+            'v2board.ip_lookup_providers' => $providers,
+        ]);
+
         try {
-            $location = new IPLocation($v4Path === '' ? null : $v4Path, $v6Path === '' ? null : $v6Path);
+            $location = new IPLocation();
             $info = $location->find($ip);
         } catch (\Throwable $e) {
             abort(500, $e->getMessage());
         }
+        if ($info === null) {
+            abort(500, $location->getLastError() ?: '无解析结果');
+        }
 
-        return response(['data' => $info ?: null]);
+        return response(['data' => $info]);
     }
 
     public function rebuildLocation(Request $request)
@@ -169,6 +225,7 @@ class UserPortraitController extends Controller
             abort(500, '参数错误');
         }
         $tableName = $table === 'sub' ? 'v2_sub_log' : 'v2_alive_ip_history';
+        $ipVersion = (int) $request->input('ip_version', 4) === 6 ? 6 : 4;
         $lastId = max(0, (int) $request->input('last_id', 0));
         $limit = (int) $request->input('limit', 500);
         if ($limit < 50) {
@@ -177,10 +234,25 @@ class UserPortraitController extends Controller
         if ($limit > 1000) {
             $limit = 1000;
         }
+        $source = $ipVersion === 6
+            ? config('v2board.ip_lookup_source_v6', 'local')
+            : config('v2board.ip_lookup_source_v4', 'local');
+        if ($source === 'online' && $limit > 100) {
+            $limit = 100;
+        }
+
+        $versionFilter = function ($query) use ($ipVersion) {
+            if ($ipVersion === 6) {
+                $query->whereRaw("INSTR(ip, ':') > 0");
+            } else {
+                $query->whereRaw("INSTR(ip, ':') = 0");
+            }
+        };
 
         try {
             $rows = DB::table($tableName)
                 ->where('id', '>', $lastId)
+                ->where($versionFilter)
                 ->orderBy('id')
                 ->limit($limit)
                 ->get(['id', 'ip']);
@@ -240,7 +312,7 @@ class UserPortraitController extends Controller
                 'last_id' => $newLastId,
                 'processed' => count($rows),
                 'done' => $done,
-                'total' => $lastId === 0 ? DB::table($tableName)->count() : null,
+                'total' => $lastId === 0 ? DB::table($tableName)->where($versionFilter)->count() : null,
             ]]);
         } catch (\Throwable $e) {
             if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpException) {
@@ -255,6 +327,123 @@ class UserPortraitController extends Controller
             ]);
             abort(500, $e->getMessage());
         }
+    }
+
+    public function resolveUserIps(Request $request)
+    {
+        $userId = (int) $request->input('user_id');
+        $type = $request->input('type');
+        if ($userId <= 0 || !in_array($type, ['sub', 'alive'], true)) {
+            abort(500, '参数错误');
+        }
+        $lastId = max(0, (int) $request->input('last_id', 0));
+        $limit = (int) $request->input('limit', 200);
+        if ($limit < 20) {
+            $limit = 20;
+        }
+        if ($limit > 500) {
+            $limit = 500;
+        }
+        $source = (string) $request->input('source', 'local');
+
+        $forceSource = 'local';
+        $forceProviders = null;
+        if ($source !== 'local') {
+            if (!preg_match('/^provider:([A-Za-z0-9_\-]+)$/', $source, $matches)
+                || ProviderRegistry::find($matches[1]) === null) {
+                abort(500, '数据源无效');
+            }
+            $forceSource = 'online';
+            $forceProviders = [$matches[1]];
+            if ($limit > 100) {
+                $limit = 100;
+            }
+        }
+
+        $tableName = $type === 'sub' ? 'v2_sub_log' : 'v2_alive_ip_history';
+
+        try {
+            $location = (new IPLocation())->withSource($forceSource, $forceProviders);
+        } catch (\Throwable $e) {
+            abort(500, $e->getMessage());
+        }
+
+        $rows = DB::table($tableName)
+            ->where('user_id', $userId)
+            ->where('id', '>', $lastId)
+            ->orderBy('id')
+            ->limit($limit)
+            ->get(['id', 'ip']);
+
+        // 先全部解析成功，再统一写库；任一失败则不修改数据
+        $resolved = [];
+        foreach ($rows as $row) {
+            $ip = trim((string) $row->ip);
+            if ($ip === '') {
+                continue;
+            }
+            if (!array_key_exists($ip, $resolved)) {
+                $resolved[$ip] = $location->find($ip);
+            }
+            if ($resolved[$ip] === null) {
+                abort(500, 'IP 解析失败（' . $ip . '）：' . ($location->getLastError() ?: '未知原因'));
+            }
+        }
+
+        $epoch = UserDistributionService::locationEpoch();
+        foreach ($rows as $row) {
+            $ip = trim((string) $row->ip);
+            if ($ip === '' || !isset($resolved[$ip])) {
+                continue;
+            }
+            $info = $resolved[$ip];
+            if ($type === 'sub') {
+                $update = [
+                    'ip_country' => $info['country'] !== '' ? $info['country'] : null,
+                    'ip_region' => $info['region'] !== '' ? $info['region'] : null,
+                    'ip_city' => $info['city'] !== '' ? $info['city'] : null,
+                    'ip_isp' => $info['isp'] !== '' ? $info['isp'] : null,
+                ];
+            } else {
+                $region = (string) $info['region'];
+                $province = $region !== '' ? UserDistributionService::normalizeProvince($region) : null;
+                $update = [
+                    'country' => $info['country'] !== '' ? $info['country'] : null,
+                    'province' => $province ?: ($region !== '' ? $region : null),
+                    'city' => $info['city'] !== '' ? $info['city'] : null,
+                    'isp' => $info['isp'] !== '' ? $info['isp'] : null,
+                    'provider' => UserDistributionService::classifyProvider((string) $info['isp']),
+                ];
+            }
+            DB::table($tableName)->where('id', $row->id)->update($update);
+
+            // 清理该 IP 的在线归属地缓存
+            try {
+                Cache::forget('alive_ip_location|' . $epoch . '|' . md5($ip));
+            } catch (\Throwable $e) {
+            }
+        }
+
+        $done = count($rows) < $limit;
+        $newLastId = count($rows) > 0 ? (int) $rows[count($rows) - 1]->id : $lastId;
+
+        if ($done) {
+            foreach (['1h', '1d', '7d', '30d'] as $range) {
+                try {
+                    Cache::forget('user_portrait_distribution|' . $range);
+                } catch (\Throwable $e) {
+                }
+            }
+        }
+
+        return response(['data' => [
+            'last_id' => $newLastId,
+            'processed' => count($rows),
+            'done' => $done,
+            'total' => $lastId === 0
+                ? DB::table($tableName)->where('user_id', $userId)->count()
+                : null,
+        ]]);
     }
 
     public function detail(Request $request)
