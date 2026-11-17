@@ -25892,6 +25892,20 @@
                  }))), o.a.createElement(s["a"], {
                     type: "vertical"
                 }), o.a.createElement(l["a"], {
+                    title: "TA\u7684\u753b\u50cf",
+                    placement: "left"
+                }, o.a.createElement("a", {
+                    href: "/" + window.settings.secure_path + "/user_portrait?tab=detail&user_id=" + (null === n || void 0 === n ? void 0 : n.user_id),
+                    target: "_blank",
+                    rel: "noopener noreferrer",
+                    style: {
+                        cursor: "pointer"
+                    }
+                }, o.a.createElement(c["a"], {
+                    type: "idcard"
+                }))), o.a.createElement(s["a"], {
+                    type: "vertical"
+                }), o.a.createElement(l["a"], {
                     title: "\u4ed6\u7684\u8ba2\u5355",
                     placement: "left"
                 }, o.a.createElement("a", {
