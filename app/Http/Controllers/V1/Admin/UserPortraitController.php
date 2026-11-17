@@ -12,6 +12,7 @@ use App\Utils\IPLocation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class UserPortraitController extends Controller
 {
@@ -114,6 +115,7 @@ class UserPortraitController extends Controller
 
     public function rebuildLocation(Request $request)
     {
+        $lockKey = 'user_portrait_rebuild_running';
         $table = $request->input('table');
         if (!in_array($table, ['sub', 'alive'], true)) {
             abort(500, '参数错误');
@@ -128,11 +130,17 @@ class UserPortraitController extends Controller
             $limit = 1000;
         }
 
-        $lock = null;
+        $acquired = false;
         if ($lastId === 0) {
-            $lock = Cache::lock('user_portrait_rebuild_location', 600);
-            if (!$lock->get()) {
-                abort(500, '已有重建任务在执行，请稍后再试');
+            try {
+                if (!Cache::add($lockKey, 1, 600)) {
+                    abort(500, '已有重建任务在执行，请稍后再试');
+                }
+                $acquired = true;
+            } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+                throw $e;
+            } catch (\Throwable $e) {
+                Log::warning('user_portrait.rebuildLocation lock unavailable: ' . $e->getMessage());
             }
         }
 
@@ -143,7 +151,12 @@ class UserPortraitController extends Controller
                 ->limit($limit)
                 ->get(['id', 'ip']);
 
-            $location = new IPLocation();
+            try {
+                $location = new IPLocation();
+            } catch (\Throwable $e) {
+                throw new \RuntimeException('IP 库不可用：' . $e->getMessage(), 0, $e);
+            }
+
             $resolved = [];
             foreach ($rows as $row) {
                 $ip = (string) $row->ip;
@@ -179,12 +192,20 @@ class UserPortraitController extends Controller
             $newLastId = count($rows) > 0 ? (int) $rows[count($rows) - 1]->id : $lastId;
 
             if ($done) {
-                UserDistributionService::bumpLocationEpoch();
-                foreach (['1h', '1d', '7d', '30d'] as $range) {
-                    Cache::forget('user_portrait_distribution|' . $range);
+                try {
+                    UserDistributionService::bumpLocationEpoch();
+                    foreach (['1h', '1d', '7d', '30d'] as $range) {
+                        Cache::forget('user_portrait_distribution|' . $range);
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('user_portrait.rebuildLocation cache reset failed: ' . $e->getMessage());
                 }
-                if ($lock) {
-                    $lock->release();
+                if ($acquired) {
+                    try {
+                        Cache::forget($lockKey);
+                    } catch (\Throwable $ignore) {
+                    }
+                    $acquired = false;
                 }
             }
 
@@ -195,10 +216,23 @@ class UserPortraitController extends Controller
                 'total' => $lastId === 0 ? DB::table($tableName)->count() : null,
             ]]);
         } catch (\Throwable $e) {
-            if ($lock) {
-                $lock->release();
+            if ($acquired) {
+                try {
+                    Cache::forget($lockKey);
+                } catch (\Throwable $ignore) {
+                }
             }
-            throw $e;
+            if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpException) {
+                throw $e;
+            }
+            Log::error('user_portrait.rebuildLocation failed', [
+                'table' => $table,
+                'last_id' => $lastId,
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            abort(500, $e->getMessage());
         }
     }
 

@@ -1838,13 +1838,15 @@ function saveSettings() {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: params.toString()
     }).then(function(r) {
-        if (!r.ok) throw new Error('http ' + r.status);
-        return r.json();
+        if (r.ok) return r.json();
+        return r.json().catch(function() { return {}; }).then(function(err) {
+            throw new Error(err.message || ('HTTP ' + r.status));
+        });
     }).then(function() {
         ipLookupBase = url;
         alert('保存成功');
-    }).catch(function() {
-        alert('保存失败，请检查接口地址格式');
+    }).catch(function(err) {
+        alert('保存失败：' + (err && err.message ? err.message : '请检查接口地址格式'));
     }).finally(function() {
         btn.disabled = false;
     });
@@ -1882,8 +1884,10 @@ function runRebuildTable(table, lastId, doneCount, total, onDone) {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: params.toString()
     }).then(function(r) {
-        if (!r.ok) throw new Error('http ' + r.status);
-        return r.json();
+        if (r.ok) return r.json();
+        return r.json().catch(function() { return {}; }).then(function(err) {
+            throw new Error(err.message || ('HTTP ' + r.status));
+        });
     }).then(function(res) {
         var data = res.data || {};
         if (data.total) total = data.total;
@@ -1894,10 +1898,10 @@ function runRebuildTable(table, lastId, doneCount, total, onDone) {
         } else {
             runRebuildTable(table, data.last_id, newDone, total, onDone);
         }
-    }).catch(function() {
+    }).catch(function(err) {
         rebuildRunning = false;
         document.getElementById('rebuildBtn').disabled = false;
-        status.textContent = '重建失败，请重试';
+        status.textContent = '重建失败：' + (err && err.message ? err.message : '请重试');
     });
 }
 
