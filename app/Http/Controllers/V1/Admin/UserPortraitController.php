@@ -88,6 +88,8 @@ class UserPortraitController extends Controller
     {
         return response(['data' => [
             'ip_lookup_url' => config('v2board.ip_lookup_url', 'https://iplark.com/'),
+            'ip_db_v4_path' => (string) config('v2board.ip_db_v4_path', ''),
+            'ip_db_v6_path' => (string) config('v2board.ip_db_v6_path', ''),
         ]]);
     }
 
@@ -102,15 +104,62 @@ class UserPortraitController extends Controller
             abort(500, 'IP 查询接口格式不正确');
         }
 
+        $v4Path = trim((string) $request->input('ip_db_v4_path', ''));
+        $v6Path = trim((string) $request->input('ip_db_v6_path', ''));
+        if ($v4Path !== '') {
+            $resolved = IPLocation::resolvePath($v4Path);
+            if (!is_file($resolved) || !is_readable($resolved)) {
+                abort(500, 'IPv4 库文件不存在或不可读：' . $resolved);
+            }
+        }
+        if ($v6Path !== '') {
+            $resolved = IPLocation::resolvePath($v6Path);
+            if (!is_file($resolved) || !is_readable($resolved)) {
+                abort(500, 'IPv6 库文件不存在或不可读：' . $resolved);
+            }
+        }
+
         $config = config('v2board') ?? [];
         $config['ip_lookup_url'] = $url;
+        $config['ip_db_v4_path'] = $v4Path;
+        $config['ip_db_v6_path'] = $v6Path;
         $exported = var_export($config, 1);
         if (!ConfigCache::write(base_path() . '/config/v2board.php', "<?php\n return $exported ;")) {
             abort(500, '保存失败');
         }
-        config(['v2board.ip_lookup_url' => $url]);
+        config([
+            'v2board.ip_lookup_url' => $url,
+            'v2board.ip_db_v4_path' => $v4Path,
+            'v2board.ip_db_v6_path' => $v6Path,
+        ]);
+
+        // IP 库可能已更换，让在线记录的归属地缓存立即失效
+        try {
+            UserDistributionService::bumpLocationEpoch();
+        } catch (\Throwable $e) {
+            Log::warning('user_portrait.saveSettings bump epoch failed: ' . $e->getMessage());
+        }
 
         return response(['data' => true]);
+    }
+
+    public function testIpLocation(Request $request)
+    {
+        $ip = trim((string) $request->input('ip', ''));
+        if (!filter_var($ip, FILTER_VALIDATE_IP)) {
+            abort(500, '请输入有效的 IP');
+        }
+
+        $v4Path = trim((string) $request->input('ip_db_v4_path', ''));
+        $v6Path = trim((string) $request->input('ip_db_v6_path', ''));
+        try {
+            $location = new IPLocation($v4Path === '' ? null : $v4Path, $v6Path === '' ? null : $v6Path);
+            $info = $location->find($ip);
+        } catch (\Throwable $e) {
+            abort(500, $e->getMessage());
+        }
+
+        return response(['data' => $info ?: null]);
     }
 
     public function rebuildLocation(Request $request)

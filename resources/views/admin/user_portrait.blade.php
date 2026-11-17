@@ -504,16 +504,40 @@
                         <label>接口地址</label>
                         <input type="text" id="settingIpLookup" placeholder="https://iplark.com/">
                     </div>
-                    <div class="filter-group" style="padding-bottom:1px">
-                        <label>&nbsp;</label>
-                        <div style="display:flex;gap:8px">
-                            <button class="btn btn-primary" id="saveSettingsBtn"><i class="fas fa-save"></i>保存</button>
-                            <button class="btn btn-default" id="resetSettingsBtn"><i class="fas fa-undo"></i>恢复默认</button>
-                        </div>
-                    </div>
                 </div>
                 <p class="text-muted" style="font-size:12px;margin:-4px 0 24px">
                     支持 <code>{ip}</code> 占位符，例如 <code>https://iplark.com/{ip}</code>；不写占位符时按「接口地址 + IP」拼接。
+                </p>
+
+                <div class="toolbar">
+                    <span class="toolbar-title">IP 归属地库</span>
+                </div>
+                <div class="filter-form">
+                    <div class="filter-group" style="flex:1;min-width:340px">
+                        <label>IPv4 库路径</label>
+                        <input type="text" id="settingIpDbV4" placeholder="留空使用程序目录下的 ipdata.xdb">
+                    </div>
+                    <div class="filter-group" style="flex:1;min-width:340px">
+                        <label>IPv6 库路径</label>
+                        <input type="text" id="settingIpDbV6" placeholder="留空使用 ipdata6.xdb，可留空">
+                    </div>
+                </div>
+                <div class="filter-form" style="margin-top:12px">
+                    <div class="filter-group" style="min-width:240px">
+                        <label>测试 IP</label>
+                        <input type="text" id="testIpInput" placeholder="例如 114.114.114.114">
+                    </div>
+                    <div class="filter-group" style="padding-bottom:1px">
+                        <label>&nbsp;</label>
+                        <button class="btn btn-default" id="testIpBtn"><i class="fas fa-vial"></i>测试</button>
+                    </div>
+                    <div class="filter-group" style="flex:1;min-width:240px">
+                        <label>解析结果</label>
+                        <div id="testIpResult" style="font-size:13px;color:#555;padding:6px 0">-</div>
+                    </div>
+                </div>
+                <p class="text-muted" style="font-size:12px;margin:-4px 0 24px">
+                    留空时使用程序目录下的 ipdata.xdb / ipdata6.xdb；相对路径按项目根目录解析。保存后对订阅日志、在线记录、订单、工单提醒、用户详情、重建缓存全部生效。
                 </p>
 
                 <div class="toolbar">
@@ -527,6 +551,11 @@
                             <span id="rebuildStatus" class="text-muted" style="font-size:13px">重新解析订阅记录和在线记录中的 IP 国家 / 地区 / 省市 / 运营商</span>
                         </div>
                     </div>
+                </div>
+
+                <div style="margin-top:24px;display:flex;gap:8px">
+                    <button class="btn btn-primary" id="saveSettingsBtn"><i class="fas fa-save"></i>保存设置</button>
+                    <button class="btn btn-default" id="resetSettingsBtn"><i class="fas fa-undo"></i>恢复默认</button>
                 </div>
             </div>
         </div>
@@ -1806,7 +1835,11 @@ function initSettingsTab() {
     document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
     document.getElementById('resetSettingsBtn').addEventListener('click', function() {
         document.getElementById('settingIpLookup').value = defaultIpLookup;
+        document.getElementById('settingIpDbV4').value = '';
+        document.getElementById('settingIpDbV6').value = '';
+        document.getElementById('testIpResult').textContent = '-';
     });
+    document.getElementById('testIpBtn').addEventListener('click', testIpLocation);
     document.getElementById('rebuildBtn').addEventListener('click', rebuildLocation);
     document.getElementById('settingIpLookup').addEventListener('keydown', function(e) {
         if (e.key === 'Enter') saveSettings();
@@ -1818,11 +1851,50 @@ function loadSettings() {
     apiFetch(apiBase + '/user_portrait/getSettings')
         .then(function(r) { return r.json(); })
         .then(function(res) {
-            var url = res.data && res.data.ip_lookup_url ? res.data.ip_lookup_url : defaultIpLookup;
+            var data = res.data || {};
+            var url = data.ip_lookup_url || defaultIpLookup;
             document.getElementById('settingIpLookup').value = url;
+            document.getElementById('settingIpDbV4').value = data.ip_db_v4_path || '';
+            document.getElementById('settingIpDbV6').value = data.ip_db_v6_path || '';
             ipLookupBase = url;
         })
         .catch(function() {});
+}
+
+function testIpLocation() {
+    var ip = document.getElementById('testIpInput').value.trim();
+    var resultBox = document.getElementById('testIpResult');
+    if (!ip) {
+        resultBox.textContent = '请输入 IP';
+        return;
+    }
+
+    var params = new URLSearchParams();
+    params.set('ip', ip);
+    params.set('ip_db_v4_path', document.getElementById('settingIpDbV4').value.trim());
+    params.set('ip_db_v6_path', document.getElementById('settingIpDbV6').value.trim());
+
+    resultBox.textContent = '测试中...';
+    apiFetch(apiBase + '/user_portrait/testIpLocation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString()
+    }).then(function(r) {
+        if (r.ok) return r.json();
+        return r.json().catch(function() { return {}; }).then(function(err) {
+            throw new Error(err.message || ('HTTP ' + r.status));
+        });
+    }).then(function(res) {
+        var d = res.data;
+        if (!d) {
+            resultBox.textContent = '无解析结果';
+            return;
+        }
+        var text = [d.country, d.region, d.city, d.isp].filter(Boolean).join(' ');
+        resultBox.textContent = text || '无解析结果';
+    }).catch(function(err) {
+        resultBox.textContent = '测试失败：' + (err && err.message ? err.message : '未知错误');
+    });
 }
 
 function saveSettings() {
@@ -1833,6 +1905,8 @@ function saveSettings() {
 
     var params = new URLSearchParams();
     params.set('ip_lookup_url', url);
+    params.set('ip_db_v4_path', document.getElementById('settingIpDbV4').value.trim());
+    params.set('ip_db_v6_path', document.getElementById('settingIpDbV6').value.trim());
     apiFetch(apiBase + '/user_portrait/saveSettings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -1846,7 +1920,7 @@ function saveSettings() {
         ipLookupBase = url;
         alert('保存成功');
     }).catch(function(err) {
-        alert('保存失败：' + (err && err.message ? err.message : '请检查接口地址格式'));
+        alert('保存失败：' + (err && err.message ? err.message : '请检查配置'));
     }).finally(function() {
         btn.disabled = false;
     });

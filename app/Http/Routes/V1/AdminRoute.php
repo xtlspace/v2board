@@ -120,6 +120,7 @@ class AdminRoute
             $router->post('/user_portrait/deleteRecord', 'V1\\Admin\\UserPortraitController@deleteRecord');
             $router->get ('/user_portrait/getSettings', 'V1\\Admin\\UserPortraitController@getSettings');
             $router->post('/user_portrait/saveSettings', 'V1\\Admin\\UserPortraitController@saveSettings');
+            $router->post('/user_portrait/testIpLocation', 'V1\\Admin\\UserPortraitController@testIpLocation');
             $router->post('/user_portrait/rebuildLocation', 'V1\\Admin\\UserPortraitController@rebuildLocation');
             $router->get ('/user_portrait/getFilterOptions', 'V1\\Admin\\UserPortraitController@getFilterOptions');
             $router->get ('/user_portrait/getRules', 'V1\\Admin\\UserPortraitController@getRules');
