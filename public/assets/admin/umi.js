@@ -69873,11 +69873,14 @@
                     title: "ID",
                     dataIndex: "id",
                     key: "id",
+                    width: 60,
                     sorter: !0
                 }, {
                     title: "\u90ae\u7bb1",
                     dataIndex: "email",
                     key: "email",
+                    width: 190,
+                    ellipsis: !0,
                     render: (e,t)=>{
                         return g.a.createElement(f["a"], {
                             placement: "top",
@@ -69890,6 +69893,7 @@
                     title: "\u72b6\u6001",
                     dataIndex: "banned",
                     key: "banned",
+                    width: 70,
                     sorter: !0,
                     render: e=>{
                         return g.a.createElement(h["a"], {
@@ -69900,6 +69904,8 @@
                     title: "\u8ba2\u9605",
                     dataIndex: "plan_name",
                     key: "plan_id",
+                    width: 100,
+                    ellipsis: !0,
                     sorter: !0,
                     render: e=>{
                         return e || "-"
@@ -69908,6 +69914,8 @@
                     title: "\u6743\u9650\u7ec4",
                     dataIndex: "group_id",
                     key: "group_id",
+                    width: 100,
+                    ellipsis: !0,
                     sorter: !0,
                     render: e=>{
                         var t = M.find(t=>t.id === e);
@@ -69917,6 +69925,7 @@
                     title: "\u5df2\u7528(G)",
                     dataIndex: "total_used",
                     key: "total_used",
+                    width: 80,
                     sorter: !0,
                     render: (e,t)=>{
                         return g.a.createElement(h["a"], {
@@ -69927,6 +69936,7 @@
                     title: "\u6d41\u91cf(G)",
                     dataIndex: "transfer_enable",
                     key: "transfer_enable",
+                    width: 80,
                     sorter: !0,
                     render: (e,t)=>{
                         return e
@@ -69935,6 +69945,7 @@
                     title: "\u8bbe\u5907\u6570",
                     dataIndex: "device_limit",
                     key: "updated_at",
+                    width: 90,
                     sorter: (e,t) => e.alive_ip - t.alive_ip,
                     render: (e,t)=>{
                         var deviceCount = t.alive_ip !== null ? t.alive_ip : 0 ;
@@ -69948,6 +69959,7 @@
                     title: "\u5230\u671f\u65f6\u95f4",
                     dataIndex: "expired_at",
                     key: "expired_at",
+                    width: 140,
                     sorter: !0,
                     render: e=>{
                         return g.a.createElement(h["a"], {
@@ -69958,38 +69970,30 @@
                     title: "\u4f59\u989d",
                     dataIndex: "balance",
                     key: "balance",
+                    width: 80,
                     sorter: !0
                 }, {
                     title: "\u4f63\u91d1",
                     dataIndex: "commission_balance",
                     key: "commission_balance",
+                    width: 80,
                     sorter: !0
                 }, {
                     title: "\u52a0\u5165\u65f6\u95f4",
                     dataIndex: "created_at",
                     key: "created_at",
+                    width: 140,
                     sorter: !0,
                     render: e=>{
                         return w()(1e3 * e).format("YYYY/MM/DD HH:mm")
                     }
-                }, {
-                    title: "\u6ce8\u518cIP",
-                    dataIndex: "reg_ip",
-                    key: "reg_ip",
-                    width: 140,
-                    render: function(e) { return e || "-" }
-                }, {
-                    title: "\u6700\u540e\u767b\u5f55IP",
-                    dataIndex: "last_login_ip",
-                    key: "last_login_ip",
-                    width: 140,
-                    render: function(e) { return e || "-" }
                 }, {
                     title: "\u64cd\u4f5c",
                     dataIndex: "action",
                     key: "action",
                     align: "right",
                     fixed: "right",
+                    width: 100,
                     render: (e,t,n)=>{
                         return g.a.createElement(g.a.Fragment, null, g.a.createElement(l["a"], {
                             trigger: "click",
@@ -70144,14 +70148,6 @@
                         title: "\u5907\u6ce8",
                         condition: ["\u6a21\u7cca"]
                     }, {
-                        key: "reg_ip",
-                        title: "\u6ce8\u518cIP",
-                        condition: ["=", "\u6a21\u7cca"]
-                    }, {
-                        key: "last_login_ip",
-                        title: "\u6700\u540e\u767b\u5f55IP",
-                        condition: ["=", "\u6a21\u7cca"]
-                    }, {
                         key: "is_admin",
                         title: "\u7ba1\u7406\u5458",
                         condition: ["="],
@@ -70212,7 +70208,7 @@
                     }),
                     columns: N,
                     scroll: {
-                        x: 1750
+                        x: 1310
                     },
                     onChange: (e,t,n)=>this.tableOnChange(e, n)
                 }, g.a.createElement("ul", {
