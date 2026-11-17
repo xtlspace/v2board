@@ -69873,13 +69873,11 @@
                     title: "ID",
                     dataIndex: "id",
                     key: "id",
-                    width: 60,
                     sorter: !0
                 }, {
                     title: "\u90ae\u7bb1",
                     dataIndex: "email",
                     key: "email",
-                    width: 190,
                     ellipsis: !0,
                     render: (e,t)=>{
                         return g.a.createElement(f["a"], {
@@ -69893,7 +69891,6 @@
                     title: "\u72b6\u6001",
                     dataIndex: "banned",
                     key: "banned",
-                    width: 70,
                     sorter: !0,
                     render: e=>{
                         return g.a.createElement(h["a"], {
@@ -69904,7 +69901,6 @@
                     title: "\u8ba2\u9605",
                     dataIndex: "plan_name",
                     key: "plan_id",
-                    width: 100,
                     ellipsis: !0,
                     sorter: !0,
                     render: e=>{
@@ -69914,7 +69910,6 @@
                     title: "\u6743\u9650\u7ec4",
                     dataIndex: "group_id",
                     key: "group_id",
-                    width: 100,
                     ellipsis: !0,
                     sorter: !0,
                     render: e=>{
@@ -69925,7 +69920,6 @@
                     title: "\u5df2\u7528(G)",
                     dataIndex: "total_used",
                     key: "total_used",
-                    width: 80,
                     sorter: !0,
                     render: (e,t)=>{
                         return g.a.createElement(h["a"], {
@@ -69936,7 +69930,6 @@
                     title: "\u6d41\u91cf(G)",
                     dataIndex: "transfer_enable",
                     key: "transfer_enable",
-                    width: 80,
                     sorter: !0,
                     render: (e,t)=>{
                         return e
@@ -69945,7 +69938,6 @@
                     title: "\u8bbe\u5907\u6570",
                     dataIndex: "device_limit",
                     key: "updated_at",
-                    width: 90,
                     sorter: (e,t) => e.alive_ip - t.alive_ip,
                     render: (e,t)=>{
                         var deviceCount = t.alive_ip !== null ? t.alive_ip : 0 ;
@@ -69959,7 +69951,6 @@
                     title: "\u5230\u671f\u65f6\u95f4",
                     dataIndex: "expired_at",
                     key: "expired_at",
-                    width: 140,
                     sorter: !0,
                     render: e=>{
                         return g.a.createElement(h["a"], {
@@ -69970,19 +69961,16 @@
                     title: "\u4f59\u989d",
                     dataIndex: "balance",
                     key: "balance",
-                    width: 80,
                     sorter: !0
                 }, {
                     title: "\u4f63\u91d1",
                     dataIndex: "commission_balance",
                     key: "commission_balance",
-                    width: 80,
                     sorter: !0
                 }, {
                     title: "\u52a0\u5165\u65f6\u95f4",
                     dataIndex: "created_at",
                     key: "created_at",
-                    width: 140,
                     sorter: !0,
                     render: e=>{
                         return w()(1e3 * e).format("YYYY/MM/DD HH:mm")
@@ -69993,7 +69981,6 @@
                     key: "action",
                     align: "right",
                     fixed: "right",
-                    width: 100,
                     render: (e,t,n)=>{
                         return g.a.createElement(g.a.Fragment, null, g.a.createElement(l["a"], {
                             trigger: "click",
@@ -70208,7 +70195,7 @@
                     }),
                     columns: N,
                     scroll: {
-                        x: 1310
+                        x: 1560
                     },
                     onChange: (e,t,n)=>this.tableOnChange(e, n)
                 }, g.a.createElement("ul", {
