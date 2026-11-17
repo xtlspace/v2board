@@ -187,6 +187,7 @@
                 <button class="tab-btn" data-tab="tabDetail">用户详情</button>
                 <button class="tab-btn" data-tab="tabRules">替换规则</button>
                 <button class="tab-btn" data-tab="tabRisk">风险筛查</button>
+                <button class="tab-btn" data-tab="tabSettings">设置</button>
             </div>
 
             <div id="tabLogs" class="tab-content active">
@@ -490,6 +491,41 @@
                         <button class="btn btn-default btn-sm" id="riskPrevPage" disabled><i class="fas fa-chevron-left"></i></button>
                         <span id="riskPageInfo">0/0</span>
                         <button class="btn btn-default btn-sm" id="riskNextPage" disabled><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tabSettings" class="tab-content">
+                <div class="toolbar">
+                    <span class="toolbar-title">IP 查询接口</span>
+                </div>
+                <div class="filter-form">
+                    <div class="filter-group" style="flex:1;min-width:320px">
+                        <label>接口地址</label>
+                        <input type="text" id="settingIpLookup" placeholder="https://iplark.com/">
+                    </div>
+                    <div class="filter-group" style="padding-bottom:1px">
+                        <label>&nbsp;</label>
+                        <div style="display:flex;gap:8px">
+                            <button class="btn btn-primary" id="saveSettingsBtn"><i class="fas fa-save"></i>保存</button>
+                            <button class="btn btn-default" id="resetSettingsBtn"><i class="fas fa-undo"></i>恢复默认</button>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-muted" style="font-size:12px;margin:-4px 0 24px">
+                    支持 <code>{ip}</code> 占位符，例如 <code>https://iplark.com/{ip}</code>；不写占位符时按「接口地址 + IP」拼接。
+                </p>
+
+                <div class="toolbar">
+                    <span class="toolbar-title">数据维护</span>
+                </div>
+                <div class="filter-form">
+                    <div class="filter-group">
+                        <label>重建缓存</label>
+                        <div style="display:flex;gap:12px;align-items:center">
+                            <button class="btn btn-primary" id="rebuildBtn"><i class="fas fa-sync"></i>重建缓存</button>
+                            <span id="rebuildStatus" class="text-muted" style="font-size:13px">重新解析订阅记录和在线记录中的 IP 国家 / 地区 / 省市 / 运营商</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -908,6 +944,17 @@ var countryGroupLabels = { mainland: '中国大陆', other: '其他' };
 var filterOptionsData = { mainland_regions: [], other_regions: [] };
 var areaLabelMap = {};
 
+var ipLookupBase = @json($ip_lookup_url ?? 'https://iplark.com/');
+var defaultIpLookup = 'https://iplark.com/';
+
+function ipLookupUrl(ip) {
+    var base = (ipLookupBase || defaultIpLookup).trim();
+    if (base.indexOf('{ip}') !== -1) {
+        return base.replace('{ip}', encodeURIComponent(ip));
+    }
+    return base.replace(/\/+$/, '') + '/' + encodeURIComponent(ip);
+}
+
 function escapeHtml(value) {
     return String(value == null ? '' : value).replace(/[&<>"']/g, function(ch) {
         return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
@@ -1235,7 +1282,7 @@ function renderLogTable(data) {
             + '<td class="col-user"><a href="javascript:void(0)" onclick="openUserDetail(' + parseInt(row.user_id, 10) + ')" style="color:#1890ff">' + escapeHtml(row.user_id) + '</a></td>'
             + '<td class="col-ip">' + (ip
                 ? '<a href="javascript:void(0)" class="quick-filter" data-filter="ip" data-value="' + escapeHtml(ip) + '">' + escapeHtml(ip) + '</a>'
-                  + '<a class="ip-lookup" href="https://iplark.com/' + encodeURIComponent(ip) + '" target="_blank" rel="noopener noreferrer" title="在 iplark 查询此 IP"><i class="fas fa-search"></i></a>'
+                  + '<a class="ip-lookup" href="' + escapeHtml(ipLookupUrl(ip)) + '" target="_blank" rel="noopener noreferrer" title="查询此 IP"><i class="fas fa-search"></i></a>'
                 : '-') + '</td>'
             + '<td class="col-region">' + regionCellHtml(row) + '</td>'
             + '<td class="alive-cell" title="' + escapeHtml(aliveText) + '">' + (aliveText ? escapeHtml(aliveText) : '<span class="text-muted">-</span>') + '</td>'
@@ -1278,7 +1325,7 @@ function initDetailTab() {
 function detailIpCell(ip) {
     if (!ip) return '-';
     return escapeHtml(ip)
-        + '<a class="ip-lookup" href="https://iplark.com/' + encodeURIComponent(ip) + '" target="_blank" rel="noopener noreferrer" title="在 iplark 查询此 IP"><i class="fas fa-search"></i></a>';
+        + '<a class="ip-lookup" href="' + escapeHtml(ipLookupUrl(ip)) + '" target="_blank" rel="noopener noreferrer" title="查询此 IP"><i class="fas fa-search"></i></a>';
 }
 
 function detailTip(shown, total) {
@@ -1639,6 +1686,7 @@ document.querySelectorAll('.tab-btn').forEach(function(btn) {
         if (tab === 'tabDetail') initDetailTab();
         if (tab === 'tabRules') loadRules();
         if (tab === 'tabRisk') loadRiskData();
+        if (tab === 'tabSettings') initSettingsTab();
     });
 });
 
@@ -1747,6 +1795,111 @@ document.getElementById('clearBtn').addEventListener('click', function() {
     .then(function() { loadLogData(); })
     .catch(function() { alert('清除失败'); });
 });
+
+// =========== Settings ===========
+var settingsInited = false;
+var rebuildRunning = false;
+
+function initSettingsTab() {
+    if (settingsInited) return;
+    settingsInited = true;
+    document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
+    document.getElementById('resetSettingsBtn').addEventListener('click', function() {
+        document.getElementById('settingIpLookup').value = defaultIpLookup;
+    });
+    document.getElementById('rebuildBtn').addEventListener('click', rebuildLocation);
+    document.getElementById('settingIpLookup').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') saveSettings();
+    });
+    loadSettings();
+}
+
+function loadSettings() {
+    apiFetch(apiBase + '/user_portrait/getSettings')
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+            var url = res.data && res.data.ip_lookup_url ? res.data.ip_lookup_url : defaultIpLookup;
+            document.getElementById('settingIpLookup').value = url;
+            ipLookupBase = url;
+        })
+        .catch(function() {});
+}
+
+function saveSettings() {
+    var input = document.getElementById('settingIpLookup');
+    var url = input.value.trim() || defaultIpLookup;
+    var btn = document.getElementById('saveSettingsBtn');
+    btn.disabled = true;
+
+    var params = new URLSearchParams();
+    params.set('ip_lookup_url', url);
+    apiFetch(apiBase + '/user_portrait/saveSettings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString()
+    }).then(function(r) {
+        if (!r.ok) throw new Error('http ' + r.status);
+        return r.json();
+    }).then(function() {
+        ipLookupBase = url;
+        alert('保存成功');
+    }).catch(function() {
+        alert('保存失败，请检查接口地址格式');
+    }).finally(function() {
+        btn.disabled = false;
+    });
+}
+
+function rebuildLocation() {
+    if (rebuildRunning) return;
+    if (!confirm('确认重建缓存？将重新解析订阅记录和在线记录中的 IP 国家 / 地区 / 省市 / 运营商，数据量大时耗时较长。')) return;
+
+    rebuildRunning = true;
+    var btn = document.getElementById('rebuildBtn');
+    var status = document.getElementById('rebuildStatus');
+    btn.disabled = true;
+    status.textContent = '准备中...';
+
+    runRebuildTable('sub', 0, 0, 0, function() {
+        runRebuildTable('alive', 0, 0, 0, function() {
+            rebuildRunning = false;
+            btn.disabled = false;
+            status.textContent = '重建完成';
+        });
+    });
+}
+
+function runRebuildTable(table, lastId, doneCount, total, onDone) {
+    var label = table === 'sub' ? '订阅记录' : '在线记录';
+    var status = document.getElementById('rebuildStatus');
+    var params = new URLSearchParams();
+    params.set('table', table);
+    params.set('last_id', lastId);
+    params.set('limit', 500);
+
+    apiFetch(apiBase + '/user_portrait/rebuildLocation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString()
+    }).then(function(r) {
+        if (!r.ok) throw new Error('http ' + r.status);
+        return r.json();
+    }).then(function(res) {
+        var data = res.data || {};
+        if (data.total) total = data.total;
+        var newDone = doneCount + (data.processed || 0);
+        status.textContent = label + ' ' + newDone + (total ? ' / ' + total : '');
+        if (data.done) {
+            onDone();
+        } else {
+            runRebuildTable(table, data.last_id, newDone, total, onDone);
+        }
+    }).catch(function() {
+        rebuildRunning = false;
+        document.getElementById('rebuildBtn').disabled = false;
+        status.textContent = '重建失败，请重试';
+    });
+}
 
 // =========== Init ===========
 document.addEventListener('DOMContentLoaded', function() {

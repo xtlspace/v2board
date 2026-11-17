@@ -60,6 +60,7 @@ Route::get('/' . config('v2board.secure_path', config('v2board.frontend_admin_pa
         'title' => config('v2board.app_name', 'V2Board'),
         'version' => config('app.version'),
         'secure_path' => config('v2board.secure_path', config('v2board.frontend_admin_path', hash('crc32b', config('app.key')))),
-        'logo' => config('v2board.logo')
+        'logo' => config('v2board.logo'),
+        'ip_lookup_url' => config('v2board.ip_lookup_url', 'https://iplark.com/')
     ]);
 });

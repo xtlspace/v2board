@@ -90,7 +90,7 @@ class UserDistributionService
 
     private function resolveLocation(string $ip, IPLocation $location): ?array
     {
-        $cacheKey = 'alive_ip_location|' . md5($ip);
+        $cacheKey = 'alive_ip_location|' . self::locationEpoch() . '|' . md5($ip);
         $cached = Cache::get($cacheKey, '__miss__');
         if ($cached !== '__miss__') {
             return is_array($cached) ? $cached : null;
@@ -108,7 +108,7 @@ class UserDistributionService
             return null;
         }
 
-        $province = $this->normalizeProvince((string) ($info['region'] ?? ''));
+        $province = self::normalizeProvince((string) ($info['region'] ?? ''));
         if ($province === null) {
             Cache::put($cacheKey, false, 86400);
             return null;
@@ -120,14 +120,27 @@ class UserDistributionService
             'province' => $province,
             'city' => trim((string) ($info['city'] ?? '')),
             'isp' => $isp,
-            'provider' => $this->classifyProvider($isp),
+            'provider' => self::classifyProvider($isp),
         ];
         Cache::put($cacheKey, $result, 86400);
 
         return $result;
     }
 
-    private function normalizeProvince(string $region): ?string
+    /**
+     * 归属地缓存版本号，重建缓存后递增使旧缓存立即失效
+     */
+    public static function locationEpoch(): int
+    {
+        return (int) Cache::get('alive_ip_location_epoch', 1);
+    }
+
+    public static function bumpLocationEpoch(): void
+    {
+        Cache::forever('alive_ip_location_epoch', self::locationEpoch() + 1);
+    }
+
+    public static function normalizeProvince(string $region): ?string
     {
         $region = trim($region);
         if ($region === '') {
@@ -142,7 +155,7 @@ class UserDistributionService
         return in_array($region, self::MAINLAND_PROVINCES, true) ? $region : null;
     }
 
-    private function classifyProvider(string $isp): string
+    public static function classifyProvider(string $isp): string
     {
         if (strpos($isp, '电信') !== false) {
             return 'telecom';
