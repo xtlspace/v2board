@@ -69986,7 +69986,11 @@
                                 key: t.id
                             }, g.a.createElement("a", null, g.a.createElement(u["a"], {
                                 type: "edit"
-                            }), " \u7f16\u8f91"))), g.a.createElement(c["a"].Item, {
+                            }), " \u7f16\u8f91"))), g.a.createElement(c["a"].Item, null, g.a.createElement("a", {
+                                onClick: () => window.open("/" + window.settings.secure_path + "/user_portrait?tab=detail&user_id=" + t.id, "_blank")
+                            }, g.a.createElement(u["a"], {
+                                type: "user"
+                            }), " TA\u7684\u753b\u50cf")), g.a.createElement(c["a"].Item, {
                                 onContextMenu: e=>{
                                     e.stopPropagation()
                                 }
@@ -70201,16 +70205,6 @@
                 }, g.a.createElement("a", null, g.a.createElement(u["a"], {
                     type: "edit"
                 }), " \u7f16\u8f91"))), g.a.createElement("li", {
-                    className: "ant-dropdown-menu-item"
-                }, g.a.createElement("a", {
-                    onClick: () => {
-                        var e;
-                        var id = null === (e = this.record) || void 0 === e ? void 0 : e.id;
-                        if (id) window.open("/" + window.settings.secure_path + "/user_portrait?tab=detail&user_id=" + id, "_blank");
-                    }
-                }, g.a.createElement(u["a"], {
-                    type: "user"
-                }), " \u7528\u6237\u753b\u50cf")), g.a.createElement("li", {
                     className: "ant-dropdown-menu-item"
                 }, g.a.createElement(S["a"], {
                     email: null === (n = this.record) || void 0 === n ? void 0 : n.email,
