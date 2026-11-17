@@ -47,6 +47,34 @@ class IPLocation
         return $this->lastError;
     }
 
+    /**
+     * 缓存用的网段标识：IPv4 按 /24，其余按原值
+     */
+    public static function subnetKey(string $ip): string
+    {
+        $ip = trim($ip);
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+            $parts = explode('.', $ip);
+            return $parts[0] . '.' . $parts[1] . '.' . $parts[2] . '.0/24';
+        }
+        return $ip;
+    }
+
+    /**
+     * 清理某个 IP 所在网段的在线接口缓存
+     *
+     * @param array|null $providerKeys 不传则使用当前启用的接口列表
+     */
+    public static function forgetOnlineCache(string $ip, array $providerKeys = null): void
+    {
+        $providerKeys = $providerKeys ?? ProviderRegistry::enabledKeys();
+        $cacheKey = 'ip_online_lookup|' . md5(implode('|', $providerKeys)) . '|' . md5(self::subnetKey($ip));
+        try {
+            Cache::forget($cacheKey);
+        } catch (\Throwable $e) {
+        }
+    }
+
     public function find($ip)
     {
         $this->lastError = null;
@@ -117,7 +145,7 @@ class IPLocation
             return $provider->key();
         }, $providers);
 
-        $cacheKey = 'ip_online_lookup|' . md5(implode('|', $providerKeys)) . '|' . md5($ip);
+        $cacheKey = 'ip_online_lookup|' . md5(implode('|', $providerKeys)) . '|' . md5(self::subnetKey($ip));
         $cached = Cache::get($cacheKey, '__miss__');
         if ($cached !== '__miss__') {
             if (is_array($cached)) {

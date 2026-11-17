@@ -417,10 +417,14 @@ class UserPortraitController extends Controller
             }
             DB::table($tableName)->where('id', $row->id)->update($update);
 
-            // 清理该 IP 的在线归属地缓存
+            // 清理该 IP 所在网段的归属地缓存
             try {
-                Cache::forget('alive_ip_location|' . $epoch . '|' . md5($ip));
+                Cache::forget('alive_ip_location2|' . $epoch . '|' . md5(IPLocation::subnetKey($ip)));
             } catch (\Throwable $e) {
+            }
+            IPLocation::forgetOnlineCache($ip);
+            if ($forceProviders !== null) {
+                IPLocation::forgetOnlineCache($ip, $forceProviders);
             }
         }
 
@@ -633,13 +637,13 @@ class UserPortraitController extends Controller
 
     public function riskCheck(Request $request)
     {
-        $typeWhitelist = ['mismatch', 'online_province', 'online_ip', 'sub_province', 'overseas'];
+        $typeWhitelist = ['mismatch', 'online_province', 'online_ip', 'sub_province', 'overseas_sub', 'overseas_online'];
         $types = array_values(array_intersect(
             array_filter(explode(',', (string) $request->input('types', ''))),
             $typeWhitelist
         ));
         if (empty($types)) {
-            $types = ['mismatch', 'online_province', 'online_ip'];
+            $types = ['mismatch', 'online_province', 'online_ip', 'overseas_online'];
         }
 
         $provinceThreshold = max(1, (int) $request->input('province_threshold', 3));
@@ -686,12 +690,15 @@ class UserPortraitController extends Controller
 
             $aliveRows = DB::table('v2_alive_ip_history')
                 ->select('user_id')
-                ->selectRaw("GROUP_CONCAT(DISTINCT province ORDER BY province SEPARATOR ',') AS provinces")
-                ->selectRaw('COUNT(DISTINCT province) AS province_count')
+                ->selectRaw("GROUP_CONCAT(DISTINCT CASE WHEN COALESCE(country, '') LIKE '%中国%'
+                    AND province NOT IN ('香港', '澳门', '台湾') THEN province END
+                    ORDER BY province SEPARATOR ',') AS provinces")
+                ->selectRaw("COUNT(DISTINCT CASE WHEN COALESCE(country, '') LIKE '%中国%'
+                    AND province NOT IN ('香港', '澳门', '台湾') THEN province END) AS province_count")
                 ->selectRaw('COUNT(DISTINCT ip) AS alive_ip_count')
                 ->selectRaw('MAX(last_seen_at) AS last_seen_at')
-                ->whereNotNull('province')
-                ->where('province', '!=', '')
+                ->selectRaw("SUM(CASE WHEN COALESCE(country, '') NOT LIKE '%中国%'
+                    OR province IN ('香港', '澳门', '台湾') THEN 1 ELSE 0 END) AS overseas_online_count")
                 ->when($since > 0, function ($query) use ($since) {
                     $query->where('last_seen_at', '>=', $since);
                 })
@@ -708,6 +715,7 @@ class UserPortraitController extends Controller
                 'alive_province_count' => 0,
                 'alive_ip_count' => 0,
                 'overseas_count' => 0,
+                'overseas_online_count' => 0,
                 'last_at' => 0,
                 'last_seen_at' => 0,
             ];
@@ -718,6 +726,7 @@ class UserPortraitController extends Controller
                     'alive_provinces' => $row->provinces ? explode(',', $row->provinces) : [],
                     'alive_province_count' => (int) $row->province_count,
                     'alive_ip_count' => (int) $row->alive_ip_count,
+                    'overseas_online_count' => (int) $row->overseas_online_count,
                     'last_seen_at' => (int) $row->last_seen_at,
                 ]);
             }
@@ -752,7 +761,10 @@ class UserPortraitController extends Controller
                     $tags[] = 'sub_province';
                 }
                 if ($item['overseas_count'] > 0) {
-                    $tags[] = 'overseas';
+                    $tags[] = 'overseas_sub';
+                }
+                if ($item['overseas_online_count'] > 0) {
+                    $tags[] = 'overseas_online';
                 }
                 if (empty($tags)) {
                     continue;
@@ -804,8 +816,10 @@ class UserPortraitController extends Controller
             $query = function () use ($since) {
                 return DB::table('v2_alive_ip_history')
                     ->where('last_seen_at', '>=', $since)
+                    ->where('country', 'like', '%中国%')
                     ->whereNotNull('province')
-                    ->where('province', '!=', '');
+                    ->where('province', '!=', '')
+                    ->whereNotIn('province', ['香港', '澳门', '台湾']);
             };
 
             $totalRow = $query()

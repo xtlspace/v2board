@@ -90,7 +90,7 @@ class UserDistributionService
 
     private function resolveLocation(string $ip, IPLocation $location): ?array
     {
-        $cacheKey = 'alive_ip_location|' . self::locationEpoch() . '|' . md5($ip);
+        $cacheKey = 'alive_ip_location2|' . self::locationEpoch() . '|' . md5(IPLocation::subnetKey($ip));
         $cached = Cache::get($cacheKey, '__miss__');
         if ($cached !== '__miss__') {
             return is_array($cached) ? $cached : null;
@@ -98,31 +98,47 @@ class UserDistributionService
 
         $info = $location->find($ip);
         if (!$info) {
-            Cache::put($cacheKey, false, 86400);
+            Cache::put($cacheKey, false, 604800);
             return null;
         }
 
         $country = trim((string) ($info['country'] ?? ''));
-        if ($country !== '' && strpos($country, '中国') === false && stripos($country, 'China') === false) {
-            Cache::put($cacheKey, false, 86400);
-            return null;
-        }
-
-        $province = self::normalizeProvince((string) ($info['region'] ?? ''));
-        if ($province === null) {
-            Cache::put($cacheKey, false, 86400);
-            return null;
-        }
-
+        $region = trim((string) ($info['region'] ?? ''));
+        $city = trim((string) ($info['city'] ?? ''));
         $isp = trim((string) ($info['isp'] ?? ''));
+
+        // 港澳台统一按地区名记录
+        $special = in_array($region, ['香港', '澳门', '台湾'], true);
+        if (!$special) {
+            foreach (['香港', '澳门', '台湾'] as $name) {
+                if ($country !== '' && strpos($country, $name) !== false) {
+                    $special = true;
+                    $region = $name;
+                    break;
+                }
+            }
+        }
+
+        $province = $special ? $region : self::normalizeProvince($region);
+
+        if ($country === '' && $province === null) {
+            Cache::put($cacheKey, false, 604800);
+            return null;
+        }
+        if ($special || $province !== null) {
+            $country = '中国';
+        }
+
         $result = [
             'country' => $country,
             'province' => $province,
-            'city' => trim((string) ($info['city'] ?? '')),
+            // 非大陆只保留国家和运营商
+            'city' => $province !== null ? $city : '',
             'isp' => $isp,
             'provider' => self::classifyProvider($isp),
+            'mainland' => $province !== null && !$special,
         ];
-        Cache::put($cacheKey, $result, 86400);
+        Cache::put($cacheKey, $result, 604800);
 
         return $result;
     }

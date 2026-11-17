@@ -139,6 +139,8 @@
         .risk-provinces { display: inline-block; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
         .mismatch-row td { background: #fff1f0; }
         .mismatch-province { color: #ff4d4f; font-weight: 600; }
+        .overseas-row td { background: #fff1f0; color: #ff4d4f; }
+        .province-highlight { background: #fffbe6; color: #d48806; padding: 0 4px; border-radius: 3px; }
         .danger-link { color: #ff4d4f; }
         .danger-link:hover { color: #ff7875; }
 
@@ -473,7 +475,8 @@
                             <label class="risk-type"><input type="checkbox" class="risk-type-check" value="sub_province"> 订阅多省 ≥
                                 <input type="number" class="risk-threshold" id="riskSubProvinceThreshold" value="3" min="1">
                             </label>
-                            <label class="risk-type"><input type="checkbox" class="risk-type-check" value="overseas"> 境外/港澳台</label>
+                            <label class="risk-type"><input type="checkbox" class="risk-type-check" value="overseas_sub"> 境外订阅</label>
+                            <label class="risk-type"><input type="checkbox" class="risk-type-check" value="overseas_online" checked> 境外在线</label>
                         </div>
                     </div>
                     <div class="filter-group">
@@ -1346,6 +1349,27 @@ function regionSubText(info) {
     return text === '-' ? '' : text;
 }
 
+function isOverseasLocation(country, region) {
+    country = (country || '').trim();
+    region = (region || '').trim();
+    if (region === '香港' || region === '澳门' || region === '台湾') return true;
+    if (country.indexOf('香港') !== -1 || country.indexOf('澳门') !== -1 || country.indexOf('台湾') !== -1) return true;
+    if (country === '') return false;
+    return country.indexOf('中国') === -1;
+}
+
+function detailRegionHtml(row) {
+    var parts = regionParts(row);
+    if (!parts.length) return '-';
+    return parts.map(function(part) {
+        var text = escapeHtml(part.text);
+        if (part.filter === 'region') {
+            return '<span class="province-highlight">' + text + '</span>';
+        }
+        return text;
+    }).join(' ');
+}
+
 function renderLogTable(data) {
     var tbody = document.getElementById('tableBody');
     if (data.length === 0) {
@@ -1600,11 +1624,11 @@ function renderDetail(data) {
     } else {
         subBody.innerHTML = subLogs.map(function(row) {
             var ua = row.user_agent || '';
-            var mismatch = isMismatch((row.ip_region || '').trim(), aliveProvinceSet, (row.ip_country || '').trim());
-            var regionHtml = mismatch
-                ? '<span class="mismatch-province">' + escapeHtml(regionText(row)) + '</span>'
-                : escapeHtml(regionText(row));
-            return '<tr' + (mismatch ? ' class="mismatch-row"' : '') + '>'
+            var overseas = isOverseasLocation(row.ip_country, row.ip_region);
+            var mismatch = !overseas && isMismatch((row.ip_region || '').trim(), aliveProvinceSet, (row.ip_country || '').trim());
+            var regionHtml = overseas ? escapeHtml(regionText(row)) : detailRegionHtml(row);
+            var rowClass = overseas ? ' class="overseas-row"' : (mismatch ? ' class="mismatch-row"' : '');
+            return '<tr' + rowClass + '>'
                 + '<td class="col-ip">' + detailIpCell(row.ip) + '</td>'
                 + '<td class="col-region">' + regionHtml + '</td>'
                 + '<td class="user-agent-cell" title="' + escapeHtml(ua) + '">' + escapeHtml(ua ? truncate(ua, 60) : '-') + '</td>'
@@ -1625,11 +1649,11 @@ function renderDetail(data) {
                 ip_city: row.city,
                 ip_isp: row.isp
             };
-            var mismatch = isMismatch((row.province || '').trim(), subProvinceSet, (row.country || '').trim());
-            var regionHtml = mismatch
-                ? '<span class="mismatch-province">' + escapeHtml(regionText(regionRow)) + '</span>'
-                : escapeHtml(regionText(regionRow));
-            return '<tr' + (mismatch ? ' class="mismatch-row"' : '') + '>'
+            var overseas = isOverseasLocation(row.country, row.province);
+            var mismatch = !overseas && isMismatch((row.province || '').trim(), subProvinceSet, (row.country || '').trim());
+            var regionHtml = overseas ? escapeHtml(regionText(regionRow)) : detailRegionHtml(regionRow);
+            var rowClass = overseas ? ' class="overseas-row"' : (mismatch ? ' class="mismatch-row"' : '');
+            return '<tr' + rowClass + '>'
                 + '<td class="col-ip">' + detailIpCell(row.ip) + '</td>'
                 + '<td class="col-region">' + regionHtml + '</td>'
                 + '<td class="col-time">' + fmtTime(row.last_seen_at) + '</td>'
@@ -1873,7 +1897,8 @@ var riskTypeLabels = {
     online_province: { text: '在线多省', cls: 'badge-warning' },
     online_ip: { text: '在线多IP', cls: 'badge-warning' },
     sub_province: { text: '订阅多省', cls: 'badge-warning' },
-    overseas: { text: '境外/港澳台', cls: 'badge-danger' }
+    overseas_sub: { text: '境外订阅', cls: 'badge-danger' },
+    overseas_online: { text: '境外在线', cls: 'badge-danger' }
 };
 
 function riskUserLink(userId) {
