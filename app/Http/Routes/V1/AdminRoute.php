@@ -116,6 +116,7 @@ class AdminRoute
             $router->post('/theme/getThemeConfig', 'V1\\Admin\\ThemeController@getThemeConfig');
             // User Portrait
             $router->get ('/user_portrait/fetch', 'V1\\Admin\\UserPortraitController@fetch');
+            $router->get ('/user_portrait/detail', 'V1\\Admin\\UserPortraitController@detail');
             $router->get ('/user_portrait/getFilterOptions', 'V1\\Admin\\UserPortraitController@getFilterOptions');
             $router->get ('/user_portrait/getRules', 'V1\\Admin\\UserPortraitController@getRules');
             $router->post('/user_portrait/saveRule', 'V1\\Admin\\UserPortraitController@saveRule');

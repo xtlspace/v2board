@@ -678,7 +678,9 @@ WHERE `dedupe_key` = '';
 
 DELETE t1 FROM `v2_sub_log` t1
 JOIN `v2_sub_log` t2
-  ON t1.`dedupe_key` = t2.`dedupe_key` AND t1.`id` < t2.`id`;
+  ON t1.`user_id` = t2.`user_id`
+ AND t1.`dedupe_key` = t2.`dedupe_key`
+ AND t1.`id` < t2.`id`;
 
 ALTER TABLE `v2_sub_log` ADD UNIQUE KEY `uk_dedupe_key` (`dedupe_key`);
 

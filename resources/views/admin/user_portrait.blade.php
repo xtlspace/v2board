@@ -63,10 +63,14 @@
         table tr:hover td { background: #fafafa; }
         .col-id { width: 60px; color: #999; }
         .col-user { width: 70px; }
-        .col-ip { width: 130px; font-family: monospace; }
+        .col-ip { width: 165px; font-family: monospace; white-space: nowrap; }
         .col-time { width: 160px; white-space: nowrap; }
         .col-actions { width: 100px; text-align: center; }
         .user-agent-cell { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .col-region { min-width: 160px; }
+        .alive-cell { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .ip-lookup { margin-left: 6px; color: #1890ff; }
+        .ip-lookup:hover { color: #40a9ff; }
         .badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 12px; background: #f0f0f0; }
         .badge-country { background: #e6f7ff; color: #1890ff; }
         .badge-isp { background: #f6ffed; color: #52c41a; }
@@ -129,6 +133,14 @@
         .summary-card { background: #fafafa; border: 1px solid #f0f0f0; border-radius: 6px; padding: 14px 16px; }
         .summary-card .label { font-size: 12px; color: #888; }
         .summary-card .value { font-size: 22px; font-weight: 600; color: #333; margin-top: 4px; }
+        .summary-card .sub { font-size: 12px; color: #999; margin-top: 4px; }
+        .detail-summary { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+        .detail-summary .summary-card { display: flex; flex-direction: column; justify-content: space-between; gap: 8px; padding: 10px 12px; }
+        .detail-summary .summary-field { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+        .detail-summary .summary-field .label { flex: 0 0 52px; line-height: 18px; }
+        .detail-summary .field-body { flex: 1; min-width: 0; }
+        .detail-summary .value { font-size: 13px; line-height: 18px; font-weight: 600; color: #333; margin-top: 0; overflow-wrap: anywhere; word-break: normal; }
+        .detail-summary .sub { font-size: 11px; line-height: 15px; margin-top: 1px; }
         .distribution-map-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; }
         .china-map { width: 100%; height: 600px; }
         .province-rank { max-height: 600px; overflow: auto; border: 1px solid #f0f0f0; border-radius: 6px; }
@@ -160,8 +172,9 @@
     <div class="card">
         <div class="card-body">
             <div class="tabs">
-                <button class="tab-btn active" data-tab="tabLogs">订阅日志</button>
+                <button class="tab-btn active" data-tab="tabLogs">订阅记录</button>
                 <button class="tab-btn" data-tab="tabDistribution">用户分布</button>
+                <button class="tab-btn" data-tab="tabDetail">用户详情</button>
                 <button class="tab-btn" data-tab="tabRules">替换规则</button>
                 <button class="tab-btn" data-tab="tabRisk">风险筛查</button>
             </div>
@@ -227,17 +240,15 @@
                             <tr>
                                 <th class="col-id sortable" data-sort="id">ID <i class="fas fa-sort"></i></th>
                                 <th class="col-user sortable" data-sort="user_id">User <i class="fas fa-sort"></i></th>
-                                <th class="col-ip sortable" data-sort="ip">IP <i class="fas fa-sort"></i></th>
-                                <th class="sortable" data-sort="ip_country">国家 <i class="fas fa-sort"></i></th>
-                                <th class="sortable" data-sort="ip_region">地区 <i class="fas fa-sort"></i></th>
-                                <th class="sortable" data-sort="ip_city">城市 <i class="fas fa-sort"></i></th>
-                                <th class="sortable" data-sort="ip_isp">运营商 <i class="fas fa-sort"></i></th>
+                                <th class="col-ip sortable" data-sort="ip">订阅IP <i class="fas fa-sort"></i></th>
+                                <th class="col-region sortable" data-sort="ip_region">地区 <i class="fas fa-sort"></i></th>
+                                <th>在线记录</th>
                                 <th class="sortable" data-sort="user_agent">User-Agent <i class="fas fa-sort"></i></th>
                                 <th class="col-time sortable active" data-sort="created_at">时间 <i class="fas fa-sort"></i></th>
                             </tr>
                         </thead>
                         <tbody id="tableBody">
-                            <tr><td colspan="9"><div class="loading"><i class="fas fa-spinner"></i><p>加载中...</p></div></td></tr>
+                            <tr><td colspan="7"><div class="loading"><i class="fas fa-spinner"></i><p>加载中...</p></div></td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -315,6 +326,63 @@
                     <div id="chinaMap" class="china-map"></div>
                     <div class="province-rank" id="provinceRank">
                         <div class="empty-state"><i class="fas fa-spinner"></i><p>加载中...</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tabDetail" class="tab-content">
+                <div class="filter-form">
+                    <div class="filter-group">
+                        <label>User ID</label>
+                        <input type="text" id="detailUserId" placeholder="输入用户 ID 查询">
+                    </div>
+                    <div class="filter-group" style="padding-bottom:1px">
+                        <label>&nbsp;</label>
+                        <div style="display:flex;gap:8px">
+                            <button class="btn btn-primary" id="detailSearchBtn"><i class="fas fa-search"></i>查询</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="detailEmpty" class="empty-state">
+                    <i class="fas fa-user"></i>
+                    <p>输入用户 ID 查看该用户的订阅记录和在线记录</p>
+                </div>
+
+                <div id="detailResult" style="display:none">
+                    <div class="distribution-summary detail-summary" id="detailSummary"></div>
+
+                    <div class="toolbar" style="margin-top:20px">
+                        <span class="toolbar-title">订阅记录 <span class="text-muted" id="detailSubTip" style="font-weight:400;font-size:12px"></span></span>
+                    </div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th class="col-ip">订阅IP</th>
+                                    <th class="col-region">地区</th>
+                                    <th>User-Agent</th>
+                                    <th class="col-time">时间</th>
+                                </tr>
+                            </thead>
+                            <tbody id="detailSubBody"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="toolbar" style="margin-top:20px">
+                        <span class="toolbar-title">在线记录 <span class="text-muted" id="detailAliveTip" style="font-weight:400;font-size:12px"></span></span>
+                    </div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th class="col-ip">IP</th>
+                                    <th class="col-region">地区</th>
+                                    <th class="col-time">最近在线时间</th>
+                                </tr>
+                            </thead>
+                            <tbody id="detailAliveBody"></tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -923,7 +991,8 @@ function scheduleLogSearch() {
 
 function fmtTime(ts) {
     if (!ts) return '-';
-    var d = new Date(ts * 1000);
+    var d = new Date(typeof ts === 'number' ? ts * 1000 : ts);
+    if (isNaN(d.getTime())) return '-';
     var pad = function(n) { return n < 10 ? '0' + n : n; };
     return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate())
         + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
@@ -1026,7 +1095,7 @@ function loadLogData() {
     searchBtn.disabled = true;
     searchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>搜索中';
 
-    document.getElementById('tableBody').innerHTML = '<tr><td colspan="9"><div class="loading"><i class="fas fa-spinner"></i><p>加载中...</p></div></td></tr>';
+    document.getElementById('tableBody').innerHTML = '<tr><td colspan="7"><div class="loading"><i class="fas fa-spinner"></i><p>加载中...</p></div></td></tr>';
 
     apiFetch(apiBase + '/user_portrait/fetch?' + params.toString())
         .then(function(r) { return r.json(); })
@@ -1037,7 +1106,7 @@ function loadLogData() {
         })
         .catch(function(err) {
             if (requestId !== logRequestId) return;
-            document.getElementById('tableBody').innerHTML = '<tr><td colspan="9"><div class="error-state"><i class="fas fa-exclamation-triangle"></i><p>加载失败</p></div></td></tr>';
+            document.getElementById('tableBody').innerHTML = '<tr><td colspan="7"><div class="error-state"><i class="fas fa-exclamation-triangle"></i><p>加载失败</p></div></td></tr>';
         })
         .finally(function() {
             if (requestId === logRequestId) {
@@ -1047,10 +1116,81 @@ function loadLogData() {
         });
 }
 
+var specialRegionMap = { '香港': '中国香港', '澳门': '中国澳门', '台湾': '中国台湾' };
+
+function filterLink(filter, value, text) {
+    return '<a href="javascript:void(0)" class="quick-filter" data-filter="' + filter +
+        '" data-value="' + escapeHtml(value) + '">' + escapeHtml(text) + '</a>';
+}
+
+function regionParts(row) {
+    var country = (row.ip_country || '').trim();
+    var region = (row.ip_region || '').trim();
+    var city = (row.ip_city || '').trim();
+    var isp = (row.ip_isp || '').trim();
+    var parts = [];
+
+    // 港澳台单独显示，不按省市拼接
+    var special = specialRegionMap[region] || specialRegionMap[country] || '';
+    if (special) {
+        var specialRegion = specialRegionMap[region] ? region : (specialRegionMap[country] ? country : '');
+        parts.push({ filter: 'region', country: '中国', region: specialRegion, text: special });
+        if (isp) parts.push({ filter: 'ip_isp', value: isp, text: isp });
+        return parts;
+    }
+
+    // 中国大陆：省 + 市 + 运营商
+    if (country === '中国') {
+        // 直辖市的省和市同名（如 北京 北京），只显示一次
+        var regionKey = region.replace(/(省|市)$/, '');
+        var cityKey = city.replace(/(省|市|地区|自治州|盟)$/, '');
+        if (region) parts.push({ filter: 'region', country: '中国', region: region, text: region });
+        if (city && cityKey !== regionKey) parts.push({ filter: 'ip_city', value: city, text: city });
+        if (isp) parts.push({ filter: 'ip_isp', value: isp, text: isp });
+        return parts;
+    }
+
+    // 其他国家/地区：国家 + 运营商
+    if (country) parts.push({ filter: 'country', country: country, text: country });
+    if (isp) parts.push({ filter: 'ip_isp', value: isp, text: isp });
+    return parts;
+}
+
+function regionCellHtml(row) {
+    var parts = regionParts(row);
+    if (!parts.length) return '<span class="text-muted">-</span>';
+    return parts.map(function(part) {
+        if (part.filter === 'region') {
+            return '<a href="javascript:void(0)" class="quick-filter" data-filter="region" data-country="中国" data-region="' + escapeHtml(part.region) + '">' + escapeHtml(part.text) + '</a>';
+        }
+        if (part.filter === 'country') {
+            return '<a href="javascript:void(0)" class="quick-filter" data-filter="country" data-country="' + escapeHtml(part.country) + '" data-region="">' + escapeHtml(part.text) + '</a>';
+        }
+        return filterLink(part.filter, part.value, part.text);
+    }).join(' ');
+}
+
+function regionText(row) {
+    var parts = regionParts(row);
+    if (!parts.length) return '-';
+    return parts.map(function(part) { return part.text; }).join(' ');
+}
+
+function regionSubText(info) {
+    if (!info) return '';
+    var text = regionText({
+        ip_country: info.country,
+        ip_region: info.region,
+        ip_city: info.city,
+        ip_isp: info.isp
+    });
+    return text === '-' ? '' : text;
+}
+
 function renderLogTable(data) {
     var tbody = document.getElementById('tableBody');
     if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><i class="fas fa-inbox"></i><p>暂无数据</p></div></td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><i class="fas fa-inbox"></i><p>暂无数据</p></div></td></tr>';
         updatePagination();
         return;
     }
@@ -1058,16 +1198,17 @@ function renderLogTable(data) {
     data.forEach(function(row) {
         var ip = row.ip || '';
         var ua = row.user_agent || '';
-        var region = row.ip_region || '';
-        var city = row.ip_city || '';
+        var alive = row.alive_provinces || [];
+        var aliveText = alive.length ? alive.join('、') : '';
         html += '<tr>'
             + '<td class="col-id">' + escapeHtml(row.id) + '</td>'
-            + '<td class="col-user"><a href="javascript:void(0)" onclick="filterByUser(' + parseInt(row.user_id, 10) + ')" style="color:#1890ff">' + escapeHtml(row.user_id) + '</a></td>'
-            + '<td class="col-ip">' + (ip ? '<a href="javascript:void(0)" class="quick-filter" data-filter="ip" data-value="' + escapeHtml(ip) + '">' + escapeHtml(ip) + '</a>' : '-') + '</td>'
-            + '<td>' + (row.ip_country ? '<a href="javascript:void(0)" class="quick-filter badge badge-country" data-filter="country" data-country="' + escapeHtml(row.ip_country) + '" data-region="' + escapeHtml(region) + '">' + escapeHtml(row.ip_country) + '</a>' : '<span class="text-muted">-</span>') + '</td>'
-            + '<td>' + (region ? '<a href="javascript:void(0)" class="quick-filter" data-filter="region" data-country="' + escapeHtml(row.ip_country || '') + '" data-region="' + escapeHtml(region) + '">' + escapeHtml(region) + '</a>' : '-') + '</td>'
-            + '<td>' + (city ? '<a href="javascript:void(0)" class="quick-filter" data-filter="ip_city" data-value="' + escapeHtml(city) + '">' + escapeHtml(city) + '</a>' : '-') + '</td>'
-            + '<td>' + (row.ip_isp ? '<a href="javascript:void(0)" class="quick-filter badge badge-isp" data-filter="ip_isp" data-value="' + escapeHtml(row.ip_isp) + '">' + escapeHtml(row.ip_isp) + '</a>' : '<span class="text-muted">-</span>') + '</td>'
+            + '<td class="col-user"><a href="javascript:void(0)" onclick="openUserDetail(' + parseInt(row.user_id, 10) + ')" style="color:#1890ff">' + escapeHtml(row.user_id) + '</a></td>'
+            + '<td class="col-ip">' + (ip
+                ? '<a href="javascript:void(0)" class="quick-filter" data-filter="ip" data-value="' + escapeHtml(ip) + '">' + escapeHtml(ip) + '</a>'
+                  + '<a class="ip-lookup" href="https://iplark.com/' + encodeURIComponent(ip) + '" target="_blank" rel="noopener noreferrer" title="在 iplark 查询此 IP"><i class="fas fa-search"></i></a>'
+                : '-') + '</td>'
+            + '<td class="col-region">' + regionCellHtml(row) + '</td>'
+            + '<td class="alive-cell" title="' + escapeHtml(aliveText) + '">' + (aliveText ? escapeHtml(aliveText) : '<span class="text-muted">-</span>') + '</td>'
             + '<td class="user-agent-cell" title="' + escapeHtml(ua) + '">' + (ua ? '<a href="javascript:void(0)" class="quick-filter" data-filter="user_agent" data-value="' + escapeHtml(ua) + '">' + escapeHtml(truncate(ua, 40)) + '</a>' : '-') + '</td>'
             + '<td class="col-time">' + fmtTime(row.created_at) + '</td>'
             + '</tr>';
@@ -1087,6 +1228,141 @@ function updatePagination() {
     document.getElementById('nextPage').disabled = page >= totalPages;
 }
 
+// =========== User detail ===========
+var detailInited = false;
+
+function initDetailTab() {
+    if (detailInited) return;
+    detailInited = true;
+    document.getElementById('detailSearchBtn').addEventListener('click', searchDetail);
+    document.getElementById('detailUserId').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') searchDetail();
+    });
+    var params = new URLSearchParams(window.location.search);
+    var userId = params.get('user_id');
+    if (userId) {
+        document.getElementById('detailUserId').value = userId;
+    }
+}
+
+function detailIpCell(ip) {
+    if (!ip) return '-';
+    return escapeHtml(ip)
+        + '<a class="ip-lookup" href="https://iplark.com/' + encodeURIComponent(ip) + '" target="_blank" rel="noopener noreferrer" title="在 iplark 查询此 IP"><i class="fas fa-search"></i></a>';
+}
+
+function detailTip(shown, total) {
+    total = total || shown;
+    if (shown >= 200 && total > shown) {
+        return '仅显示最近 ' + shown + ' 条，共 ' + total + ' 条';
+    }
+    return '共 ' + total + ' 条';
+}
+
+function searchDetail() {
+    var input = document.getElementById('detailUserId');
+    var userId = parseInt(input.value.trim(), 10);
+    if (!userId || userId <= 0) {
+        alert('请输入有效的用户 ID');
+        return;
+    }
+    var btn = document.getElementById('detailSearchBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>查询中';
+
+    apiFetch(apiBase + '/user_portrait/detail?user_id=' + userId)
+        .then(function(r) {
+            if (!r.ok) throw new Error('http ' + r.status);
+            return r.json();
+        })
+        .then(function(res) {
+            renderDetail(res.data || {});
+        })
+        .catch(function() {
+            alert('查询失败，请确认用户 ID 是否正确');
+        })
+        .finally(function() {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-search"></i>查询';
+        });
+}
+
+function renderDetail(data) {
+    var user = data.user || {};
+    var subLogs = data.sub_logs || [];
+    var aliveIps = data.alive_ips || [];
+
+    document.getElementById('detailEmpty').style.display = 'none';
+    document.getElementById('detailResult').style.display = '';
+
+    var summary = [
+        { fields: [
+            { label: '状态', value: user.banned ? '已封禁' : '正常' },
+            { label: '邮箱', value: user.email || '-' }
+        ] },
+        { fields: [
+            { label: '订阅计划', value: user.plan_name || '-' },
+            { label: '到期时间', value: user.expired_at ? fmtTime(user.expired_at) : '-' }
+        ] },
+        { fields: [
+            { label: '注册IP', value: user.reg_ip || '-', sub: regionSubText(user.reg_ip_info) },
+            { label: '注册时间', value: user.created_at ? fmtTime(user.created_at) : '-' }
+        ] },
+        { fields: [
+            { label: '登录IP', value: user.login_ip || '-', sub: regionSubText(user.login_ip_info) },
+            { label: '最近登录', value: user.last_login_at ? fmtTime(user.last_login_at) : '-' }
+        ] }
+    ];
+    document.getElementById('detailSummary').innerHTML = summary.map(function(card) {
+        var inner = card.fields.map(function(field) {
+            return '<div class="summary-field">'
+                + '<div class="label">' + escapeHtml(field.label) + '</div>'
+                + '<div class="field-body">'
+                + '<div class="value">' + escapeHtml(field.value) + '</div>'
+                + (field.sub ? '<div class="sub">' + escapeHtml(field.sub) + '</div>' : '')
+                + '</div></div>';
+        }).join('');
+        return '<div class="summary-card">' + inner + '</div>';
+    }).join('');
+
+    document.getElementById('detailSubTip').textContent = detailTip(subLogs.length, data.sub_total);
+    document.getElementById('detailAliveTip').textContent = detailTip(aliveIps.length, data.alive_total);
+
+    var subBody = document.getElementById('detailSubBody');
+    if (!subLogs.length) {
+        subBody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><i class="fas fa-inbox"></i><p>暂无订阅记录</p></div></td></tr>';
+    } else {
+        subBody.innerHTML = subLogs.map(function(row) {
+            var ua = row.user_agent || '';
+            return '<tr>'
+                + '<td class="col-ip">' + detailIpCell(row.ip) + '</td>'
+                + '<td class="col-region">' + escapeHtml(regionText(row)) + '</td>'
+                + '<td class="user-agent-cell" title="' + escapeHtml(ua) + '">' + escapeHtml(ua ? truncate(ua, 60) : '-') + '</td>'
+                + '<td class="col-time">' + fmtTime(row.created_at) + '</td>'
+                + '</tr>';
+        }).join('');
+    }
+
+    var aliveBody = document.getElementById('detailAliveBody');
+    if (!aliveIps.length) {
+        aliveBody.innerHTML = '<tr><td colspan="3"><div class="empty-state"><i class="fas fa-inbox"></i><p>暂无在线记录</p></div></td></tr>';
+    } else {
+        aliveBody.innerHTML = aliveIps.map(function(row) {
+            var regionRow = {
+                ip_country: row.country,
+                ip_region: row.province,
+                ip_city: row.city,
+                ip_isp: row.isp
+            };
+            return '<tr>'
+                + '<td class="col-ip">' + detailIpCell(row.ip) + '</td>'
+                + '<td class="col-region">' + escapeHtml(regionText(regionRow)) + '</td>'
+                + '<td class="col-time">' + fmtTime(row.last_seen_at) + '</td>'
+                + '</tr>';
+        }).join('');
+    }
+}
+
 function searchLogs() {
     clearTimeout(filterDebounceTimer);
     state.current = 1;
@@ -1101,6 +1377,15 @@ function filterByUser(userId) {
     state.filters = buildFilters();
     renderFilterChips();
     loadLogData();
+}
+
+// 点击 User ID 直接切到「用户详情」并查询
+function openUserDetail(userId) {
+    var btn = document.querySelector('.tab-btn[data-tab="tabDetail"]');
+    if (btn) btn.click();
+    var input = document.getElementById('detailUserId');
+    if (input) input.value = userId;
+    searchDetail();
 }
 
 function quickFilter(key, value) {
@@ -1277,6 +1562,7 @@ document.querySelectorAll('.tab-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
         var tab = this.getAttribute('data-tab');
         if (tab === 'tabDistribution') loadDistribution();
+        if (tab === 'tabDetail') initDetailTab();
         if (tab === 'tabRules') loadRules();
         if (tab === 'tabRisk') loadRiskData();
     });
@@ -1286,7 +1572,7 @@ document.querySelectorAll('.tab-btn').forEach(function(btn) {
 var riskState = { current: 1, pageSize: 10, total: 0, sort: 'city_count', sortType: 'DESC' };
 
 function riskUserLink(userId) {
-    window.open('/' + securePath + '/user_portrait?user_id=' + userId, '_blank');
+    openUserDetail(userId);
 }
 
 function loadRiskData() {
@@ -1356,7 +1642,7 @@ document.getElementById('clearBtn').addEventListener('click', function() {
     var filters = buildFilters();
     var message = Object.keys(filters).length
         ? '确认清除当前筛选条件下的 ' + (state.total || 0) + ' 条日志？此操作不可恢复。'
-        : '当前没有筛选条件，确认清除全部订阅日志？此操作不可恢复。';
+        : '当前没有筛选条件，确认清除全部订阅记录？此操作不可恢复。';
     if (!confirm(message)) return;
     var params = new URLSearchParams();
     Object.keys(filters).forEach(function(k) { params.set(k, filters[k]); });

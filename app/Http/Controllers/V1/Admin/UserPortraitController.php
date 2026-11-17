@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AliveIpHistory;
 use App\Models\SubLog;
 use App\Models\SubRule;
+use App\Utils\IPLocation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -36,7 +37,98 @@ class UserPortraitController extends Controller
         $total = $builder->count();
         $res = $builder->forPage($current, $pageSize)->get();
 
+        // 补充每个用户在 v2_alive_ip_history 中记录的省份（在线记录）
+        $userIds = $res->pluck('user_id')->unique()->values()->all();
+        $aliveProvinces = [];
+        if (!empty($userIds)) {
+            $rows = DB::table('v2_alive_ip_history')
+                ->select('user_id', 'province')
+                ->selectRaw('MAX(last_seen_at) as last_seen_at')
+                ->whereIn('user_id', $userIds)
+                ->whereNotNull('province')
+                ->where('province', '!=', '')
+                ->groupBy('user_id', 'province')
+                ->orderByDesc('last_seen_at')
+                ->get();
+            foreach ($rows as $row) {
+                $aliveProvinces[$row->user_id][] = $row->province;
+            }
+        }
+        $res->each(function ($item) use ($aliveProvinces) {
+            $item->alive_provinces = $aliveProvinces[$item->user_id] ?? [];
+            return $item;
+        });
+
         return response(['data' => $res, 'total' => $total]);
+    }
+
+    public function detail(Request $request)
+    {
+        $userId = (int) $request->input('user_id');
+        if ($userId <= 0) {
+            abort(500, '参数错误');
+        }
+        $user = DB::table('v2_user')->where('id', $userId)->first();
+        if (!$user) {
+            abort(500, '用户不存在');
+        }
+
+        $subTotal = DB::table('v2_sub_log')->where('user_id', $userId)->count();
+        $aliveTotal = DB::table('v2_alive_ip_history')->where('user_id', $userId)->count();
+
+        $subLogs = DB::table('v2_sub_log')
+            ->where('user_id', $userId)
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->limit(200)
+            ->get();
+
+        $aliveIps = DB::table('v2_alive_ip_history')
+            ->where('user_id', $userId)
+            ->orderByDesc('last_seen_at')
+            ->limit(200)
+            ->get();
+
+        $planName = null;
+        if (!empty($user->plan_id)) {
+            $planName = DB::table('v2_plan')->where('id', $user->plan_id)->value('name');
+        }
+
+        $regLocation = null;
+        $loginLocation = null;
+        try {
+            $ipLocation = new IPLocation();
+            if (!empty($user->reg_ip)) {
+                $regLocation = $ipLocation->find($user->reg_ip) ?: null;
+            }
+            if (!empty($user->last_login_ip)) {
+                $loginLocation = $ipLocation->find($user->last_login_ip) ?: null;
+            }
+        } catch (\Exception $e) {
+            // IP 归属地解析失败不影响详情
+        }
+
+        return response([
+            'data' => [
+                'user' => [
+                    'id' => (int) $user->id,
+                    'email' => $user->email,
+                    'created_at' => (int) $user->created_at,
+                    'expired_at' => $user->expired_at !== null ? (int) $user->expired_at : null,
+                    'banned' => (int) $user->banned,
+                    'last_login_at' => $user->last_login_at !== null ? (int) $user->last_login_at : null,
+                    'plan_name' => $planName,
+                    'reg_ip' => $user->reg_ip,
+                    'reg_ip_info' => $regLocation,
+                    'login_ip' => $user->last_login_ip,
+                    'login_ip_info' => $loginLocation,
+                ],
+                'sub_logs' => $subLogs,
+                'sub_total' => $subTotal,
+                'alive_ips' => $aliveIps,
+                'alive_total' => $aliveTotal,
+            ],
+        ]);
     }
 
     public function getFilterOptions(Request $request)
