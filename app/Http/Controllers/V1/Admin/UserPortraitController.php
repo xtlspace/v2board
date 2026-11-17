@@ -115,7 +115,6 @@ class UserPortraitController extends Controller
 
     public function rebuildLocation(Request $request)
     {
-        $lockKey = 'user_portrait_rebuild_running';
         $table = $request->input('table');
         if (!in_array($table, ['sub', 'alive'], true)) {
             abort(500, '参数错误');
@@ -128,20 +127,6 @@ class UserPortraitController extends Controller
         }
         if ($limit > 1000) {
             $limit = 1000;
-        }
-
-        $acquired = false;
-        if ($lastId === 0) {
-            try {
-                if (!Cache::add($lockKey, 1, 600)) {
-                    abort(500, '已有重建任务在执行，请稍后再试');
-                }
-                $acquired = true;
-            } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
-                throw $e;
-            } catch (\Throwable $e) {
-                Log::warning('user_portrait.rebuildLocation lock unavailable: ' . $e->getMessage());
-            }
         }
 
         try {
@@ -200,13 +185,6 @@ class UserPortraitController extends Controller
                 } catch (\Throwable $e) {
                     Log::warning('user_portrait.rebuildLocation cache reset failed: ' . $e->getMessage());
                 }
-                if ($acquired) {
-                    try {
-                        Cache::forget($lockKey);
-                    } catch (\Throwable $ignore) {
-                    }
-                    $acquired = false;
-                }
             }
 
             return response(['data' => [
@@ -216,12 +194,6 @@ class UserPortraitController extends Controller
                 'total' => $lastId === 0 ? DB::table($tableName)->count() : null,
             ]]);
         } catch (\Throwable $e) {
-            if ($acquired) {
-                try {
-                    Cache::forget($lockKey);
-                } catch (\Throwable $ignore) {
-                }
-            }
             if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpException) {
                 throw $e;
             }
