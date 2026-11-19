@@ -499,6 +499,19 @@
                             <option value="0">全部</option>
                         </select>
                     </div>
+                    <div class="filter-group">
+                        <label>用户 ID</label>
+                        <div style="display:flex;gap:6px">
+                            <select id="riskUserIdOp" style="min-width:70px">
+                                <option value=">">&gt;</option>
+                                <option value=">=">&gt;=</option>
+                                <option value="<">&lt;</option>
+                                <option value="<=">&lt;=</option>
+                                <option value="=">=</option>
+                            </select>
+                            <input type="number" id="riskUserIdValue" placeholder="用户ID" min="0" style="min-width:100px">
+                        </div>
+                    </div>
                     <div class="filter-group" style="padding-bottom:1px">
                         <label>&nbsp;</label>
                         <div style="display:flex;gap:8px">
@@ -2051,6 +2064,11 @@ function loadRiskData() {
         params.set('pageSize', riskState.pageSize);
         params.set('rules', selected.join(','));
         params.set('days', days);
+        var userIdValue = document.getElementById('riskUserIdValue').value.trim();
+        if (userIdValue !== '') {
+            params.set('user_id_op', document.getElementById('riskUserIdOp').value);
+            params.set('user_id', userIdValue);
+        }
         params.set('sort', riskState.sort);
         params.set('sort_type', riskState.sortType);
 
@@ -2726,6 +2744,19 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('riskDays').addEventListener('change', function() {
         riskState.current = 1;
         loadRiskData();
+    });
+    document.getElementById('riskUserIdValue').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            riskState.current = 1;
+            loadRiskData();
+        }
+    });
+    document.getElementById('riskUserIdValue').addEventListener('input', function() {
+        clearTimeout(filterDebounceTimer);
+        filterDebounceTimer = setTimeout(function() {
+            riskState.current = 1;
+            loadRiskData();
+        }, 400);
     });
     document.getElementById('riskPrevPage').addEventListener('click', function() {
         if (riskState.current > 1) { riskState.current--; loadRiskData(); }

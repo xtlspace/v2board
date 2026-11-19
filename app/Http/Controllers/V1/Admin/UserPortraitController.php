@@ -829,6 +829,13 @@ class UserPortraitController extends Controller
             $days = 30;
         }
 
+        $userIdOp = (string) $request->input('user_id_op', '>');
+        if (!in_array($userIdOp, ['>', '>=', '<', '<=', '='], true)) {
+            $userIdOp = '>';
+        }
+        $userIdRaw = trim((string) $request->input('user_id', ''));
+        $userIdValue = $userIdRaw === '' ? null : max(0, (int) $userIdRaw);
+
         $sortWhitelist = ['risk_count', 'sub_region_count', 'ua_count', 'alive_province_count', 'last_at'];
         $sort = in_array($request->input('sort'), $sortWhitelist, true) ? $request->input('sort') : 'risk_count';
         $sortType = in_array($request->input('sort_type'), ['ASC', 'DESC']) ? $request->input('sort_type') : 'DESC';
@@ -841,10 +848,10 @@ class UserPortraitController extends Controller
             $pageSize = 100;
         }
 
-        $cacheKey = 'sub_risk|' . md5(serialize([$rules, $selected, $days]));
+        $cacheKey = 'sub_risk|' . md5(serialize([$rules, $selected, $days, $userIdOp, $userIdValue]));
 
-        $filtered = Cache::remember($cacheKey, 60, function () use ($rules, $selected, $days) {
-            return $this->buildRiskRows($rules, $selected, $days);
+        $filtered = Cache::remember($cacheKey, 60, function () use ($rules, $selected, $days, $userIdOp, $userIdValue) {
+            return $this->buildRiskRows($rules, $selected, $days, $userIdOp, $userIdValue);
         });
 
         usort($filtered, function ($a, $b) use ($sort, $sortType) {
@@ -862,7 +869,7 @@ class UserPortraitController extends Controller
         return response(['data' => $data, 'total' => $total]);
     }
 
-    private function buildRiskRows(array $rules, array $selected, int $days): array
+    private function buildRiskRows(array $rules, array $selected, int $days, string $userIdOp = '>', ?int $userIdValue = null): array
     {
         $since = $days > 0 ? time() - $days * 86400 : 0;
         try {
@@ -880,6 +887,9 @@ class UserPortraitController extends Controller
             ->when($since > 0, function ($query) use ($since) {
                 $query->where('created_at', '>=', $since);
             })
+            ->when($userIdValue !== null, function ($query) use ($userIdOp, $userIdValue) {
+                $query->where('user_id', $userIdOp, $userIdValue);
+            })
             ->groupBy('user_id')
             ->get();
 
@@ -891,6 +901,9 @@ class UserPortraitController extends Controller
             ->selectRaw('MAX(last_seen_at) AS last_seen_at')
             ->when($since > 0, function ($query) use ($since) {
                 $query->where('last_seen_at', '>=', $since);
+            })
+            ->when($userIdValue !== null, function ($query) use ($userIdOp, $userIdValue) {
+                $query->where('user_id', $userIdOp, $userIdValue);
             })
             ->groupBy('user_id')
             ->get();
