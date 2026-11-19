@@ -121,6 +121,7 @@ class AdminRoute
             $router->get ('/user_portrait/getSettings', 'V1\\Admin\\UserPortraitController@getSettings');
             $router->post('/user_portrait/saveSettings', 'V1\\Admin\\UserPortraitController@saveSettings');
             $router->post('/user_portrait/saveRiskRules', 'V1\\Admin\\UserPortraitController@saveRiskRules');
+            $router->post('/user_portrait/toggleRiskIgnore', 'V1\\Admin\\UserPortraitController@toggleRiskIgnore');
             $router->post('/user_portrait/testIpLocation', 'V1\\Admin\\UserPortraitController@testIpLocation');
             $router->post('/user_portrait/rebuildLocation', 'V1\\Admin\\UserPortraitController@rebuildLocation');
             $router->post('/user_portrait/resolveUserIps', 'V1\\Admin\\UserPortraitController@resolveUserIps');

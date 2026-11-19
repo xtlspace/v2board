@@ -20,6 +20,7 @@ Schedule::command('check:order')->everyMinute()->withoutOverlapping();
 Schedule::command('check:commission')->everyFifteenMinutes();
 Schedule::command('check:ticket')->everyMinute();
 Schedule::command('check:renewal')->dailyAt('22:30');
+Schedule::command('risk:notify')->everyMinute()->withoutOverlapping();
 Schedule::command('reset:traffic')->daily();
 Schedule::command('reset:log')->daily();
 Schedule::command('send:remindMail')->dailyAt('11:30');

@@ -458,6 +458,7 @@ CREATE TABLE `v2_user` (
                            `transfer_enable` bigint(20) NOT NULL DEFAULT '0',
                            `device_limit` int(11) DEFAULT NULL,
                            `banned` tinyint(1) NOT NULL DEFAULT '0',
+                           `risk_ignore` tinyint(1) NOT NULL DEFAULT '0',
                            `is_admin` tinyint(1) NOT NULL DEFAULT '0',
                            `last_login_at` int(11) DEFAULT NULL,
                            `is_staff` tinyint(1) NOT NULL DEFAULT '0',
@@ -482,3 +483,11 @@ CREATE TABLE `v2_user` (
 
 
 -- 2025-09-12 10:05:00
+
+-- 风险通知待检查队列
+CREATE TABLE IF NOT EXISTS `v2_risk_queue` (
+  `user_id` int(11) NOT NULL,
+  `created_at` int(11) NOT NULL,
+  PRIMARY KEY (`user_id`),
+  KEY `idx_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

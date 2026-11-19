@@ -69,6 +69,16 @@ class UserDistributionService
                 ['country', 'province', 'city', 'isp', 'provider', 'last_seen_at', 'updated_at']
             );
         }
+
+        $touched = [];
+        foreach ($data as $userId => $ips) {
+            if (is_numeric($userId) && is_array($ips) && !empty($ips)) {
+                $touched[] = (int) $userId;
+            }
+        }
+        if (!empty($touched)) {
+            RiskQueue::markMany($touched);
+        }
     }
 
     private function normalizeIp($value): ?string

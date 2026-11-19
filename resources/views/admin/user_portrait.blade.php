@@ -46,6 +46,8 @@
         .btn-primary:hover { background: #40a9ff; }
         .btn-danger { background: #ff4d4f; color: #fff; }
         .btn-danger:hover { background: #ff7875; }
+        .btn-warning { background: #faad14; color: #fff; }
+        .btn-warning:hover { background: #ffc53d; }
         .btn-success { background: #52c41a; color: #fff; }
         .btn-success:hover { background: #73d13d; }
         .btn-default { background: #fff; color: #333; border: 1px solid #d9d9d9; }
@@ -81,6 +83,10 @@
         .badge-warning { background: #fffbe6; color: #faad14; }
         .badge-danger { background: #fff2f0; color: #ff4d4f; }
         .badge-orange { background: #fff7e6; color: #fa8c16; }
+        .badge-muted { background: #f5f5f5; color: #999; }
+        .risk-ignored-row td { background: #fafafa; color: #999; }
+        .risk-ignored-row td a { color: #99a9bd !important; }
+        .risk-ignored-row .badge { opacity: .65; }
         .risk-rule-list { display: flex; flex-direction: column; gap: 12px; }
         .risk-rule { border: 1px solid #f0f0f0; border-radius: 6px; padding: 12px; background: #fafafa; }
         .risk-rule-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
@@ -420,6 +426,10 @@
                             <label>状态</label>
                             <div id="detailResolveStatus" style="font-size:13px;color:#555;padding:6px 0">选择数据源后点击重新定位</div>
                         </div>
+                        <div class="filter-group" style="padding-bottom:1px">
+                            <label>&nbsp;</label>
+                            <button class="btn btn-default" id="detailIgnoreBtn" disabled><i class="fas fa-eye-slash"></i>屏蔽风险筛查</button>
+                        </div>
                     </div>
 
                     <div class="toolbar" style="margin-top:20px;justify-content:flex-start;gap:12px">
@@ -496,27 +506,9 @@
             <div id="tabRisk" class="tab-content">
                 <div class="toolbar">
                     <span class="toolbar-title">风险筛查</span>
-                    <button class="btn btn-default btn-sm" id="riskDefinitionBtn"><i class="fas fa-cog"></i>风险定义</button>
-                </div>
-                <div class="filter-form" id="riskFilterForm">
-                    <div class="filter-group">
-                        <label>风险类型</label>
-                        <div class="risk-types" id="riskTypeList"></div>
-                    </div>
-                    <div class="filter-group">
-                        <label>时间范围</label>
-                        <select id="riskDays">
-                            <option value="7">近7天</option>
-                            <option value="30" selected>近30天</option>
-                            <option value="90">近90天</option>
-                            <option value="0">全部</option>
-                        </select>
-                    </div>
-                    <div class="filter-group" style="padding-bottom:1px">
-                        <label>&nbsp;</label>
-                        <div style="display:flex;gap:8px">
-                            <button class="btn btn-primary" id="riskSearchBtn"><i class="fas fa-search"></i>筛查</button>
-                        </div>
+                    <div style="display:flex;gap:8px">
+                        <button class="btn btn-primary btn-sm" id="riskSearchBtn"><i class="fas fa-search"></i>筛查</button>
+                        <button class="btn btn-default btn-sm" id="riskDefinitionBtn"><i class="fas fa-cog"></i>风险定义</button>
                     </div>
                 </div>
                 <div class="table-wrapper">
@@ -733,7 +725,7 @@
             </div>
             <div id="riskRuleList" class="risk-rule-list"></div>
             <p class="text-muted" style="font-size:12px;margin:12px 0 0">
-                点击「编辑」配置条件组；「启用」控制该规则是否参与筛查。保存后统一生效。
+                点击「编辑」配置条件组；「启用」控制该规则是否参与筛查，规则内的「TG 通知」控制该规则是否推送。保存后统一生效。
             </p>
         </div>
         <div class="modal-footer">
@@ -758,6 +750,7 @@
                     <option value="yellow">黄色</option>
                 </select>
                 <label class="risk-type"><input type="checkbox" id="riskEditorEnabled"> 启用</label>
+                <label class="risk-type"><input type="checkbox" id="riskEditorNotify"> TG 通知</label>
                 <span class="rr-match-label">组间</span>
                 <select id="riskEditorMatch" class="rr-match">
                     <option value="all">全部满足</option>
@@ -1502,6 +1495,7 @@ function initDetailTab() {
         if (e.key === 'Enter') searchDetail();
     });
     document.getElementById('detailResolveBtn').addEventListener('click', resolveDetailIps);
+    document.getElementById('detailIgnoreBtn').addEventListener('click', toggleDetailRiskIgnore);
     document.getElementById('detailClearSubBtn').addEventListener('click', function() {
         clearDetailRecords('sub');
     });
@@ -1650,11 +1644,57 @@ function searchDetail() {
         });
 }
 
+function setDetailIgnoreState(ignored) {
+    var btn = document.getElementById('detailIgnoreBtn');
+    if (!btn) return;
+    btn.disabled = false;
+    btn.setAttribute('data-ignored', ignored ? '1' : '0');
+    if (ignored) {
+        btn.className = 'btn btn-warning';
+        btn.innerHTML = '<i class="fas fa-eye"></i>已忽略风险 · 点击恢复';
+    } else {
+        btn.className = 'btn btn-default';
+        btn.innerHTML = '<i class="fas fa-eye-slash"></i>屏蔽风险筛查';
+    }
+}
+
+function toggleDetailRiskIgnore() {
+    var userId = parseInt(document.getElementById('detailUserId').value.trim(), 10);
+    if (!userId) return;
+    var btn = document.getElementById('detailIgnoreBtn');
+    var wasIgnored = btn.getAttribute('data-ignored') === '1';
+
+    var params = new URLSearchParams();
+    params.set('user_id', userId);
+    params.set('ignore', wasIgnored ? '0' : '1');
+
+    btn.disabled = true;
+    apiFetch(apiBase + '/user_portrait/toggleRiskIgnore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString()
+    }).then(function(r) {
+        if (r.ok) return r.json();
+        return r.json().catch(function() { return {}; }).then(function(err) {
+            throw new Error(err.message || ('HTTP ' + r.status));
+        });
+    }).then(function(res) {
+        var ignored = !!(res && res.data && res.data.ignored);
+        setDetailIgnoreState(ignored);
+        riskRulesPromise = null;
+        alert(ignored ? '已忽略该用户的风险筛查' : '已恢复该用户的风险筛查');
+    }).catch(function(err) {
+        setDetailIgnoreState(wasIgnored);
+        alert('操作失败：' + (err && err.message ? err.message : '请重试'));
+    });
+}
+
 function renderDetail(data) {
     detailData = data;
     var user = data.user || {};
     var subLogs = data.sub_logs || [];
     var aliveIps = data.alive_ips || [];
+    setDetailIgnoreState(!!user.risk_ignore);
 
     document.getElementById('detailEmpty').style.display = 'none';
     document.getElementById('detailResult').style.display = '';
@@ -2021,7 +2061,7 @@ document.querySelectorAll('.tab-btn').forEach(function(btn) {
 });
 
 // =========== Risk Screening ===========
-var riskState = { current: 1, pageSize: 10, total: 0, sort: 'risk_count', sortType: 'DESC' };
+var riskState = { current: 1, pageSize: 10, total: 0, ignoredTotal: 0, sort: 'risk_count', sortType: 'DESC' };
 var riskRuleList = [];
 var riskRuleMap = {};
 var riskRulesPromise = null;
@@ -2042,32 +2082,14 @@ function ensureRiskRules() {
             riskRuleList = all.filter(function(rule) { return !!rule.enabled; });
             riskRuleMap = {};
             riskRuleList.forEach(function(rule) { riskRuleMap[rule.id] = rule; });
-            renderRiskTypeFilters();
             return riskRuleList;
         })
         .catch(function() {
             riskRuleList = [];
             riskRuleMap = {};
-            renderRiskTypeFilters();
             return [];
         });
     return riskRulesPromise;
-}
-
-function renderRiskTypeFilters() {
-    var box = document.getElementById('riskTypeList');
-    if (!box) return;
-    box.innerHTML = '';
-    if (!riskRuleList.length) {
-        box.innerHTML = '<span class="text-muted" style="font-size:13px">暂无启用的风险规则，请到设置里添加</span>';
-        return;
-    }
-    riskRuleList.forEach(function(rule) {
-        var label = document.createElement('label');
-        label.className = 'risk-type';
-        label.innerHTML = '<input type="checkbox" class="risk-type-check" value="' + escapeHtml(rule.id) + '" checked> ' + escapeHtml(rule.name);
-        box.appendChild(label);
-    });
 }
 
 function riskUserLink(userId) {
@@ -2083,24 +2105,11 @@ function loadRiskData() {
             return;
         }
 
-        var selected = [];
-        document.querySelectorAll('.risk-type-check:checked').forEach(function(el) {
-            selected.push(el.value);
-        });
-        if (!selected.length) {
-            alert('请至少选择一种风险类型');
-            return;
-        }
-
-        var days = document.getElementById('riskDays').value;
-
         document.getElementById('riskBody').innerHTML = '<tr><td colspan="5"><div class="loading"><i class="fas fa-spinner"></i><p>加载中...</p></div></td></tr>';
 
         var params = new URLSearchParams();
         params.set('current', riskState.current);
         params.set('pageSize', riskState.pageSize);
-        params.set('rules', selected.join(','));
-        params.set('days', days);
         params.set('sort', riskState.sort);
         params.set('sort_type', riskState.sortType);
 
@@ -2109,6 +2118,7 @@ function loadRiskData() {
             .then(function(res) {
                 var data = res.data || [];
                 riskState.total = res.total || 0;
+                riskState.ignoredTotal = res.ignored_total || 0;
                 updateRiskPagination();
 
                 if (data.length === 0) {
@@ -2125,9 +2135,13 @@ function loadRiskData() {
                         var cls = riskRuleColorClass(rule ? rule.color : 'red');
                         return '<span class="badge ' + cls + '">' + escapeHtml(text) + '</span>';
                     }).join('');
+                    var ignored = !!r.ignored;
+                    if (ignored) {
+                        tagHtml += '<span class="badge badge-muted">已忽略</span>';
+                    }
                     var subRegions = (r.sub_regions || []).join('、');
                     var aliveRegions = (r.alive_provinces || []).join('、');
-                    html += '<tr>'
+                    html += '<tr' + (ignored ? ' class="risk-ignored-row" title="该用户已忽略风险筛查，不发送通知"' : '') + '>'
                         + '<td><a href="javascript:void(0)" onclick="riskUserLink(' + parseInt(r.user_id, 10) + ')" style="color:#1890ff">' + escapeHtml(r.user_id) + '</a></td>'
                         + '<td><span class="risk-tags">' + tagHtml + '</span></td>'
                         + '<td><span class="risk-provinces" title="' + escapeHtml(subRegions) + '">' + (subRegions ? escapeHtml(subRegions) : '<span class="text-muted">-</span>') + '</span></td>'
@@ -2148,7 +2162,11 @@ function updateRiskPagination() {
     if (riskState.total === 0) { pagination.style.display = 'none'; return; }
     pagination.style.display = 'flex';
     var totalPages = Math.ceil(riskState.total / riskState.pageSize) || 1;
-    document.getElementById('riskTotalInfo').textContent = '\u5171 ' + riskState.total + ' \u6761';
+    var info = '\u5171 ' + riskState.total + ' \u6761';
+    if (riskState.ignoredTotal > 0) {
+        info += '\uff08\u5df2\u5ffd\u7565 ' + riskState.ignoredTotal + ' \u6761\uff09';
+    }
+    document.getElementById('riskTotalInfo').textContent = info;
     document.getElementById('riskPageInfo').textContent = riskState.current + '/' + totalPages;
     document.getElementById('riskPrevPage').disabled = riskState.current <= 1;
     document.getElementById('riskNextPage').disabled = riskState.current >= totalPages;
@@ -2264,6 +2282,7 @@ function normalizeDraftRule(rule) {
         id: rule.id || '',
         name: rule.name || '',
         enabled: rule.enabled !== false,
+        notify: rule.notify !== false,
         color: ['red', 'orange', 'yellow'].indexOf(rule.color) !== -1 ? rule.color : 'red',
         match: rule.match === 'any' ? 'any' : 'all',
         groups: groups
@@ -2354,6 +2373,7 @@ function openRiskEditor(rule) {
     document.getElementById('riskEditorName').value = rule.name || '';
     document.getElementById('riskEditorColor').value = rule.color || 'red';
     document.getElementById('riskEditorEnabled').checked = rule.enabled !== false;
+    document.getElementById('riskEditorNotify').checked = rule.notify !== false;
     document.getElementById('riskEditorMatch').value = rule.match === 'any' ? 'any' : 'all';
 
     var box = document.getElementById('riskEditorGroups');
@@ -2398,6 +2418,7 @@ function confirmRiskEditor() {
         id: id,
         name: name,
         enabled: document.getElementById('riskEditorEnabled').checked,
+        notify: document.getElementById('riskEditorNotify').checked,
         color: document.getElementById('riskEditorColor').value,
         match: document.getElementById('riskEditorMatch').value === 'any' ? 'any' : 'all',
         groups: groups
@@ -2942,10 +2963,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     document.getElementById('riskSearchBtn').addEventListener('click', function() {
-        riskState.current = 1;
-        loadRiskData();
-    });
-    document.getElementById('riskDays').addEventListener('change', function() {
         riskState.current = 1;
         loadRiskData();
     });

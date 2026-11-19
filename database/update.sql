@@ -732,3 +732,14 @@ ALTER TABLE `v2_sub_log` ADD INDEX `idx_created_at` (`created_at`);
 
 -- 订阅 UA 前缀匹配索引（风险筛查「前缀匹配」使用）
 ALTER TABLE `v2_sub_log` ADD INDEX `idx_user_agent_prefix` (`user_agent`(191));
+
+-- 风险通知待检查队列
+CREATE TABLE IF NOT EXISTS `v2_risk_queue` (
+  `user_id` int(11) NOT NULL,
+  `created_at` int(11) NOT NULL,
+  PRIMARY KEY (`user_id`),
+  KEY `idx_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 用户风险筛查忽略标记
+ALTER TABLE `v2_user` ADD COLUMN `risk_ignore` tinyint(1) NOT NULL DEFAULT '0';

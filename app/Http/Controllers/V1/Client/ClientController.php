@@ -7,6 +7,7 @@ use App\Protocols\General;
 use App\Protocols\Singbox\Singbox;
 use App\Protocols\ClashMeta;
 use App\Services\ServerService;
+use App\Services\RiskQueue;
 use App\Services\UserService;
 use App\Utils\Helper;
 use Illuminate\Http\Request;
@@ -48,6 +49,7 @@ class ClientController extends Controller
         SubLog::upsert([$subLogData], ['dedupe_key'], [
             'ip_country', 'ip_region', 'ip_city', 'ip_isp', 'created_at', 'updated_at'
         ]);
+        RiskQueue::mark((int) $user->id);
         $subLog = new SubLog($subLogData);
 
         // account is banned
