@@ -80,6 +80,17 @@
         .badge-success { background: #f6ffed; color: #52c41a; }
         .badge-warning { background: #fffbe6; color: #faad14; }
         .badge-danger { background: #fff2f0; color: #ff4d4f; }
+        .badge-orange { background: #fff7e6; color: #fa8c16; }
+        .risk-rule-list { display: flex; flex-direction: column; gap: 12px; }
+        .risk-rule { border: 1px solid #f0f0f0; border-radius: 6px; padding: 12px; background: #fafafa; }
+        .risk-rule-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+        .risk-rule-head input[type="text"],
+        .risk-rule-head select { padding: 5px 8px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 13px; }
+        .risk-rule-head .rr-name { width: 160px; }
+        .risk-rule-cond { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px; }
+        .risk-rule-cond select,
+        .risk-rule-cond input { padding: 5px 8px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 13px; }
+        .risk-rule-cond .cond-value { width: 160px; }
         .text-muted { color: #999; }
 
         .pagination { display: flex; align-items: center; justify-content: space-between; padding: 16px 0 0; }
@@ -306,6 +317,8 @@
                         <button class="btn btn-default btn-sm" data-provider="telecom">电信</button>
                         <button class="btn btn-default btn-sm" data-provider="unicom">联通</button>
                         <button class="btn btn-default btn-sm" data-provider="mobile">移动</button>
+                        <button class="btn btn-default btn-sm" data-provider="cable">广电</button>
+                        <button class="btn btn-default btn-sm" data-provider="edu">教育网</button>
                         <button class="btn btn-default btn-sm" data-provider="other">其他</button>
                     </div>
                     <div class="group">
@@ -336,6 +349,14 @@
                     <div class="summary-card">
                         <div class="label">移动</div>
                         <div class="value" id="distMobile">0</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="label">广电</div>
+                        <div class="value" id="distCable">0</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="label">教育网</div>
+                        <div class="value" id="distEdu">0</div>
                     </div>
                     <div class="summary-card">
                         <div class="label">其他</div>
@@ -388,8 +409,9 @@
                         </div>
                     </div>
 
-                    <div class="toolbar" style="margin-top:20px">
+                    <div class="toolbar" style="margin-top:20px;justify-content:flex-start;gap:12px">
                         <span class="toolbar-title">订阅记录 <span class="text-muted" id="detailSubTip" style="font-weight:400;font-size:12px"></span></span>
+                        <button class="btn btn-danger" id="detailClearSubBtn"><i class="fas fa-trash"></i>清除记录</button>
                     </div>
                     <div class="table-wrapper">
                         <table>
@@ -406,8 +428,9 @@
                         </table>
                     </div>
 
-                    <div class="toolbar" style="margin-top:20px">
+                    <div class="toolbar" style="margin-top:20px;justify-content:flex-start;gap:12px">
                         <span class="toolbar-title">在线记录 <span class="text-muted" id="detailAliveTip" style="font-weight:400;font-size:12px"></span></span>
+                        <button class="btn btn-danger" id="detailClearAliveBtn"><i class="fas fa-trash"></i>清除记录</button>
                     </div>
                     <div class="table-wrapper">
                         <table>
@@ -464,20 +487,7 @@
                 <div class="filter-form" id="riskFilterForm">
                     <div class="filter-group">
                         <label>风险类型</label>
-                        <div class="risk-types">
-                            <label class="risk-type"><input type="checkbox" class="risk-type-check" value="mismatch" checked> 省份不一致</label>
-                            <label class="risk-type"><input type="checkbox" class="risk-type-check" value="online_province" checked> 在线多省 ≥
-                                <input type="number" class="risk-threshold" id="riskProvinceThreshold" value="3" min="1">
-                            </label>
-                            <label class="risk-type"><input type="checkbox" class="risk-type-check" value="online_ip" checked> 在线多 IP ≥
-                                <input type="number" class="risk-threshold" id="riskIpThreshold" value="5" min="1">
-                            </label>
-                            <label class="risk-type"><input type="checkbox" class="risk-type-check" value="sub_province"> 订阅多省 ≥
-                                <input type="number" class="risk-threshold" id="riskSubProvinceThreshold" value="3" min="1">
-                            </label>
-                            <label class="risk-type"><input type="checkbox" class="risk-type-check" value="overseas_sub"> 境外订阅</label>
-                            <label class="risk-type"><input type="checkbox" class="risk-type-check" value="overseas_online" checked> 境外在线</label>
-                        </div>
+                        <div class="risk-types" id="riskTypeList"></div>
                     </div>
                     <div class="filter-group">
                         <label>时间范围</label>
@@ -593,6 +603,15 @@
                 </div>
                 <p class="text-muted" style="font-size:12px;margin:-4px 0 24px">
                     保存后对订阅日志、在线记录、订单、工单提醒、用户详情、重建缓存全部生效。
+                </p>
+
+                <div class="toolbar">
+                    <span class="toolbar-title">风险类型 <span class="text-muted" style="font-weight:400;font-size:12px">自定义风险筛查规则</span></span>
+                    <button class="btn btn-default btn-sm" id="addRiskRuleBtn"><i class="fas fa-plus"></i>添加规则</button>
+                </div>
+                <div id="riskRuleList" class="risk-rule-list"></div>
+                <p class="text-muted" style="font-size:12px;margin:8px 0 24px">
+                    全部满足：所有条件都命中才算风险；任一满足：命中任一条件即可。省份/运营商种类按去重后统计。
                 </p>
 
                 <div class="toolbar">
@@ -724,7 +743,7 @@ var distributionState = { range: '1h', provider: 'all', data: null, chart: null 
 var chinaMapPromise = null;
 
 function providerLabel(provider) {
-    var labels = { telecom: '电信', unicom: '联通', mobile: '移动', other: '其他' };
+    var labels = { telecom: '电信', unicom: '联通', mobile: '移动', cable: '广电', edu: '教育网', other: '其他' };
     return labels[provider] || provider;
 }
 
@@ -894,6 +913,8 @@ function renderDistribution() {
     document.getElementById('distTelecom').textContent = providers.telecom || 0;
     document.getElementById('distUnicom').textContent = providers.unicom || 0;
     document.getElementById('distMobile').textContent = providers.mobile || 0;
+    document.getElementById('distCable').textContent = providers.cable || 0;
+    document.getElementById('distEdu').textContent = providers.edu || 0;
     document.getElementById('distOther').textContent = providers.other || 0;
 
     var rank = regions.map(function(item) {
@@ -1406,6 +1427,7 @@ function updatePagination() {
 
 // =========== User detail ===========
 var detailInited = false;
+var detailData = null;
 
 function initDetailTab() {
     if (detailInited) return;
@@ -1415,6 +1437,12 @@ function initDetailTab() {
         if (e.key === 'Enter') searchDetail();
     });
     document.getElementById('detailResolveBtn').addEventListener('click', resolveDetailIps);
+    document.getElementById('detailClearSubBtn').addEventListener('click', function() {
+        clearDetailRecords('sub');
+    });
+    document.getElementById('detailClearAliveBtn').addEventListener('click', function() {
+        clearDetailRecords('alive');
+    });
     loadDetailSources();
     var params = new URLSearchParams(window.location.search);
     var userId = params.get('user_id');
@@ -1558,6 +1586,7 @@ function searchDetail() {
 }
 
 function renderDetail(data) {
+    detailData = data;
     var user = data.user || {};
     var subLogs = data.sub_logs || [];
     var aliveIps = data.alive_ips || [];
@@ -1575,20 +1604,23 @@ function renderDetail(data) {
             { label: '到期时间', value: user.expired_at ? fmtTime(user.expired_at) : '-' }
         ] },
         { fields: [
-            { label: '注册IP', value: user.reg_ip || '-', sub: regionSubText(user.reg_ip_info) },
+            { label: '注册IP', value: user.reg_ip || '-', sub: regionSubText(user.reg_ip_info), ip: user.reg_ip || '' },
             { label: '注册时间', value: user.created_at ? fmtTime(user.created_at) : '-' }
         ] },
         { fields: [
-            { label: '登录IP', value: user.login_ip || '-', sub: regionSubText(user.login_ip_info) },
+            { label: '登录IP', value: user.login_ip || '-', sub: regionSubText(user.login_ip_info), ip: user.login_ip || '' },
             { label: '最近登录', value: user.last_login_at ? fmtTime(user.last_login_at) : '-' }
         ] }
     ];
     document.getElementById('detailSummary').innerHTML = summary.map(function(card) {
         var inner = card.fields.map(function(field) {
+            var lookup = field.ip
+                ? '<a class="ip-lookup" href="' + escapeHtml(ipLookupUrl(field.ip)) + '" target="_blank" rel="noopener noreferrer" title="查询此 IP"><i class="fas fa-search"></i></a>'
+                : '';
             return '<div class="summary-field">'
                 + '<div class="label">' + escapeHtml(field.label) + '</div>'
                 + '<div class="field-body">'
-                + '<div class="value">' + escapeHtml(field.value) + '</div>'
+                + '<div class="value">' + escapeHtml(field.value) + lookup + '</div>'
                 + (field.sub ? '<div class="sub">' + escapeHtml(field.sub) + '</div>' : '')
                 + '</div></div>';
         }).join('');
@@ -1597,6 +1629,8 @@ function renderDetail(data) {
 
     document.getElementById('detailSubTip').textContent = detailTip(subLogs.length, data.sub_total);
     document.getElementById('detailAliveTip').textContent = detailTip(aliveIps.length, data.alive_total);
+    document.getElementById('detailClearSubBtn').disabled = !(data.sub_total > 0);
+    document.getElementById('detailClearAliveBtn').disabled = !(data.alive_total > 0);
 
     // 省份对比：只标记两侧不重叠的大陆省份
     var subProvinceSet = {};
@@ -1673,6 +1707,45 @@ function deleteDetailRecord(type, id) {
         searchDetail();
     }).catch(function() {
         alert('删除失败');
+    });
+}
+
+function clearDetailRecords(type) {
+    var userId = parseInt(document.getElementById('detailUserId').value.trim(), 10);
+    if (!userId || userId <= 0) {
+        alert('请先查询用户');
+        return;
+    }
+
+    var label = type === 'sub' ? '订阅记录' : '在线记录';
+    var total = 0;
+    if (detailData) {
+        total = type === 'sub' ? (detailData.sub_total || 0) : (detailData.alive_total || 0);
+    }
+    if (total <= 0) {
+        alert('没有可清除的' + label);
+        return;
+    }
+    if (!confirm('确认清除该用户的全部' + label + '（共 ' + total + ' 条）？此操作不可恢复。')) return;
+
+    var params = new URLSearchParams();
+    params.set('user_id', userId);
+    params.set('type', type);
+
+    apiFetch(apiBase + '/user_portrait/clearUserRecords', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString()
+    }).then(function(r) {
+        if (r.ok) return r.json();
+        return r.json().catch(function() { return {}; }).then(function(err) {
+            throw new Error(err.message || ('HTTP ' + r.status));
+        });
+    }).then(function(res) {
+        alert('已清除 ' + (res.count || 0) + ' 条' + label);
+        searchDetail();
+    }).catch(function(err) {
+        alert('清除失败：' + (err && err.message ? err.message : '请重试'));
     });
 }
 
@@ -1884,81 +1957,125 @@ document.querySelectorAll('.tab-btn').forEach(function(btn) {
 
 // =========== Risk Screening ===========
 var riskState = { current: 1, pageSize: 10, total: 0, sort: 'risk_count', sortType: 'DESC' };
-var riskTypeLabels = {
-    mismatch: { text: '省份不一致', cls: 'badge-danger' },
-    online_province: { text: '在线多省', cls: 'badge-warning' },
-    online_ip: { text: '在线多IP', cls: 'badge-warning' },
-    sub_province: { text: '订阅多省', cls: 'badge-warning' },
-    overseas_sub: { text: '境外订阅', cls: 'badge-danger' },
-    overseas_online: { text: '境外在线', cls: 'badge-danger' }
-};
+var riskRuleList = [];
+var riskRuleMap = {};
+var riskRulesPromise = null;
+
+function riskRuleColorClass(color) {
+    if (color === 'orange') return 'badge-orange';
+    if (color === 'yellow') return 'badge-warning';
+    return 'badge-danger';
+}
+
+function ensureRiskRules() {
+    if (riskRulesPromise) return riskRulesPromise;
+    riskRulesPromise = apiFetch(apiBase + '/user_portrait/getSettings')
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+            var data = res.data || {};
+            var all = data.risk_rules || [];
+            riskRuleList = all.filter(function(rule) { return !!rule.enabled; });
+            riskRuleMap = {};
+            riskRuleList.forEach(function(rule) { riskRuleMap[rule.id] = rule; });
+            renderRiskTypeFilters();
+            return riskRuleList;
+        })
+        .catch(function() {
+            riskRuleList = [];
+            riskRuleMap = {};
+            renderRiskTypeFilters();
+            return [];
+        });
+    return riskRulesPromise;
+}
+
+function renderRiskTypeFilters() {
+    var box = document.getElementById('riskTypeList');
+    if (!box) return;
+    box.innerHTML = '';
+    if (!riskRuleList.length) {
+        box.innerHTML = '<span class="text-muted" style="font-size:13px">暂无启用的风险规则，请到设置里添加</span>';
+        return;
+    }
+    riskRuleList.forEach(function(rule) {
+        var label = document.createElement('label');
+        label.className = 'risk-type';
+        label.innerHTML = '<input type="checkbox" class="risk-type-check" value="' + escapeHtml(rule.id) + '" checked> ' + escapeHtml(rule.name);
+        box.appendChild(label);
+    });
+}
 
 function riskUserLink(userId) {
     openUserDetail(userId);
 }
 
 function loadRiskData() {
-    var types = [];
-    document.querySelectorAll('.risk-type-check:checked').forEach(function(el) {
-        types.push(el.value);
-    });
-    if (!types.length) {
-        alert('请至少选择一种风险类型');
-        return;
-    }
-
-    var provinceThreshold = document.getElementById('riskProvinceThreshold').value || 3;
-    var ipThreshold = document.getElementById('riskIpThreshold').value || 5;
-    var subProvinceThreshold = document.getElementById('riskSubProvinceThreshold').value || 3;
-    var days = document.getElementById('riskDays').value;
-
-    document.getElementById('riskBody').innerHTML = '<tr><td colspan="5"><div class="loading"><i class="fas fa-spinner"></i><p>加载中...</p></div></td></tr>';
-
-    var params = new URLSearchParams();
-    params.set('current', riskState.current);
-    params.set('pageSize', riskState.pageSize);
-    params.set('types', types.join(','));
-    params.set('province_threshold', provinceThreshold);
-    params.set('ip_threshold', ipThreshold);
-    params.set('sub_province_threshold', subProvinceThreshold);
-    params.set('days', days);
-    params.set('sort', riskState.sort);
-    params.set('sort_type', riskState.sortType);
-
-    apiFetch(apiBase + '/user_portrait/riskCheck?' + params.toString())
-        .then(function(r) { return r.json(); })
-        .then(function(res) {
-            var data = res.data || [];
-            riskState.total = res.total || 0;
+    ensureRiskRules().then(function(rules) {
+        if (!rules.length) {
+            riskState.total = 0;
             updateRiskPagination();
+            document.getElementById('riskBody').innerHTML = '<tr><td colspan="5"><div class="empty-state"><i class="fas fa-shield-alt"></i><p>暂无启用的风险规则，请到设置里添加</p></div></td></tr>';
+            return;
+        }
 
-            if (data.length === 0) {
-                document.getElementById('riskBody').innerHTML = '<tr><td colspan="5"><div class="empty-state"><i class="fas fa-check-circle"></i><p>未发现风险用户</p></div></td></tr>';
-                return;
-            }
-
-            var html = '';
-            data.forEach(function(r) {
-                var tags = r.risk_tags || [];
-                var tagHtml = tags.map(function(tag) {
-                    var meta = riskTypeLabels[tag] || { text: tag, cls: 'badge-type' };
-                    return '<span class="badge ' + meta.cls + '">' + escapeHtml(meta.text) + '</span>';
-                }).join('');
-                var subRegions = (r.sub_regions || []).join('、');
-                var aliveRegions = (r.alive_provinces || []).join('、');
-                html += '<tr>'
-                    + '<td><a href="javascript:void(0)" onclick="riskUserLink(' + parseInt(r.user_id, 10) + ')" style="color:#1890ff">' + escapeHtml(r.user_id) + '</a></td>'
-                    + '<td><span class="risk-tags">' + tagHtml + '</span></td>'
-                    + '<td><span class="risk-provinces" title="' + escapeHtml(subRegions) + '">' + (subRegions ? escapeHtml(subRegions) : '<span class="text-muted">-</span>') + '</span></td>'
-                    + '<td>' + escapeHtml(r.ua_count || 0) + '</td>'
-                    + '<td><span class="risk-provinces" title="' + escapeHtml(aliveRegions) + '">' + (aliveRegions ? escapeHtml(aliveRegions) : '<span class="text-muted">-</span>') + '</span></td>'
-                    + '</tr>';
-            });
-            document.getElementById('riskBody').innerHTML = html;
-        })
-        .catch(function() {
-            document.getElementById('riskBody').innerHTML = '<tr><td colspan="5"><div class="error-state"><i class="fas fa-exclamation-triangle"></i><p>加载失败</p></div></td></tr>';
+        var selected = [];
+        document.querySelectorAll('.risk-type-check:checked').forEach(function(el) {
+            selected.push(el.value);
         });
+        if (!selected.length) {
+            alert('请至少选择一种风险类型');
+            return;
+        }
+
+        var days = document.getElementById('riskDays').value;
+
+        document.getElementById('riskBody').innerHTML = '<tr><td colspan="5"><div class="loading"><i class="fas fa-spinner"></i><p>加载中...</p></div></td></tr>';
+
+        var params = new URLSearchParams();
+        params.set('current', riskState.current);
+        params.set('pageSize', riskState.pageSize);
+        params.set('rules', selected.join(','));
+        params.set('days', days);
+        params.set('sort', riskState.sort);
+        params.set('sort_type', riskState.sortType);
+
+        apiFetch(apiBase + '/user_portrait/riskCheck?' + params.toString())
+            .then(function(r) { return r.json(); })
+            .then(function(res) {
+                var data = res.data || [];
+                riskState.total = res.total || 0;
+                updateRiskPagination();
+
+                if (data.length === 0) {
+                    document.getElementById('riskBody').innerHTML = '<tr><td colspan="5"><div class="empty-state"><i class="fas fa-check-circle"></i><p>未发现风险用户</p></div></td></tr>';
+                    return;
+                }
+
+                var html = '';
+                data.forEach(function(r) {
+                    var tagIds = r.risk_tags || [];
+                    var tagHtml = tagIds.map(function(id) {
+                        var rule = riskRuleMap[id];
+                        var text = rule ? rule.name : id;
+                        var cls = riskRuleColorClass(rule ? rule.color : 'red');
+                        return '<span class="badge ' + cls + '">' + escapeHtml(text) + '</span>';
+                    }).join('');
+                    var subRegions = (r.sub_regions || []).join('、');
+                    var aliveRegions = (r.alive_provinces || []).join('、');
+                    html += '<tr>'
+                        + '<td><a href="javascript:void(0)" onclick="riskUserLink(' + parseInt(r.user_id, 10) + ')" style="color:#1890ff">' + escapeHtml(r.user_id) + '</a></td>'
+                        + '<td><span class="risk-tags">' + tagHtml + '</span></td>'
+                        + '<td><span class="risk-provinces" title="' + escapeHtml(subRegions) + '">' + (subRegions ? escapeHtml(subRegions) : '<span class="text-muted">-</span>') + '</span></td>'
+                        + '<td>' + escapeHtml(r.ua_count || 0) + '</td>'
+                        + '<td><span class="risk-provinces" title="' + escapeHtml(aliveRegions) + '">' + (aliveRegions ? escapeHtml(aliveRegions) : '<span class="text-muted">-</span>') + '</span></td>'
+                        + '</tr>';
+                });
+                document.getElementById('riskBody').innerHTML = html;
+            })
+            .catch(function() {
+                document.getElementById('riskBody').innerHTML = '<tr><td colspan="5"><div class="error-state"><i class="fas fa-exclamation-triangle"></i><p>加载失败</p></div></td></tr>';
+            });
+    });
 }
 
 function updateRiskPagination() {
@@ -2031,6 +2148,245 @@ function setSource(name, value) {
     });
 }
 
+var riskFieldList = [];
+var riskRuleSeq = 0;
+
+function riskOpOptions(type) {
+    if (type === 'count') {
+        return [['>', '>'], ['>=', '>='], ['<', '<'], ['<=', '<='], ['=', '=']];
+    }
+    if (type === 'bool') {
+        return [['is_true', '是']];
+    }
+    return [['contains', '包含'], ['equals', '等于'], ['starts_with', '前缀'], ['not_contains', '不包含'], ['not_equals', '不等于']];
+}
+
+function riskFieldMeta(key) {
+    for (var i = 0; i < riskFieldList.length; i++) {
+        if (riskFieldList[i].key === key) return riskFieldList[i];
+    }
+    return null;
+}
+
+function renderRiskRules(rules) {
+    var box = document.getElementById('riskRuleList');
+    if (!box) return;
+    box.innerHTML = '';
+    (rules || []).forEach(function(rule) {
+        box.appendChild(createRiskRuleElement(rule));
+    });
+}
+
+function createRiskRuleElement(rule) {
+    rule = rule || {};
+    var box = document.createElement('div');
+    box.className = 'risk-rule';
+    box.setAttribute('data-id', rule.id || ('rule' + Date.now() + (++riskRuleSeq)));
+
+    var head = document.createElement('div');
+    head.className = 'risk-rule-head';
+
+    var nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.className = 'rr-name';
+    nameInput.maxLength = 20;
+    nameInput.placeholder = '风险名称';
+    nameInput.value = rule.name || '';
+
+    var colorSel = document.createElement('select');
+    colorSel.className = 'rr-color';
+    [['red', '红色'], ['orange', '橙色'], ['yellow', '黄色']].forEach(function(item) {
+        var opt = document.createElement('option');
+        opt.value = item[0];
+        opt.textContent = item[1];
+        colorSel.appendChild(opt);
+    });
+    colorSel.value = rule.color || 'red';
+
+    var enabledLabel = document.createElement('label');
+    enabledLabel.className = 'risk-type';
+    var enabledInput = document.createElement('input');
+    enabledInput.type = 'checkbox';
+    enabledInput.className = 'rr-enabled';
+    enabledInput.checked = rule.enabled !== false;
+    enabledLabel.appendChild(enabledInput);
+    enabledLabel.appendChild(document.createTextNode(' 启用'));
+
+    var matchSel = document.createElement('select');
+    matchSel.className = 'rr-match';
+    [['all', '全部满足'], ['any', '任一满足']].forEach(function(item) {
+        var opt = document.createElement('option');
+        opt.value = item[0];
+        opt.textContent = item[1];
+        matchSel.appendChild(opt);
+    });
+    matchSel.value = rule.match === 'any' ? 'any' : 'all';
+
+    var delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'btn btn-default btn-sm';
+    delBtn.innerHTML = '<i class="fas fa-trash"></i>';
+    delBtn.addEventListener('click', function() {
+        box.parentNode.removeChild(box);
+    });
+
+    head.appendChild(nameInput);
+    head.appendChild(colorSel);
+    head.appendChild(enabledLabel);
+    head.appendChild(matchSel);
+    head.appendChild(delBtn);
+
+    var conds = document.createElement('div');
+    conds.className = 'rr-conditions';
+    var initial = (rule.conditions && rule.conditions.length)
+        ? rule.conditions
+        : [{ field: 'sub_province_count', op: '>=', value: 3 }];
+    initial.forEach(function(cond) {
+        conds.appendChild(createRiskCondition(cond));
+    });
+
+    var addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'btn btn-default btn-sm';
+    addBtn.style.marginTop = '8px';
+    addBtn.innerHTML = '<i class="fas fa-plus"></i>添加条件';
+    addBtn.addEventListener('click', function() {
+        conds.appendChild(createRiskCondition({ field: 'sub_province_count', op: '>=', value: 3 }));
+    });
+
+    box.appendChild(head);
+    box.appendChild(conds);
+    box.appendChild(addBtn);
+    return box;
+}
+
+function createRiskCondition(cond) {
+    cond = cond || {};
+    var row = document.createElement('div');
+    row.className = 'risk-rule-cond rr-cond-row';
+
+    var fieldSel = document.createElement('select');
+    fieldSel.className = 'cond-field';
+    riskFieldList.forEach(function(field) {
+        var opt = document.createElement('option');
+        opt.value = field.key;
+        opt.textContent = field.label;
+        fieldSel.appendChild(opt);
+    });
+    if (cond.field && riskFieldMeta(cond.field)) {
+        fieldSel.value = cond.field;
+    }
+
+    var opSel = document.createElement('select');
+    opSel.className = 'cond-op';
+
+    var valueInput = document.createElement('input');
+    valueInput.className = 'cond-value';
+
+    function refreshOps() {
+        var meta = riskFieldMeta(fieldSel.value) || { type: 'string' };
+        var ops = riskOpOptions(meta.type);
+        var current = opSel.value;
+        opSel.innerHTML = '';
+        ops.forEach(function(item) {
+            var opt = document.createElement('option');
+            opt.value = item[0];
+            opt.textContent = item[1];
+            opSel.appendChild(opt);
+        });
+        var found = ops.some(function(item) { return item[0] === current; });
+        opSel.value = found ? current : ops[0][0];
+
+        if (meta.type === 'count') {
+            valueInput.type = 'number';
+            valueInput.min = '0';
+            valueInput.max = '999';
+            valueInput.disabled = false;
+            if (valueInput.value === '') valueInput.value = '3';
+        } else if (meta.type === 'bool') {
+            valueInput.type = 'text';
+            valueInput.value = '';
+            valueInput.disabled = true;
+        } else {
+            valueInput.type = 'text';
+            valueInput.disabled = false;
+        }
+    }
+
+    fieldSel.addEventListener('change', refreshOps);
+    refreshOps();
+
+    if (cond.op) {
+        for (var i = 0; i < opSel.options.length; i++) {
+            if (opSel.options[i].value === cond.op) {
+                opSel.value = cond.op;
+                break;
+            }
+        }
+    }
+    if (cond.value !== undefined && cond.value !== null && cond.value !== '') {
+        valueInput.value = String(cond.value);
+    }
+
+    var delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'btn btn-default btn-sm';
+    delBtn.title = '删除条件';
+    delBtn.innerHTML = '<i class="fas fa-times"></i>';
+    delBtn.addEventListener('click', function() {
+        row.parentNode.removeChild(row);
+    });
+
+    row.appendChild(fieldSel);
+    row.appendChild(opSel);
+    row.appendChild(valueInput);
+    row.appendChild(delBtn);
+    return row;
+}
+
+function collectRiskRules() {
+    var rules = [];
+    document.querySelectorAll('#riskRuleList .risk-rule').forEach(function(ruleEl, index) {
+        var name = ruleEl.querySelector('.rr-name').value.trim();
+        if (!name) return;
+
+        var conditions = [];
+        ruleEl.querySelectorAll('.rr-cond-row').forEach(function(rowEl) {
+            var field = rowEl.querySelector('.cond-field').value;
+            var op = rowEl.querySelector('.cond-op').value;
+            var input = rowEl.querySelector('.cond-value');
+            var meta = riskFieldMeta(field);
+            if (!meta) return;
+            var value = input.value;
+            if (meta.type === 'count') {
+                value = parseInt(value, 10) || 0;
+            } else if (meta.type === 'bool') {
+                value = '';
+            } else {
+                value = String(value).trim();
+                if (!value) return;
+            }
+            conditions.push({ field: field, op: op, value: value });
+        });
+        if (!conditions.length) return;
+
+        var id = ruleEl.getAttribute('data-id');
+        if (!id || !/^[A-Za-z0-9_\-]{1,32}$/.test(id)) {
+            id = 'rule' + (index + 1);
+        }
+
+        rules.push({
+            id: id,
+            name: name,
+            enabled: ruleEl.querySelector('.rr-enabled').checked,
+            color: ruleEl.querySelector('.rr-color').value,
+            match: ruleEl.querySelector('.rr-match').value,
+            conditions: conditions
+        });
+    });
+    return rules;
+}
+
 function initSettingsTab() {
     if (settingsInited) return;
     settingsInited = true;
@@ -2044,8 +2400,12 @@ function initSettingsTab() {
         settingsEnabledProviders = settingsProviderOptions.map(function(p) { return p.key; });
         renderProviders();
         document.getElementById('testIpResult').textContent = '-';
+        renderRiskRules([]);
     });
     document.getElementById('testIpBtn').addEventListener('click', testIpLocation);
+    document.getElementById('addRiskRuleBtn').addEventListener('click', function() {
+        document.getElementById('riskRuleList').appendChild(createRiskRuleElement({ name: '', enabled: true, color: 'red', match: 'all' }));
+    });
     document.getElementById('rebuildBtnV4').addEventListener('click', function() { rebuildLocation(4); });
     document.getElementById('rebuildBtnV6').addEventListener('click', function() { rebuildLocation(6); });
     document.getElementById('settingIpLookup').addEventListener('keydown', function(e) {
@@ -2069,6 +2429,8 @@ function loadSettings() {
             settingsProviderOptions = data.ip_providers || [];
             settingsEnabledProviders = data.ip_lookup_providers || settingsProviderOptions.map(function(p) { return p.key; });
             renderProviders();
+            riskFieldList = data.risk_fields || [];
+            renderRiskRules(data.risk_rules || []);
             ipLookupBase = url;
         })
         .catch(function() {});
@@ -2126,6 +2488,7 @@ function saveSettings() {
     params.set('ip_lookup_source_v4', selectedSource('settingSourceV4'));
     params.set('ip_lookup_source_v6', selectedSource('settingSourceV6'));
     params.set('ip_lookup_providers', JSON.stringify(collectProviders()));
+    params.set('risk_rules', JSON.stringify(collectRiskRules()));
     apiFetch(apiBase + '/user_portrait/saveSettings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -2137,6 +2500,7 @@ function saveSettings() {
         });
     }).then(function() {
         ipLookupBase = url;
+        riskRulesPromise = null;
         alert('保存成功');
     }).catch(function(err) {
         alert('保存失败：' + (err && err.message ? err.message : '请检查配置'));
@@ -2291,10 +2655,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('riskSearchBtn').addEventListener('click', function() {
         riskState.current = 1;
         loadRiskData();
-    });
-    ['riskProvinceThreshold', 'riskIpThreshold', 'riskSubProvinceThreshold'].forEach(function(id) {
-        var el = document.getElementById(id);
-        if (el) el.addEventListener('keydown', function(e) { if (e.key === 'Enter') { riskState.current = 1; loadRiskData(); } });
     });
     document.getElementById('riskDays').addEventListener('change', function() {
         riskState.current = 1;

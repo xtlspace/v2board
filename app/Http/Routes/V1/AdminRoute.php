@@ -123,6 +123,7 @@ class AdminRoute
             $router->post('/user_portrait/testIpLocation', 'V1\\Admin\\UserPortraitController@testIpLocation');
             $router->post('/user_portrait/rebuildLocation', 'V1\\Admin\\UserPortraitController@rebuildLocation');
             $router->post('/user_portrait/resolveUserIps', 'V1\\Admin\\UserPortraitController@resolveUserIps');
+            $router->post('/user_portrait/clearUserRecords', 'V1\\Admin\\UserPortraitController@clearUserRecords');
             $router->get ('/user_portrait/getFilterOptions', 'V1\\Admin\\UserPortraitController@getFilterOptions');
             $router->get ('/user_portrait/getRules', 'V1\\Admin\\UserPortraitController@getRules');
             $router->post('/user_portrait/saveRule', 'V1\\Admin\\UserPortraitController@saveRule');

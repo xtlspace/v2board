@@ -182,6 +182,12 @@ class UserDistributionService
         if (strpos($isp, '移动') !== false) {
             return 'mobile';
         }
+        if (preg_match('/(广电|有线|歌华|天威|珠江数码|东方有线)/u', $isp)) {
+            return 'cable';
+        }
+        if (preg_match('/(教育网|CERNET|校园网)/iu', $isp)) {
+            return 'edu';
+        }
         return 'other';
     }
 }

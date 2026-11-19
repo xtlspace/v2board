@@ -17,6 +17,26 @@ use Illuminate\Support\Facades\Log;
 
 class UserPortraitController extends Controller
 {
+    private const RISK_FIELDS = [
+        'sub_province_count' => ['type' => 'count', 'label' => '订阅省份种类'],
+        'alive_province_count' => ['type' => 'count', 'label' => '在线省份种类'],
+        'sub_isp_count' => ['type' => 'count', 'label' => '订阅运营商种类'],
+        'alive_isp_count' => ['type' => 'count', 'label' => '在线运营商种类'],
+        'sub_ua_count' => ['type' => 'count', 'label' => '订阅 UA 种类'],
+        'sub_country' => ['type' => 'string', 'label' => '订阅国家'],
+        'sub_region' => ['type' => 'string', 'label' => '订阅地区'],
+        'sub_isp' => ['type' => 'string', 'label' => '订阅运营商'],
+        'sub_user_agent' => ['type' => 'string', 'label' => '订阅 User-Agent'],
+        'alive_country' => ['type' => 'string', 'label' => '在线国家'],
+        'alive_region' => ['type' => 'string', 'label' => '在线地区'],
+        'alive_isp' => ['type' => 'string', 'label' => '在线运营商'],
+        'province_mismatch' => ['type' => 'bool', 'label' => '省份不一致'],
+    ];
+
+    private const RISK_COUNT_OPS = ['>', '>=', '<', '<=', '='];
+
+    private const RISK_STRING_OPS = ['contains', 'equals', 'starts_with', 'not_contains', 'not_equals'];
+
     public function fetch(Request $request)
     {
         $current = max(1, (int) $request->input('current', 1));
@@ -111,6 +131,136 @@ class UserPortraitController extends Controller
         return $keys ?: ProviderRegistry::keys();
     }
 
+    public function clearUserRecords(Request $request)
+    {
+        $userId = (int) $request->input('user_id');
+        $type = $request->input('type');
+        if ($userId <= 0 || !in_array($type, ['sub', 'alive'], true)) {
+            abort(500, '参数错误');
+        }
+
+        $table = $type === 'sub' ? 'v2_sub_log' : 'v2_alive_ip_history';
+        $count = DB::table($table)->where('user_id', $userId)->delete();
+
+        if ($type === 'alive') {
+            foreach (['1h', '1d', '7d', '30d'] as $range) {
+                try {
+                    Cache::forget('user_portrait_distribution|' . $range);
+                } catch (\Throwable $e) {
+                }
+            }
+        }
+
+        return response(['data' => true, 'count' => $count]);
+    }
+
+    private function riskRules(): array
+    {
+        $rules = config('v2board.risk_rules', []);
+        if (is_string($rules)) {
+            $decoded = json_decode($rules, true);
+            $rules = is_array($decoded) ? $decoded : [];
+        }
+        return is_array($rules) ? $rules : [];
+    }
+
+    private function riskFieldOptions(): array
+    {
+        $fields = [];
+        foreach (self::RISK_FIELDS as $key => $meta) {
+            $fields[] = [
+                'key' => $key,
+                'label' => $meta['label'],
+                'type' => $meta['type'],
+            ];
+        }
+        return $fields;
+    }
+
+    private function normalizeRiskRules($input): array
+    {
+        if (is_string($input)) {
+            $decoded = json_decode($input, true);
+            $input = is_array($decoded) ? $decoded : [];
+        }
+        if (!is_array($input)) {
+            $input = [];
+        }
+
+        $rules = [];
+        $usedIds = [];
+        foreach (array_slice($input, 0, 20) as $index => $rule) {
+            if (!is_array($rule)) {
+                continue;
+            }
+            $name = mb_substr(trim((string) ($rule['name'] ?? '')), 0, 20);
+            if ($name === '') {
+                continue;
+            }
+
+            $color = in_array($rule['color'] ?? '', ['red', 'orange', 'yellow'], true) ? $rule['color'] : 'red';
+            $match = ($rule['match'] ?? 'all') === 'any' ? 'any' : 'all';
+
+            $id = trim((string) ($rule['id'] ?? ''));
+            if ($id === '' || !preg_match('/^[A-Za-z0-9_\-]{1,32}$/', $id)) {
+                $id = 'rule' . ($index + 1);
+            }
+            if (isset($usedIds[$id])) {
+                $id .= '_' . ($index + 1);
+            }
+            $usedIds[$id] = true;
+
+            $conditions = [];
+            foreach (array_slice((array) ($rule['conditions'] ?? []), 0, 10) as $cond) {
+                if (!is_array($cond)) {
+                    continue;
+                }
+                $field = (string) ($cond['field'] ?? '');
+                if (!isset(self::RISK_FIELDS[$field])) {
+                    continue;
+                }
+                $type = self::RISK_FIELDS[$field]['type'];
+
+                if ($type === 'count') {
+                    $op = (string) ($cond['op'] ?? '>=');
+                    if (!in_array($op, self::RISK_COUNT_OPS, true)) {
+                        $op = '>=';
+                    }
+                    $value = max(0, min(999, (int) ($cond['value'] ?? 0)));
+                } elseif ($type === 'string') {
+                    $op = (string) ($cond['op'] ?? 'contains');
+                    if (!in_array($op, self::RISK_STRING_OPS, true)) {
+                        $op = 'contains';
+                    }
+                    $value = mb_substr(trim((string) ($cond['value'] ?? '')), 0, 100);
+                    if ($value === '') {
+                        continue;
+                    }
+                } else {
+                    $op = 'is_true';
+                    $value = '';
+                }
+
+                $conditions[] = ['field' => $field, 'op' => $op, 'value' => $value];
+            }
+
+            if (empty($conditions)) {
+                continue;
+            }
+
+            $rules[] = [
+                'id' => $id,
+                'name' => $name,
+                'enabled' => !empty($rule['enabled']),
+                'color' => $color,
+                'match' => $match,
+                'conditions' => $conditions,
+            ];
+        }
+
+        return $rules;
+    }
+
     public function getSettings()
     {
         return response(['data' => [
@@ -121,6 +271,8 @@ class UserPortraitController extends Controller
             'ip_lookup_source_v6' => config('v2board.ip_lookup_source_v6', 'local'),
             'ip_lookup_providers' => ProviderRegistry::enabledKeys(),
             'ip_providers' => ProviderRegistry::options(),
+            'risk_rules' => $this->riskRules(),
+            'risk_fields' => $this->riskFieldOptions(),
         ]]);
     }
 
@@ -153,6 +305,7 @@ class UserPortraitController extends Controller
         $sourceV4 = $request->input('ip_lookup_source_v4', 'local') === 'online' ? 'online' : 'local';
         $sourceV6 = $request->input('ip_lookup_source_v6', 'local') === 'online' ? 'online' : 'local';
         $providers = $this->normalizeProviderKeys($request->input('ip_lookup_providers', '[]'));
+        $riskRules = $this->normalizeRiskRules($request->input('risk_rules', '[]'));
 
         $config = config('v2board') ?? [];
         $config['ip_lookup_url'] = $url;
@@ -161,6 +314,7 @@ class UserPortraitController extends Controller
         $config['ip_lookup_source_v4'] = $sourceV4;
         $config['ip_lookup_source_v6'] = $sourceV6;
         $config['ip_lookup_providers'] = $providers;
+        $config['risk_rules'] = $riskRules;
         $exported = var_export($config, 1);
         if (!ConfigCache::write(base_path() . '/config/v2board.php', "<?php\n return $exported ;")) {
             abort(500, '保存失败');
@@ -172,6 +326,7 @@ class UserPortraitController extends Controller
             'v2board.ip_lookup_source_v4' => $sourceV4,
             'v2board.ip_lookup_source_v6' => $sourceV6,
             'v2board.ip_lookup_providers' => $providers,
+            'v2board.risk_rules' => $riskRules,
         ]);
 
         // IP 库/接口可能已更换，让在线记录的归属地缓存立即失效
@@ -637,18 +792,26 @@ class UserPortraitController extends Controller
 
     public function riskCheck(Request $request)
     {
-        $typeWhitelist = ['mismatch', 'online_province', 'online_ip', 'sub_province', 'overseas_sub', 'overseas_online'];
-        $types = array_values(array_intersect(
-            array_filter(explode(',', (string) $request->input('types', ''))),
-            $typeWhitelist
-        ));
-        if (empty($types)) {
-            $types = ['mismatch', 'online_province', 'online_ip', 'overseas_online'];
+        $rules = array_values(array_filter($this->riskRules(), function ($rule) {
+            return !empty($rule['enabled']) && !empty($rule['conditions']);
+        }));
+        if (empty($rules)) {
+            return response(['data' => [], 'total' => 0]);
         }
 
-        $provinceThreshold = max(1, (int) $request->input('province_threshold', 3));
-        $ipThreshold = max(1, (int) $request->input('ip_threshold', 5));
-        $subProvinceThreshold = max(1, (int) $request->input('sub_province_threshold', 3));
+        $ruleIds = array_map(function ($rule) {
+            return (string) $rule['id'];
+        }, $rules);
+
+        $selected = $request->input('rules', '');
+        if (is_string($selected)) {
+            $selected = $selected === '' ? [] : explode(',', $selected);
+        }
+        $selected = array_values(array_intersect($ruleIds, array_map('strval', (array) $selected)));
+        if (empty($selected)) {
+            $selected = $ruleIds;
+        }
+
         $days = (int) $request->input('days', 30);
         if (!in_array($days, [0, 7, 30, 90], true)) {
             $days = 30;
@@ -666,120 +829,11 @@ class UserPortraitController extends Controller
             $pageSize = 100;
         }
 
-        $cacheKey = 'sub_risk|' . md5(serialize([
-            $types, $provinceThreshold, $ipThreshold, $subProvinceThreshold, $days,
-        ]));
+        $cacheKey = 'sub_risk|' . md5(serialize([$rules, $selected, $days]));
 
-        $rows = Cache::remember($cacheKey, 60, function () use ($provinceThreshold, $ipThreshold, $subProvinceThreshold, $days) {
-            $since = $days > 0 ? time() - $days * 86400 : 0;
-
-            $subRows = DB::table('v2_sub_log')
-                ->select('user_id')
-                ->selectRaw("GROUP_CONCAT(DISTINCT ip_region ORDER BY ip_region SEPARATOR ',') AS regions")
-                ->selectRaw('COUNT(DISTINCT ip_region) AS region_count')
-                ->selectRaw('COUNT(DISTINCT user_agent) AS ua_count')
-                ->selectRaw('COUNT(DISTINCT ip) AS sub_ip_count')
-                ->selectRaw('MAX(created_at) AS last_at')
-                ->selectRaw("SUM(CASE WHEN COALESCE(ip_country, '') NOT IN ('中国', '')
-                    OR ip_region IN ('香港', '澳门', '台湾') THEN 1 ELSE 0 END) AS overseas_count")
-                ->when($since > 0, function ($query) use ($since) {
-                    $query->where('created_at', '>=', $since);
-                })
-                ->groupBy('user_id')
-                ->get();
-
-            $aliveRows = DB::table('v2_alive_ip_history')
-                ->select('user_id')
-                ->selectRaw("GROUP_CONCAT(DISTINCT CASE WHEN COALESCE(country, '') LIKE '%中国%'
-                    AND province NOT IN ('香港', '澳门', '台湾') THEN province END
-                    ORDER BY province SEPARATOR ',') AS provinces")
-                ->selectRaw("COUNT(DISTINCT CASE WHEN COALESCE(country, '') LIKE '%中国%'
-                    AND province NOT IN ('香港', '澳门', '台湾') THEN province END) AS province_count")
-                ->selectRaw('COUNT(DISTINCT ip) AS alive_ip_count')
-                ->selectRaw('MAX(last_seen_at) AS last_seen_at')
-                ->selectRaw("SUM(CASE WHEN COALESCE(country, '') NOT LIKE '%中国%'
-                    OR province IN ('香港', '澳门', '台湾') THEN 1 ELSE 0 END) AS overseas_online_count")
-                ->when($since > 0, function ($query) use ($since) {
-                    $query->where('last_seen_at', '>=', $since);
-                })
-                ->groupBy('user_id')
-                ->get();
-
-            $users = [];
-            $blank = [
-                'sub_regions' => [],
-                'alive_provinces' => [],
-                'sub_region_count' => 0,
-                'ua_count' => 0,
-                'sub_ip_count' => 0,
-                'alive_province_count' => 0,
-                'alive_ip_count' => 0,
-                'overseas_count' => 0,
-                'overseas_online_count' => 0,
-                'last_at' => 0,
-                'last_seen_at' => 0,
-            ];
-
-            foreach ($aliveRows as $row) {
-                $users[$row->user_id] = array_merge($blank, [
-                    'user_id' => (int) $row->user_id,
-                    'alive_provinces' => $row->provinces ? explode(',', $row->provinces) : [],
-                    'alive_province_count' => (int) $row->province_count,
-                    'alive_ip_count' => (int) $row->alive_ip_count,
-                    'overseas_online_count' => (int) $row->overseas_online_count,
-                    'last_seen_at' => (int) $row->last_seen_at,
-                ]);
-            }
-
-            foreach ($subRows as $row) {
-                $id = $row->user_id;
-                if (!isset($users[$id])) {
-                    $users[$id] = array_merge($blank, ['user_id' => (int) $id]);
-                }
-                $users[$id]['sub_regions'] = $row->regions ? explode(',', $row->regions) : [];
-                $users[$id]['sub_region_count'] = (int) $row->region_count;
-                $users[$id]['ua_count'] = (int) $row->ua_count;
-                $users[$id]['sub_ip_count'] = (int) $row->sub_ip_count;
-                $users[$id]['overseas_count'] = (int) $row->overseas_count;
-                $users[$id]['last_at'] = (int) $row->last_at;
-            }
-
-            $list = [];
-            foreach ($users as $item) {
-                $tags = [];
-                if (!empty($item['sub_regions']) && !empty($item['alive_provinces'])
-                    && !array_intersect($item['sub_regions'], $item['alive_provinces'])) {
-                    $tags[] = 'mismatch';
-                }
-                if ($item['alive_province_count'] >= $provinceThreshold) {
-                    $tags[] = 'online_province';
-                }
-                if ($item['alive_ip_count'] >= $ipThreshold) {
-                    $tags[] = 'online_ip';
-                }
-                if ($item['sub_region_count'] >= $subProvinceThreshold) {
-                    $tags[] = 'sub_province';
-                }
-                if ($item['overseas_count'] > 0) {
-                    $tags[] = 'overseas_sub';
-                }
-                if ($item['overseas_online_count'] > 0) {
-                    $tags[] = 'overseas_online';
-                }
-                if (empty($tags)) {
-                    continue;
-                }
-                $item['risk_tags'] = $tags;
-                $item['risk_count'] = count($tags);
-                $list[] = $item;
-            }
-
-            return $list;
+        $filtered = Cache::remember($cacheKey, 60, function () use ($rules, $selected, $days) {
+            return $this->buildRiskRows($rules, $selected, $days);
         });
-
-        $filtered = array_values(array_filter($rows, function ($item) use ($types) {
-            return (bool) array_intersect($types, $item['risk_tags']);
-        }));
 
         usort($filtered, function ($a, $b) use ($sort, $sortType) {
             $left = $a[$sort] ?? 0;
@@ -794,6 +848,317 @@ class UserPortraitController extends Controller
         $data = array_slice($filtered, ($current - 1) * $pageSize, $pageSize);
 
         return response(['data' => $data, 'total' => $total]);
+    }
+
+    private function buildRiskRows(array $rules, array $selected, int $days): array
+    {
+        $since = $days > 0 ? time() - $days * 86400 : 0;
+        try {
+            DB::statement('SET SESSION group_concat_max_len = 16384');
+        } catch (\Throwable $e) {
+        }
+
+        $subRows = DB::table('v2_sub_log')
+            ->select('user_id')
+            ->selectRaw("GROUP_CONCAT(DISTINCT ip_region SEPARATOR ',') AS regions")
+            ->selectRaw("GROUP_CONCAT(DISTINCT ip_country SEPARATOR ',') AS countries")
+            ->selectRaw("GROUP_CONCAT(DISTINCT ip_isp SEPARATOR ',') AS isps")
+            ->selectRaw('COUNT(DISTINCT user_agent) AS ua_count')
+            ->selectRaw('MAX(created_at) AS last_at')
+            ->when($since > 0, function ($query) use ($since) {
+                $query->where('created_at', '>=', $since);
+            })
+            ->groupBy('user_id')
+            ->get();
+
+        $aliveRows = DB::table('v2_alive_ip_history')
+            ->select('user_id')
+            ->selectRaw("GROUP_CONCAT(DISTINCT province SEPARATOR ',') AS regions")
+            ->selectRaw("GROUP_CONCAT(DISTINCT country SEPARATOR ',') AS countries")
+            ->selectRaw("GROUP_CONCAT(DISTINCT isp SEPARATOR ',') AS isps")
+            ->selectRaw('MAX(last_seen_at) AS last_seen_at')
+            ->when($since > 0, function ($query) use ($since) {
+                $query->where('last_seen_at', '>=', $since);
+            })
+            ->groupBy('user_id')
+            ->get();
+
+        $blank = [
+            'sub_regions_raw' => [],
+            'sub_countries' => [],
+            'sub_isps' => [],
+            'ua_count' => 0,
+            'alive_regions_raw' => [],
+            'alive_countries' => [],
+            'alive_isps' => [],
+            'last_at' => 0,
+            'last_seen_at' => 0,
+        ];
+
+        $users = [];
+
+        foreach ($aliveRows as $row) {
+            $id = (int) $row->user_id;
+            $users[$id] = array_merge($blank, [
+                'user_id' => $id,
+                'alive_regions_raw' => $this->splitList($row->regions),
+                'alive_countries' => $this->splitList($row->countries),
+                'alive_isps' => $this->splitList($row->isps),
+                'last_seen_at' => (int) $row->last_seen_at,
+            ]);
+        }
+
+        foreach ($subRows as $row) {
+            $id = (int) $row->user_id;
+            if (!isset($users[$id])) {
+                $users[$id] = array_merge($blank, ['user_id' => $id]);
+            }
+            $users[$id]['sub_regions_raw'] = $this->splitList($row->regions);
+            $users[$id]['sub_countries'] = $this->splitList($row->countries);
+            $users[$id]['sub_isps'] = $this->splitList($row->isps);
+            $users[$id]['ua_count'] = (int) $row->ua_count;
+            $users[$id]['last_at'] = (int) $row->last_at;
+        }
+
+        foreach ($users as &$user) {
+            $user['sub_regions'] = $this->mainlandProvinces($user['sub_regions_raw']);
+            $user['alive_regions'] = $this->mainlandProvinces($user['alive_regions_raw']);
+            $user['sub_region_count'] = count($user['sub_regions']);
+            $user['alive_province_count'] = count($user['alive_regions']);
+            $user['sub_isp_count'] = count($this->ispCategories($user['sub_isps']));
+            $user['alive_isp_count'] = count($this->ispCategories($user['alive_isps']));
+            $user['province_mismatch'] = !empty($user['sub_regions']) && !empty($user['alive_regions'])
+                && empty(array_intersect($user['sub_regions'], $user['alive_regions']));
+        }
+        unset($user);
+
+        $uaSets = [];
+        foreach ($rules as $rule) {
+            if (!in_array((string) $rule['id'], $selected, true)) {
+                continue;
+            }
+            foreach ($rule['conditions'] as $cond) {
+                if ($cond['field'] !== 'sub_user_agent') {
+                    continue;
+                }
+                $key = $cond['op'] . '|' . $cond['value'];
+                if (!array_key_exists($key, $uaSets)) {
+                    $uaSets[$key] = $this->uaMatchSet($cond, $since);
+                }
+            }
+        }
+
+        $list = [];
+        foreach ($users as $user) {
+            $tags = [];
+            foreach ($rules as $rule) {
+                if (!in_array((string) $rule['id'], $selected, true)) {
+                    continue;
+                }
+                if ($this->ruleMatches($rule, $user, $uaSets)) {
+                    $tags[] = (string) $rule['id'];
+                }
+            }
+            if (empty($tags)) {
+                continue;
+            }
+            $list[] = [
+                'user_id' => $user['user_id'],
+                'risk_tags' => $tags,
+                'risk_count' => count($tags),
+                'sub_regions' => $user['sub_regions'],
+                'sub_region_count' => $user['sub_region_count'],
+                'ua_count' => $user['ua_count'],
+                'alive_provinces' => $user['alive_regions'],
+                'alive_province_count' => $user['alive_province_count'],
+                'last_at' => max($user['last_at'], $user['last_seen_at']),
+            ];
+        }
+
+        return $list;
+    }
+
+    private function splitList($value): array
+    {
+        if ($value === null || $value === '') {
+            return [];
+        }
+        $items = [];
+        foreach (explode(',', (string) $value) as $item) {
+            $item = trim($item);
+            if ($item !== '') {
+                $items[$item] = true;
+            }
+        }
+        return array_keys($items);
+    }
+
+    private function mainlandProvinces(array $regions): array
+    {
+        $provinces = [];
+        foreach ($regions as $region) {
+            $province = UserDistributionService::normalizeProvince((string) $region);
+            if ($province !== null) {
+                $provinces[$province] = true;
+            }
+        }
+        return array_keys($provinces);
+    }
+
+    private function ispCategories(array $isps): array
+    {
+        $categories = [];
+        foreach ($isps as $isp) {
+            $categories[UserDistributionService::classifyProvider((string) $isp)] = true;
+        }
+        return array_keys($categories);
+    }
+
+    private function ruleMatches(array $rule, array $user, array $uaSets): bool
+    {
+        $matchAll = ($rule['match'] ?? 'all') !== 'any';
+        foreach ($rule['conditions'] as $cond) {
+            $ok = $this->conditionMatches($cond, $user, $uaSets);
+            if ($matchAll && !$ok) {
+                return false;
+            }
+            if (!$matchAll && $ok) {
+                return true;
+            }
+        }
+        return $matchAll;
+    }
+
+    private function conditionMatches(array $cond, array $user, array $uaSets): bool
+    {
+        $field = (string) $cond['field'];
+        $value = $cond['value'];
+
+        switch ($field) {
+            case 'sub_province_count':
+                return $this->compareNumber($user['sub_region_count'], (string) $cond['op'], (int) $value);
+            case 'alive_province_count':
+                return $this->compareNumber($user['alive_province_count'], (string) $cond['op'], (int) $value);
+            case 'sub_isp_count':
+                return $this->compareNumber($user['sub_isp_count'], (string) $cond['op'], (int) $value);
+            case 'alive_isp_count':
+                return $this->compareNumber($user['alive_isp_count'], (string) $cond['op'], (int) $value);
+            case 'sub_ua_count':
+                return $this->compareNumber($user['ua_count'], (string) $cond['op'], (int) $value);
+            case 'province_mismatch':
+                return !empty($user['province_mismatch']);
+            case 'sub_country':
+                return $this->stringSetMatches($user['sub_countries'], $cond);
+            case 'sub_region':
+                return $this->stringSetMatches($user['sub_regions_raw'], $cond);
+            case 'sub_isp':
+                return $this->stringSetMatches($user['sub_isps'], $cond);
+            case 'sub_user_agent':
+                $key = $cond['op'] . '|' . $cond['value'];
+                return isset($uaSets[$key][$user['user_id']]);
+            case 'alive_country':
+                return $this->stringSetMatches($user['alive_countries'], $cond);
+            case 'alive_region':
+                return $this->stringSetMatches($user['alive_regions_raw'], $cond);
+            case 'alive_isp':
+                return $this->stringSetMatches($user['alive_isps'], $cond);
+        }
+
+        return false;
+    }
+
+    private function compareNumber(int $left, string $op, int $right): bool
+    {
+        switch ($op) {
+            case '>':
+                return $left > $right;
+            case '>=':
+                return $left >= $right;
+            case '<':
+                return $left < $right;
+            case '<=':
+                return $left <= $right;
+            default:
+                return $left === $right;
+        }
+    }
+
+    private function stringSetMatches(array $values, array $cond): bool
+    {
+        $op = (string) $cond['op'];
+        $needle = (string) $cond['value'];
+        $negative = in_array($op, ['not_contains', 'not_equals'], true);
+        $baseOp = $op === 'not_contains' ? 'contains' : ($op === 'not_equals' ? 'equals' : $op);
+
+        $matched = false;
+        foreach ($values as $value) {
+            if ($this->stringMatches((string) $value, $baseOp, $needle)) {
+                $matched = true;
+                break;
+            }
+        }
+
+        return $negative ? (!empty($values) && !$matched) : $matched;
+    }
+
+    private function stringMatches(string $value, string $op, string $needle): bool
+    {
+        if ($needle === '') {
+            return false;
+        }
+        switch ($op) {
+            case 'equals':
+                return mb_strtolower($value) === mb_strtolower($needle);
+            case 'starts_with':
+                return mb_stripos($value, $needle) === 0;
+            case 'contains':
+            default:
+                return mb_stripos($value, $needle) !== false;
+        }
+    }
+
+    private function uaMatchSet(array $cond, int $since): array
+    {
+        $op = (string) $cond['op'];
+        $needle = (string) $cond['value'];
+        $negative = in_array($op, ['not_contains', 'not_equals'], true);
+        $baseOp = $op === 'not_contains' ? 'contains' : ($op === 'not_equals' ? 'equals' : $op);
+        $escaped = addcslashes($needle, '%_\\');
+
+        $query = DB::table('v2_sub_log')->select('user_id')->distinct();
+        if ($since > 0) {
+            $query->where('created_at', '>=', $since);
+        }
+        if ($baseOp === 'equals') {
+            $query->where('user_agent', $needle);
+        } elseif ($baseOp === 'starts_with') {
+            $query->where('user_agent', 'like', $escaped . '%');
+        } else {
+            $query->where('user_agent', 'like', '%' . $escaped . '%');
+        }
+
+        $matched = [];
+        foreach ($query->pluck('user_id') as $id) {
+            $matched[(int) $id] = true;
+        }
+
+        if (!$negative) {
+            return $matched;
+        }
+
+        $all = DB::table('v2_sub_log')->select('user_id')->distinct();
+        if ($since > 0) {
+            $all->where('created_at', '>=', $since);
+        }
+        $result = [];
+        foreach ($all->pluck('user_id') as $id) {
+            $id = (int) $id;
+            if (!isset($matched[$id])) {
+                $result[$id] = true;
+            }
+        }
+
+        return $result;
     }
 
     public function distribution(Request $request)
@@ -849,6 +1214,8 @@ class UserPortraitController extends Controller
                 'telecom' => 0,
                 'unicom' => 0,
                 'mobile' => 0,
+                'cable' => 0,
+                'edu' => 0,
                 'other' => 0,
             ];
             foreach ($providerRows as $row) {
@@ -867,6 +1234,8 @@ class UserPortraitController extends Controller
                     'telecom' => 0,
                     'unicom' => 0,
                     'mobile' => 0,
+                    'cable' => 0,
+                    'edu' => 0,
                     'other' => 0,
                 ];
             }
@@ -879,6 +1248,8 @@ class UserPortraitController extends Controller
                         'telecom' => 0,
                         'unicom' => 0,
                         'mobile' => 0,
+                        'cable' => 0,
+                        'edu' => 0,
                         'other' => 0,
                     ];
                 }

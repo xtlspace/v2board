@@ -364,7 +364,8 @@ CREATE TABLE `v2_sub_log` (
                             UNIQUE KEY `uk_dedupe_key` (`dedupe_key`),
                             KEY `idx_risk` (`user_id`,`created_at`,`ip_city`),
                             KEY `idx_user_id` (`user_id`),
-                            KEY `idx_created_at` (`created_at`)
+                            KEY `idx_created_at` (`created_at`),
+                            KEY `idx_user_agent_prefix` (`user_agent`(191))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 

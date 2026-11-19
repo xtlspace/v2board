@@ -729,3 +729,6 @@ CREATE TABLE IF NOT EXISTS `v2_alive_ip_history` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 ALTER TABLE `v2_sub_log` ADD INDEX `idx_created_at` (`created_at`);
+
+-- 订阅 UA 前缀匹配索引（风险筛查「前缀匹配」使用）
+ALTER TABLE `v2_sub_log` ADD INDEX `idx_user_agent_prefix` (`user_agent`(191));
