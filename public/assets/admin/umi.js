@@ -5959,6 +5959,15 @@
                     checked: parseInt(r.allow_new_period),
                     onChange: e=>this.set("subscribe", "allow_new_period", e ? 1 : 0)
                 })), f.a.createElement(m, {
+                    title: "启用链式加速",
+                    description: "填写Mihomo的dialer-proxy代理组名称，仅TCP协议支持，需提前修改Clash配置文件"
+                }, f.a.createElement("input", {
+                    type: "text",
+                    className: "form-control",
+                    placeholder: "为空时不启用",
+                    defaultValue: r.clash_dialer_proxy,
+                    onChange: e=>this.set("subscribe", "clash_dialer_proxy", e.target.value)
+                })), f.a.createElement(m, {
                     title: "\u5f53\u8ba2\u9605\u65b0\u8d2d\u65f6\u89e6\u53d1\u4e8b\u4ef6",
                     description: "\u65b0\u8d2d\u8ba2\u9605\u5b8c\u6210\u65f6\u5c06\u89e6\u53d1\u8be5\u4efb\u52a1\u3002"
                 }, f.a.createElement("select", {

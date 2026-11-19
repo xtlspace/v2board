@@ -22,6 +22,7 @@ class ClashMeta
     {
         $servers = $this->servers;
         $user = $this->user;
+        $dialerProxy = trim(str_replace(["\r", "\n"], '', (string) config('v2board.clash_dialer_proxy', '')));
         $appName = config('v2board.app_name', 'V2Board');
         header("subscription-userinfo: upload={$user['u']}; download={$user['d']}; total={$user['transfer_enable']}; expire={$user['expired_at']}");
         header('profile-update-interval: 24');
@@ -43,11 +44,19 @@ class ClashMeta
             }
             switch ($item['type']) {
                 case 'shadowsocks':
-                    $proxy[] = self::buildShadowsocks($user['uuid'], $item);
+                    $node = self::buildShadowsocks($user['uuid'], $item);
+                    if ($dialerProxy !== '') {
+                        $node['dialer-proxy'] = $dialerProxy;
+                    }
+                    $proxy[] = $node;
                     $proxies[] = $item['name'];
                     break;
                 case 'vless':
-                    $proxy[] = self::buildVless($user['uuid'], $item);
+                    $node = self::buildVless($user['uuid'], $item);
+                    if ($dialerProxy !== '') {
+                        $node['dialer-proxy'] = $dialerProxy;
+                    }
+                    $proxy[] = $node;
                     $proxies[] = $item['name'];
                     break;
                 case 'tuic':
@@ -55,7 +64,11 @@ class ClashMeta
                     $proxies[] = $item['name'];
                     break;
                 case 'anytls':
-                    $proxy[] = self::buildAnyTLS($user['uuid'], $item);
+                    $node = self::buildAnyTLS($user['uuid'], $item);
+                    if ($dialerProxy !== '') {
+                        $node['dialer-proxy'] = $dialerProxy;
+                    }
+                    $proxy[] = $node;
                     $proxies[] = $item['name'];
                     break;
                 case 'hysteria':
