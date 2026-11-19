@@ -6474,12 +6474,6 @@
                     checked: parseInt(y.telegram_bot_enable),
                     onChange: e=>this.set("telegram", "telegram_bot_enable", e ? 1 : 0)
                 })), f.a.createElement(m, {
-                    title: "\u9996\u6b21\u8d2d\u4e70\u901a\u77e5",
-                    description: "\u5f00\u542f\u540e\u7528\u6237\u9996\u4e2a\u5df2\u652f\u4ed8\u8ba2\u9605\u8ba2\u5355\u5c06\u901a\u8fc7Telegram\u901a\u77e5\u7ba1\u7406\u5458\u3002"
-                }, f.a.createElement(l["a"], {
-                    checked: parseInt(y.first_purchase_notify_enable),
-                    onChange: e=>this.set("telegram", "first_purchase_notify_enable", e ? 1 : 0)
-                })), f.a.createElement(m, {
                     title: "\u6536\u6b3e\u901a\u77e5",
                     description: "\u5f00\u542f\u540e\u6bcf\u7b14\u7ebf\u4e0a\u652f\u4ed8\u6210\u529f\u5c06\u901a\u8fc7Telegram\u901a\u77e5\u7ba1\u7406\u5458\u3002"
                 }, f.a.createElement(l["a"], {

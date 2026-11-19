@@ -6,7 +6,6 @@ use App\Jobs\OrderHandleJob;
 use App\Models\Order;
 use App\Models\Plan;
 use App\Models\User;
-use App\Utils\IPLocation;
 use Illuminate\Support\Facades\DB;
 
 class OrderService
@@ -266,49 +265,7 @@ class OrderService
         } catch (\Exception $e) {
             return false;
         }
-        try {
-            $this->notifyFirstPurchase();
-        } catch (\Exception $e) {
-        }
         return true;
-    }
-
-    private function notifyFirstPurchase()
-    {
-        if (!config('v2board.first_purchase_notify_enable', 0)) return;
-        $order = $this->order;
-        if ((int)$order->type !== 1) return;
-        $isFirst = Order::where('user_id', $order->user_id)
-            ->whereNotIn('status', [0, 2])
-            ->count() === 1;
-        if (!$isFirst) return;
-
-        $user = User::find($order->user_id);
-        if (!$user) return;
-
-        $plan = Plan::find($order->plan_id);
-        $planName = $plan ? $plan->name : '未找到套餐信息';
-        $regLoc = trim($this->ipLocationText($user->reg_ip)) ?: '-';
-        $loginLoc = trim($this->ipLocationText($user->last_login_ip)) ?: '-';
-		
-        $telegramService = new TelegramService();
-        $telegramService->sendMessageWithAdmin(
-            "🛒首次购买提醒\n———————————————\n邮箱： `{$user->email}`\n订单号： `{$order->trade_no}`\n注册地: {$regLoc}(`{$user->reg_ip}`)\n登录地: {$loginLoc}(`{$user->last_login_ip}`)\n购买套餐: {$planName}({$this->periodText($order->period)})",
-            true
-        );
-    }
-
-    private function ipLocationText($ip)
-    {
-        if (empty($ip)) return '';
-        try {
-            $loc = (new IPLocation())->find($ip);
-            if ($loc) {
-                return trim(implode(' ', array_filter([$loc['country'], $loc['region'], $loc['city'], $loc['isp']])));
-            }
-        } catch (\Exception $e) {
-        }
-        return '';
     }
 
     private function periodText($period)
