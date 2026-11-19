@@ -87,6 +87,19 @@
         .risk-rule-head input[type="text"],
         .risk-rule-head select { padding: 5px 8px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 13px; }
         .risk-rule-head .rr-name { width: 160px; }
+        .risk-rule-head .rr-match-label { font-size: 12px; color: #888; }
+        .rr-groups { display: flex; flex-direction: column; gap: 10px; }
+        .rr-group { border: 1px solid #ececec; border-radius: 6px; padding: 10px 12px; background: #fff; }
+        .rr-group-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 4px; }
+        .rr-group-title { font-size: 13px; font-weight: 600; color: #595959; min-width: 36px; }
+        .rr-group-head select { padding: 4px 8px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 12px; }
+        .rr-group-conditions { display: flex; flex-direction: column; gap: 6px; }
+        .risk-rule-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #f0f0f0; border-radius: 6px; background: #fafafa; }
+        .risk-rule-row-name { flex: 1; min-width: 0; font-size: 13px; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .risk-color-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 8px; }
+        .risk-color-dot.dot-red { background: #ff4d4f; }
+        .risk-color-dot.dot-orange { background: #fa8c16; }
+        .risk-color-dot.dot-yellow { background: #faad14; }
         .risk-rule-cond { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px; }
         .risk-rule-cond select,
         .risk-rule-cond input { padding: 5px 8px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 13px; }
@@ -720,12 +733,49 @@
             </div>
             <div id="riskRuleList" class="risk-rule-list"></div>
             <p class="text-muted" style="font-size:12px;margin:12px 0 0">
-                全部满足：所有条件都命中才算风险；任一满足：命中任一条件即可。省份/运营商种类按去重后统计。
+                点击「编辑」配置条件组；「启用」控制该规则是否参与筛查。保存后统一生效。
             </p>
         </div>
         <div class="modal-footer">
             <button class="btn btn-default" onclick="closeRiskRuleModal()">取消</button>
             <button class="btn btn-primary" id="riskRuleSaveBtn"><i class="fas fa-save"></i>保存</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="riskRuleEditModal" style="z-index: 1100;">
+    <div class="modal" style="width: 900px;">
+        <div class="modal-header">
+            <h3 id="riskEditorTitle">编辑规则</h3>
+            <span class="modal-close" onclick="cancelRiskEditor()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="risk-rule-head" style="margin-bottom: 12px;">
+                <input type="text" id="riskEditorName" class="rr-name" maxlength="20" placeholder="风险名称">
+                <select id="riskEditorColor" class="rr-color">
+                    <option value="red">红色</option>
+                    <option value="orange">橙色</option>
+                    <option value="yellow">黄色</option>
+                </select>
+                <label class="risk-type"><input type="checkbox" id="riskEditorEnabled"> 启用</label>
+                <span class="rr-match-label">组间</span>
+                <select id="riskEditorMatch" class="rr-match">
+                    <option value="all">全部满足</option>
+                    <option value="any">任一满足</option>
+                </select>
+            </div>
+            <div id="riskEditorGroups" class="rr-groups"></div>
+            <button class="btn btn-default btn-sm" id="riskEditorAddGroup" style="margin-top: 8px;">
+                <i class="fas fa-plus"></i>添加条件组
+            </button>
+            <p class="text-muted" style="font-size: 12px; margin: 12px 0 0;">
+                「组间」决定多个条件组之间是全部满足还是任一满足；每组内的「组内」决定该组条件之间是全部满足还是任一满足。
+                例如 A 且（B 或 C）：组间选全部满足，组 1 放 A，组 2 选任一满足并放 B、C。
+            </p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-default" onclick="cancelRiskEditor()">取消</button>
+            <button class="btn btn-primary" id="riskEditorConfirmBtn"><i class="fas fa-check"></i>确定</button>
         </div>
     </div>
 </div>
@@ -2183,78 +2233,258 @@ function riskFieldMeta(key) {
     return null;
 }
 
-function renderRiskRules(rules) {
+var riskRuleDraft = [];
+var riskEditIndex = -1;
+var riskEditorRule = null;
+
+function cloneRiskRule(rule) {
+    return JSON.parse(JSON.stringify(rule || {}));
+}
+
+function normalizeDraftRule(rule) {
+    rule = rule || {};
+    var groups = [];
+    if (rule.groups && rule.groups.length) {
+        rule.groups.forEach(function(group) {
+            groups.push({
+                match: group.match === 'any' ? 'any' : 'all',
+                conditions: (group.conditions || []).slice()
+            });
+        });
+    } else if (rule.conditions && rule.conditions.length) {
+        groups.push({
+            match: rule.match === 'any' ? 'any' : 'all',
+            conditions: rule.conditions.slice()
+        });
+    }
+    if (!groups.length) {
+        groups.push({ match: 'all', conditions: [] });
+    }
+    return {
+        id: rule.id || '',
+        name: rule.name || '',
+        enabled: rule.enabled !== false,
+        color: ['red', 'orange', 'yellow'].indexOf(rule.color) !== -1 ? rule.color : 'red',
+        match: rule.match === 'any' ? 'any' : 'all',
+        groups: groups
+    };
+}
+
+function renderRiskRuleList() {
     var box = document.getElementById('riskRuleList');
     if (!box) return;
     box.innerHTML = '';
-    (rules || []).forEach(function(rule) {
-        box.appendChild(createRiskRuleElement(rule));
+    if (!riskRuleDraft.length) {
+        box.innerHTML = '<div class="text-muted" style="font-size:13px;padding:10px 0">暂无规则，点击右上角「添加规则」</div>';
+        return;
+    }
+    riskRuleDraft.forEach(function(rule, index) {
+        var row = document.createElement('div');
+        row.className = 'risk-rule-row';
+
+        var dot = document.createElement('span');
+        dot.className = 'risk-color-dot dot-' + (['red', 'orange', 'yellow'].indexOf(rule.color) !== -1 ? rule.color : 'red');
+
+        var name = document.createElement('span');
+        name.className = 'risk-rule-row-name';
+        name.textContent = rule.name || '未命名规则';
+
+        var enabledLabel = document.createElement('label');
+        enabledLabel.className = 'risk-type';
+        var enabledInput = document.createElement('input');
+        enabledInput.type = 'checkbox';
+        enabledInput.checked = rule.enabled !== false;
+        enabledInput.addEventListener('change', function() {
+            if (riskRuleDraft[index]) riskRuleDraft[index].enabled = enabledInput.checked;
+        });
+        enabledLabel.appendChild(enabledInput);
+        enabledLabel.appendChild(document.createTextNode(' 启用'));
+
+        var editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.className = 'btn btn-default btn-sm';
+        editBtn.innerHTML = '<i class="fas fa-edit"></i>编辑';
+        editBtn.addEventListener('click', function() { editRiskRule(index); });
+
+        var delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'btn btn-default btn-sm';
+        delBtn.innerHTML = '<i class="fas fa-trash"></i>';
+        delBtn.addEventListener('click', function() { deleteRiskRule(index); });
+
+        row.appendChild(dot);
+        row.appendChild(name);
+        row.appendChild(enabledLabel);
+        row.appendChild(editBtn);
+        row.appendChild(delBtn);
+        box.appendChild(row);
     });
 }
 
-function createRiskRuleElement(rule) {
-    rule = rule || {};
-    var box = document.createElement('div');
-    box.className = 'risk-rule';
-    box.setAttribute('data-id', rule.id || ('rule' + Date.now() + (++riskRuleSeq)));
+function addRiskRuleDraft() {
+    riskEditIndex = -1;
+    riskEditorRule = null;
+    openRiskEditor(normalizeDraftRule({
+        id: 'rule' + Date.now() + (++riskRuleSeq),
+        name: '',
+        enabled: true,
+        color: 'red',
+        match: 'all'
+    }));
+}
+
+function editRiskRule(index) {
+    var rule = riskRuleDraft[index];
+    if (!rule) return;
+    riskEditIndex = index;
+    openRiskEditor(normalizeDraftRule(cloneRiskRule(rule)));
+}
+
+function deleteRiskRule(index) {
+    var rule = riskRuleDraft[index];
+    if (!rule) return;
+    if (!confirm('删除规则「' + (rule.name || '未命名规则') + '」？')) return;
+    riskRuleDraft.splice(index, 1);
+    renderRiskRuleList();
+}
+
+function openRiskEditor(rule) {
+    riskEditorRule = rule;
+    document.getElementById('riskEditorTitle').textContent = riskEditIndex === -1 ? '添加规则' : '编辑规则';
+    document.getElementById('riskEditorName').value = rule.name || '';
+    document.getElementById('riskEditorColor').value = rule.color || 'red';
+    document.getElementById('riskEditorEnabled').checked = rule.enabled !== false;
+    document.getElementById('riskEditorMatch').value = rule.match === 'any' ? 'any' : 'all';
+
+    var box = document.getElementById('riskEditorGroups');
+    box.innerHTML = '';
+    (rule.groups || []).forEach(function(group) {
+        box.appendChild(createRiskGroup(group));
+    });
+    if (!box.querySelector('.rr-group')) {
+        box.appendChild(createRiskGroup({ match: 'all', conditions: [] }));
+    }
+    renumberRiskGroups(box);
+    document.getElementById('riskRuleEditModal').classList.add('show');
+}
+
+function closeRiskEditor() {
+    document.getElementById('riskRuleEditModal').classList.remove('show');
+}
+
+function cancelRiskEditor() {
+    closeRiskEditor();
+}
+
+function confirmRiskEditor() {
+    var name = document.getElementById('riskEditorName').value.trim();
+    if (!name) {
+        alert('请填写风险名称');
+        return;
+    }
+
+    var groups = collectRiskEditorGroups();
+    if (!groups.length) {
+        alert('请至少添加一个条件');
+        return;
+    }
+
+    var id = riskEditorRule && riskEditorRule.id ? riskEditorRule.id : '';
+    if (!id || !/^[A-Za-z0-9_\-]{1,32}$/.test(id)) {
+        id = 'rule' + Date.now() + (++riskRuleSeq);
+    }
+
+    var rule = {
+        id: id,
+        name: name,
+        enabled: document.getElementById('riskEditorEnabled').checked,
+        color: document.getElementById('riskEditorColor').value,
+        match: document.getElementById('riskEditorMatch').value === 'any' ? 'any' : 'all',
+        groups: groups
+    };
+
+    if (riskEditIndex >= 0 && riskRuleDraft[riskEditIndex]) {
+        riskRuleDraft[riskEditIndex] = rule;
+    } else {
+        riskRuleDraft.push(rule);
+    }
+    closeRiskEditor();
+    renderRiskRuleList();
+}
+
+function collectRiskEditorGroups() {
+    var groups = [];
+    var totalConditions = 0;
+    document.querySelectorAll('#riskEditorGroups .rr-group').forEach(function(groupEl) {
+        if (totalConditions >= 30) return;
+        var groupMatch = groupEl.querySelector('.rr-group-match').value === 'any' ? 'any' : 'all';
+        var conditions = [];
+        groupEl.querySelectorAll('.rr-cond-row').forEach(function(rowEl) {
+            if (totalConditions + conditions.length >= 30) return;
+            var field = rowEl.querySelector('.cond-field').value;
+            var op = rowEl.querySelector('.cond-op').value;
+            var input = rowEl.querySelector('.cond-value');
+            var meta = riskFieldMeta(field);
+            if (!meta) return;
+            var value = input.value;
+            if (meta.type === 'count' || meta.type === 'number') {
+                value = parseInt(value, 10) || 0;
+            } else if (meta.type === 'bool') {
+                value = '';
+            } else {
+                value = String(value).trim();
+                if (!value) return;
+            }
+            conditions.push({ field: field, op: op, value: value });
+        });
+        if (!conditions.length) return;
+        totalConditions += conditions.length;
+        groups.push({ match: groupMatch, conditions: conditions });
+    });
+    return groups;
+}
+
+function createRiskGroup(group) {
+    group = group || {};
+    var card = document.createElement('div');
+    card.className = 'rr-group';
 
     var head = document.createElement('div');
-    head.className = 'risk-rule-head';
+    head.className = 'rr-group-head';
 
-    var nameInput = document.createElement('input');
-    nameInput.type = 'text';
-    nameInput.className = 'rr-name';
-    nameInput.maxLength = 20;
-    nameInput.placeholder = '风险名称';
-    nameInput.value = rule.name || '';
-
-    var colorSel = document.createElement('select');
-    colorSel.className = 'rr-color';
-    [['red', '红色'], ['orange', '橙色'], ['yellow', '黄色']].forEach(function(item) {
-        var opt = document.createElement('option');
-        opt.value = item[0];
-        opt.textContent = item[1];
-        colorSel.appendChild(opt);
-    });
-    colorSel.value = rule.color || 'red';
-
-    var enabledLabel = document.createElement('label');
-    enabledLabel.className = 'risk-type';
-    var enabledInput = document.createElement('input');
-    enabledInput.type = 'checkbox';
-    enabledInput.className = 'rr-enabled';
-    enabledInput.checked = rule.enabled !== false;
-    enabledLabel.appendChild(enabledInput);
-    enabledLabel.appendChild(document.createTextNode(' 启用'));
+    var title = document.createElement('span');
+    title.className = 'rr-group-title';
+    title.textContent = '组';
 
     var matchSel = document.createElement('select');
-    matchSel.className = 'rr-match';
+    matchSel.className = 'rr-group-match';
     [['all', '全部满足'], ['any', '任一满足']].forEach(function(item) {
         var opt = document.createElement('option');
         opt.value = item[0];
         opt.textContent = item[1];
         matchSel.appendChild(opt);
     });
-    matchSel.value = rule.match === 'any' ? 'any' : 'all';
+    matchSel.value = group.match === 'any' ? 'any' : 'all';
 
     var delBtn = document.createElement('button');
     delBtn.type = 'button';
     delBtn.className = 'btn btn-default btn-sm';
+    delBtn.title = '删除条件组';
     delBtn.innerHTML = '<i class="fas fa-trash"></i>';
     delBtn.addEventListener('click', function() {
-        box.parentNode.removeChild(box);
+        var container = card.parentNode;
+        if (container) container.removeChild(card);
+        renumberRiskGroups(container);
     });
 
-    head.appendChild(nameInput);
-    head.appendChild(colorSel);
-    head.appendChild(enabledLabel);
+    head.appendChild(title);
     head.appendChild(matchSel);
     head.appendChild(delBtn);
 
     var conds = document.createElement('div');
-    conds.className = 'rr-conditions';
-    var initial = (rule.conditions && rule.conditions.length)
-        ? rule.conditions
+    conds.className = 'rr-group-conditions';
+    var initial = (group.conditions && group.conditions.length)
+        ? group.conditions
         : [{ field: 'sub_province_count', op: '>=', value: 3 }];
     initial.forEach(function(cond) {
         conds.appendChild(createRiskCondition(cond));
@@ -2266,13 +2496,26 @@ function createRiskRuleElement(rule) {
     addBtn.style.marginTop = '8px';
     addBtn.innerHTML = '<i class="fas fa-plus"></i>添加条件';
     addBtn.addEventListener('click', function() {
+        if (conds.querySelectorAll('.rr-cond-row').length >= 10) {
+            alert('每组最多 10 个条件');
+            return;
+        }
         conds.appendChild(createRiskCondition({ field: 'sub_province_count', op: '>=', value: 3 }));
     });
 
-    box.appendChild(head);
-    box.appendChild(conds);
-    box.appendChild(addBtn);
-    return box;
+    card.appendChild(head);
+    card.appendChild(conds);
+    card.appendChild(addBtn);
+    return card;
+}
+
+function renumberRiskGroups(container) {
+    if (!container || !container.querySelectorAll) return;
+    var groups = container.querySelectorAll('.rr-group');
+    for (var i = 0; i < groups.length; i++) {
+        var title = groups[i].querySelector('.rr-group-title');
+        if (title) title.textContent = '\u7ec4 ' + (i + 1);
+    }
 }
 
 function createRiskCondition(cond) {
@@ -2365,59 +2608,24 @@ function createRiskCondition(cond) {
     return row;
 }
 
-function collectRiskRules() {
-    var rules = [];
-    document.querySelectorAll('#riskRuleList .risk-rule').forEach(function(ruleEl, index) {
-        var name = ruleEl.querySelector('.rr-name').value.trim();
-        if (!name) return;
-
-        var conditions = [];
-        ruleEl.querySelectorAll('.rr-cond-row').forEach(function(rowEl) {
-            var field = rowEl.querySelector('.cond-field').value;
-            var op = rowEl.querySelector('.cond-op').value;
-            var input = rowEl.querySelector('.cond-value');
-            var meta = riskFieldMeta(field);
-            if (!meta) return;
-            var value = input.value;
-            if (meta.type === 'count' || meta.type === 'number') {
-                value = parseInt(value, 10) || 0;
-            } else if (meta.type === 'bool') {
-                value = '';
-            } else {
-                value = String(value).trim();
-                if (!value) return;
-            }
-            conditions.push({ field: field, op: op, value: value });
-        });
-        if (!conditions.length) return;
-
-        var id = ruleEl.getAttribute('data-id');
-        if (!id || !/^[A-Za-z0-9_\-]{1,32}$/.test(id)) {
-            id = 'rule' + (index + 1);
-        }
-
-        rules.push({
-            id: id,
-            name: name,
-            enabled: ruleEl.querySelector('.rr-enabled').checked,
-            color: ruleEl.querySelector('.rr-color').value,
-            match: ruleEl.querySelector('.rr-match').value,
-            conditions: conditions
-        });
-    });
-    return rules;
-}
-
 var riskDefInited = false;
 
 function initRiskDefinition() {
     if (riskDefInited) return;
     riskDefInited = true;
     document.getElementById('riskDefinitionBtn').addEventListener('click', openRiskRuleModal);
-    document.getElementById('addRiskRuleBtn').addEventListener('click', function() {
-        document.getElementById('riskRuleList').appendChild(createRiskRuleElement({ name: '', enabled: true, color: 'red', match: 'all' }));
-    });
+    document.getElementById('addRiskRuleBtn').addEventListener('click', addRiskRuleDraft);
     document.getElementById('riskRuleSaveBtn').addEventListener('click', saveRiskRuleSettings);
+    document.getElementById('riskEditorConfirmBtn').addEventListener('click', confirmRiskEditor);
+    document.getElementById('riskEditorAddGroup').addEventListener('click', function() {
+        var box = document.getElementById('riskEditorGroups');
+        if (box.querySelectorAll('.rr-group').length >= 5) {
+            alert('每条规则最多 5 个条件组');
+            return;
+        }
+        box.appendChild(createRiskGroup({ match: 'all', conditions: [] }));
+        renumberRiskGroups(box);
+    });
 }
 
 function openRiskRuleModal() {
@@ -2426,7 +2634,10 @@ function openRiskRuleModal() {
         .then(function(res) {
             var data = res.data || {};
             riskFieldList = data.risk_fields || [];
-            renderRiskRules(data.risk_rules || []);
+            riskRuleDraft = (data.risk_rules || []).map(function(rule) {
+                return normalizeDraftRule(rule);
+            });
+            renderRiskRuleList();
             document.getElementById('riskRuleModal').classList.add('show');
         })
         .catch(function() {
@@ -2435,15 +2646,20 @@ function openRiskRuleModal() {
 }
 
 function closeRiskRuleModal() {
+    closeRiskEditor();
     document.getElementById('riskRuleModal').classList.remove('show');
 }
 
 function saveRiskRuleSettings() {
+    if (!riskRuleDraft.length && !confirm('当前没有任何规则，保存后将清空全部风险规则，确定继续？')) {
+        return;
+    }
+
     var btn = document.getElementById('riskRuleSaveBtn');
     btn.disabled = true;
 
     var params = new URLSearchParams();
-    params.set('risk_rules', JSON.stringify(collectRiskRules()));
+    params.set('risk_rules', JSON.stringify(riskRuleDraft));
 
     apiFetch(apiBase + '/user_portrait/saveRiskRules', {
         method: 'POST',

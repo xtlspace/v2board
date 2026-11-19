@@ -162,7 +162,7 @@ class UserPortraitController extends Controller
             $decoded = json_decode($rules, true);
             $rules = is_array($decoded) ? $decoded : [];
         }
-        return is_array($rules) ? $rules : [];
+        return $this->normalizeRiskRules(is_array($rules) ? $rules : []);
     }
 
     private function riskFieldOptions(): array
@@ -211,47 +211,39 @@ class UserPortraitController extends Controller
             }
             $usedIds[$id] = true;
 
-            $conditions = [];
-            foreach (array_slice((array) ($rule['conditions'] ?? []), 0, 10) as $cond) {
-                if (!is_array($cond)) {
-                    continue;
-                }
-                $field = (string) ($cond['field'] ?? '');
-                if (!isset(self::RISK_FIELDS[$field])) {
-                    continue;
-                }
-                $type = self::RISK_FIELDS[$field]['type'];
-
-                if ($type === 'count') {
-                    $op = (string) ($cond['op'] ?? '>=');
-                    if (!in_array($op, self::RISK_COUNT_OPS, true)) {
-                        $op = '>=';
-                    }
-                    $value = max(0, min(999, (int) ($cond['value'] ?? 0)));
-                } elseif ($type === 'number') {
-                    $op = (string) ($cond['op'] ?? '>=');
-                    if (!in_array($op, self::RISK_COUNT_OPS, true)) {
-                        $op = '>=';
-                    }
-                    $value = max(0, (int) ($cond['value'] ?? 0));
-                } elseif ($type === 'string') {
-                    $op = (string) ($cond['op'] ?? 'contains');
-                    if (!in_array($op, self::RISK_STRING_OPS, true)) {
-                        $op = 'contains';
-                    }
-                    $value = mb_substr(trim((string) ($cond['value'] ?? '')), 0, 100);
-                    if ($value === '') {
-                        continue;
-                    }
-                } else {
-                    $op = 'is_true';
-                    $value = '';
-                }
-
-                $conditions[] = ['field' => $field, 'op' => $op, 'value' => $value];
+            $rawGroups = $rule['groups'] ?? null;
+            if (!is_array($rawGroups) || empty($rawGroups)) {
+                $rawGroups = [['match' => $match, 'conditions' => (array) ($rule['conditions'] ?? [])]];
             }
 
-            if (empty($conditions)) {
+            $groups = [];
+            $totalConditions = 0;
+            foreach (array_slice($rawGroups, 0, 5) as $group) {
+                if ($totalConditions >= 30) {
+                    break;
+                }
+                if (!is_array($group)) {
+                    continue;
+                }
+                $groupMatch = ($group['match'] ?? 'all') === 'any' ? 'any' : 'all';
+                $conditions = [];
+                foreach (array_slice((array) ($group['conditions'] ?? []), 0, 10) as $cond) {
+                    if ($totalConditions + count($conditions) >= 30) {
+                        break;
+                    }
+                    $normalized = $this->normalizeRiskCondition($cond);
+                    if ($normalized !== null) {
+                        $conditions[] = $normalized;
+                    }
+                }
+                if (empty($conditions)) {
+                    continue;
+                }
+                $totalConditions += count($conditions);
+                $groups[] = ['match' => $groupMatch, 'conditions' => $conditions];
+            }
+
+            if (empty($groups)) {
                 continue;
             }
 
@@ -261,11 +253,51 @@ class UserPortraitController extends Controller
                 'enabled' => !empty($rule['enabled']),
                 'color' => $color,
                 'match' => $match,
-                'conditions' => $conditions,
+                'groups' => $groups,
             ];
         }
 
         return $rules;
+    }
+
+    private function normalizeRiskCondition($cond): ?array
+    {
+        if (!is_array($cond)) {
+            return null;
+        }
+        $field = (string) ($cond['field'] ?? '');
+        if (!isset(self::RISK_FIELDS[$field])) {
+            return null;
+        }
+        $type = self::RISK_FIELDS[$field]['type'];
+
+        if ($type === 'count') {
+            $op = (string) ($cond['op'] ?? '>=');
+            if (!in_array($op, self::RISK_COUNT_OPS, true)) {
+                $op = '>=';
+            }
+            $value = max(0, min(999, (int) ($cond['value'] ?? 0)));
+        } elseif ($type === 'number') {
+            $op = (string) ($cond['op'] ?? '>=');
+            if (!in_array($op, self::RISK_COUNT_OPS, true)) {
+                $op = '>=';
+            }
+            $value = max(0, (int) ($cond['value'] ?? 0));
+        } elseif ($type === 'string') {
+            $op = (string) ($cond['op'] ?? 'contains');
+            if (!in_array($op, self::RISK_STRING_OPS, true)) {
+                $op = 'contains';
+            }
+            $value = mb_substr(trim((string) ($cond['value'] ?? '')), 0, 100);
+            if ($value === '') {
+                return null;
+            }
+        } else {
+            $op = 'is_true';
+            $value = '';
+        }
+
+        return ['field' => $field, 'op' => $op, 'value' => $value];
     }
 
     public function getSettings()
@@ -812,7 +844,7 @@ class UserPortraitController extends Controller
     public function riskCheck(Request $request)
     {
         $rules = array_values(array_filter($this->riskRules(), function ($rule) {
-            return !empty($rule['enabled']) && !empty($rule['conditions']);
+            return !empty($rule['enabled']) && (!empty($rule['groups']) || !empty($rule['conditions']));
         }));
         if (empty($rules)) {
             return response(['data' => [], 'total' => 0]);
@@ -956,7 +988,7 @@ class UserPortraitController extends Controller
             if (!in_array((string) $rule['id'], $selected, true)) {
                 continue;
             }
-            foreach ($rule['conditions'] as $cond) {
+            foreach ($this->ruleConditions($rule) as $cond) {
                 if ($cond['field'] !== 'sub_user_agent') {
                     continue;
                 }
@@ -1035,17 +1067,65 @@ class UserPortraitController extends Controller
 
     private function ruleMatches(array $rule, array $user, array $uaSets): bool
     {
+        $groups = $rule['groups'] ?? [];
+        if (!is_array($groups) || empty($groups)) {
+            $groups = [['match' => $rule['match'] ?? 'all', 'conditions' => $rule['conditions'] ?? []]];
+        }
+
         $matchAll = ($rule['match'] ?? 'all') !== 'any';
-        foreach ($rule['conditions'] as $cond) {
-            $ok = $this->conditionMatches($cond, $user, $uaSets);
-            if ($matchAll && !$ok) {
+        $evaluated = false;
+
+        foreach ($groups as $group) {
+            if (!is_array($group)) {
+                continue;
+            }
+            $conditions = (array) ($group['conditions'] ?? []);
+            if (empty($conditions)) {
+                continue;
+            }
+            $evaluated = true;
+
+            $groupAll = ($group['match'] ?? 'all') !== 'any';
+            $groupOk = $groupAll;
+            foreach ($conditions as $cond) {
+                $ok = $this->conditionMatches($cond, $user, $uaSets);
+                if ($groupAll && !$ok) {
+                    $groupOk = false;
+                    break;
+                }
+                if (!$groupAll && $ok) {
+                    $groupOk = true;
+                    break;
+                }
+            }
+
+            if ($matchAll && !$groupOk) {
                 return false;
             }
-            if (!$matchAll && $ok) {
+            if (!$matchAll && $groupOk) {
                 return true;
             }
         }
-        return $matchAll;
+
+        return $evaluated && $matchAll;
+    }
+
+    private function ruleConditions(array $rule): array
+    {
+        $conditions = [];
+        $groups = $rule['groups'] ?? [];
+        if (is_array($groups) && !empty($groups)) {
+            foreach ($groups as $group) {
+                if (!is_array($group)) {
+                    continue;
+                }
+                foreach ((array) ($group['conditions'] ?? []) as $cond) {
+                    $conditions[] = $cond;
+                }
+            }
+            return $conditions;
+        }
+        return (array) ($rule['conditions'] ?? []);
     }
 
     private function conditionMatches(array $cond, array $user, array $uaSets): bool
