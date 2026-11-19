@@ -6352,8 +6352,8 @@
                     checked: parseInt(u.device_limit_mode),
                     onChange: e=>this.set("server", "device_limit_mode", e ? 1 : 0)
                 })), f.a.createElement(m, {
-                    title: "\u94fe\u5f0f\u8f6c\u53d1\u8bbe\u5907\u6570\u91cf\u91cd\u590d\u7edf\u8ba1",
-                    description: "\u5f00\u542f\u540e\u7edf\u8ba1\u8bbe\u5907\u65f6\u5c06\u5ffd\u7565\u5bf9\u63a5\u8282\u70b9\u7684IP\u5730\u5740"
+                    title: "节点IP不计入设备数量",
+                    description: "开启后统计设备时将忽略对接节点的IP地址，即链式转发只记1台设备"
                 }, f.a.createElement(l["a"], {
                     checked: parseInt(u.device_limit_chain_forward),
                     onChange: e=>this.set("server", "device_limit_chain_forward", e ? 1 : 0)
