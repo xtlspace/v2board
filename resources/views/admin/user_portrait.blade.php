@@ -483,6 +483,7 @@
             <div id="tabRisk" class="tab-content">
                 <div class="toolbar">
                     <span class="toolbar-title">风险筛查</span>
+                    <button class="btn btn-default btn-sm" id="riskDefinitionBtn"><i class="fas fa-cog"></i>风险定义</button>
                 </div>
                 <div class="filter-form" id="riskFilterForm">
                     <div class="filter-group">
@@ -606,15 +607,6 @@
                 </p>
 
                 <div class="toolbar">
-                    <span class="toolbar-title">风险类型 <span class="text-muted" style="font-weight:400;font-size:12px">自定义风险筛查规则</span></span>
-                    <button class="btn btn-default btn-sm" id="addRiskRuleBtn"><i class="fas fa-plus"></i>添加规则</button>
-                </div>
-                <div id="riskRuleList" class="risk-rule-list"></div>
-                <p class="text-muted" style="font-size:12px;margin:8px 0 24px">
-                    全部满足：所有条件都命中才算风险；任一满足：命中任一条件即可。省份/运营商种类按去重后统计。
-                </p>
-
-                <div class="toolbar">
                     <span class="toolbar-title">数据维护</span>
                 </div>
                 <div class="filter-form">
@@ -711,6 +703,29 @@
         <div class="modal-footer">
             <button class="btn btn-default" onclick="closeRuleModal()">取消</button>
             <button class="btn btn-primary" id="saveRuleBtn">保存</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="riskRuleModal">
+    <div class="modal" style="width: 900px;">
+        <div class="modal-header">
+            <h3>风险定义</h3>
+            <span class="modal-close" onclick="closeRiskRuleModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="toolbar">
+                <span class="toolbar-title">规则列表 <span class="text-muted" style="font-weight:400;font-size:12px">颜色用于区分风险等级</span></span>
+                <button class="btn btn-default btn-sm" id="addRiskRuleBtn"><i class="fas fa-plus"></i>添加规则</button>
+            </div>
+            <div id="riskRuleList" class="risk-rule-list"></div>
+            <p class="text-muted" style="font-size:12px;margin:12px 0 0">
+                全部满足：所有条件都命中才算风险；任一满足：命中任一条件即可。省份/运营商种类按去重后统计。
+            </p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-default" onclick="closeRiskRuleModal()">取消</button>
+            <button class="btn btn-primary" id="riskRuleSaveBtn"><i class="fas fa-save"></i>保存</button>
         </div>
     </div>
 </div>
@@ -2387,6 +2402,64 @@ function collectRiskRules() {
     return rules;
 }
 
+var riskDefInited = false;
+
+function initRiskDefinition() {
+    if (riskDefInited) return;
+    riskDefInited = true;
+    document.getElementById('riskDefinitionBtn').addEventListener('click', openRiskRuleModal);
+    document.getElementById('addRiskRuleBtn').addEventListener('click', function() {
+        document.getElementById('riskRuleList').appendChild(createRiskRuleElement({ name: '', enabled: true, color: 'red', match: 'all' }));
+    });
+    document.getElementById('riskRuleSaveBtn').addEventListener('click', saveRiskRuleSettings);
+}
+
+function openRiskRuleModal() {
+    apiFetch(apiBase + '/user_portrait/getSettings')
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+            var data = res.data || {};
+            riskFieldList = data.risk_fields || [];
+            renderRiskRules(data.risk_rules || []);
+            document.getElementById('riskRuleModal').classList.add('show');
+        })
+        .catch(function() {
+            alert('加载风险定义失败');
+        });
+}
+
+function closeRiskRuleModal() {
+    document.getElementById('riskRuleModal').classList.remove('show');
+}
+
+function saveRiskRuleSettings() {
+    var btn = document.getElementById('riskRuleSaveBtn');
+    btn.disabled = true;
+
+    var params = new URLSearchParams();
+    params.set('risk_rules', JSON.stringify(collectRiskRules()));
+
+    apiFetch(apiBase + '/user_portrait/saveRiskRules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString()
+    }).then(function(r) {
+        if (r.ok) return r.json();
+        return r.json().catch(function() { return {}; }).then(function(err) {
+            throw new Error(err.message || ('HTTP ' + r.status));
+        });
+    }).then(function() {
+        closeRiskRuleModal();
+        riskRulesPromise = null;
+        loadRiskData();
+        alert('保存成功');
+    }).catch(function(err) {
+        alert('保存失败：' + (err && err.message ? err.message : '请重试'));
+    }).finally(function() {
+        btn.disabled = false;
+    });
+}
+
 function initSettingsTab() {
     if (settingsInited) return;
     settingsInited = true;
@@ -2400,12 +2473,8 @@ function initSettingsTab() {
         settingsEnabledProviders = settingsProviderOptions.map(function(p) { return p.key; });
         renderProviders();
         document.getElementById('testIpResult').textContent = '-';
-        renderRiskRules([]);
     });
     document.getElementById('testIpBtn').addEventListener('click', testIpLocation);
-    document.getElementById('addRiskRuleBtn').addEventListener('click', function() {
-        document.getElementById('riskRuleList').appendChild(createRiskRuleElement({ name: '', enabled: true, color: 'red', match: 'all' }));
-    });
     document.getElementById('rebuildBtnV4').addEventListener('click', function() { rebuildLocation(4); });
     document.getElementById('rebuildBtnV6').addEventListener('click', function() { rebuildLocation(6); });
     document.getElementById('settingIpLookup').addEventListener('keydown', function(e) {
@@ -2429,8 +2498,6 @@ function loadSettings() {
             settingsProviderOptions = data.ip_providers || [];
             settingsEnabledProviders = data.ip_lookup_providers || settingsProviderOptions.map(function(p) { return p.key; });
             renderProviders();
-            riskFieldList = data.risk_fields || [];
-            renderRiskRules(data.risk_rules || []);
             ipLookupBase = url;
         })
         .catch(function() {});
@@ -2488,7 +2555,6 @@ function saveSettings() {
     params.set('ip_lookup_source_v4', selectedSource('settingSourceV4'));
     params.set('ip_lookup_source_v6', selectedSource('settingSourceV6'));
     params.set('ip_lookup_providers', JSON.stringify(collectProviders()));
-    params.set('risk_rules', JSON.stringify(collectRiskRules()));
     apiFetch(apiBase + '/user_portrait/saveSettings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -2500,7 +2566,6 @@ function saveSettings() {
         });
     }).then(function() {
         ipLookupBase = url;
-        riskRulesPromise = null;
         alert('保存成功');
     }).catch(function(err) {
         alert('保存失败：' + (err && err.message ? err.message : '请检查配置'));
@@ -2574,6 +2639,8 @@ function runRebuildTable(table, ipVersion, lastId, doneCount, total, onDone) {
 
 // =========== Init ===========
 document.addEventListener('DOMContentLoaded', function() {
+    initRiskDefinition();
+
     loadFilterOptions().then(function() {
         var params = new URLSearchParams(window.location.search);
         restoreStateFromUrl();

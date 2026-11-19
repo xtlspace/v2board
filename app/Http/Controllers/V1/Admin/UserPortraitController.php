@@ -305,7 +305,6 @@ class UserPortraitController extends Controller
         $sourceV4 = $request->input('ip_lookup_source_v4', 'local') === 'online' ? 'online' : 'local';
         $sourceV6 = $request->input('ip_lookup_source_v6', 'local') === 'online' ? 'online' : 'local';
         $providers = $this->normalizeProviderKeys($request->input('ip_lookup_providers', '[]'));
-        $riskRules = $this->normalizeRiskRules($request->input('risk_rules', '[]'));
 
         $config = config('v2board') ?? [];
         $config['ip_lookup_url'] = $url;
@@ -314,7 +313,6 @@ class UserPortraitController extends Controller
         $config['ip_lookup_source_v4'] = $sourceV4;
         $config['ip_lookup_source_v6'] = $sourceV6;
         $config['ip_lookup_providers'] = $providers;
-        $config['risk_rules'] = $riskRules;
         $exported = var_export($config, 1);
         if (!ConfigCache::write(base_path() . '/config/v2board.php', "<?php\n return $exported ;")) {
             abort(500, '保存失败');
@@ -326,7 +324,6 @@ class UserPortraitController extends Controller
             'v2board.ip_lookup_source_v4' => $sourceV4,
             'v2board.ip_lookup_source_v6' => $sourceV6,
             'v2board.ip_lookup_providers' => $providers,
-            'v2board.risk_rules' => $riskRules,
         ]);
 
         // IP 库/接口可能已更换，让在线记录的归属地缓存立即失效
@@ -335,6 +332,21 @@ class UserPortraitController extends Controller
         } catch (\Throwable $e) {
             Log::warning('user_portrait.saveSettings bump epoch failed: ' . $e->getMessage());
         }
+
+        return response(['data' => true]);
+    }
+
+    public function saveRiskRules(Request $request)
+    {
+        $rules = $this->normalizeRiskRules($request->input('risk_rules', '[]'));
+
+        $config = config('v2board') ?? [];
+        $config['risk_rules'] = $rules;
+        $exported = var_export($config, 1);
+        if (!ConfigCache::write(base_path() . '/config/v2board.php', "<?php\n return $exported ;")) {
+            abort(500, '保存失败');
+        }
+        config(['v2board.risk_rules' => $rules]);
 
         return response(['data' => true]);
     }
