@@ -84,6 +84,7 @@
         .badge-danger { background: #fff2f0; color: #ff4d4f; }
         .badge-orange { background: #fff7e6; color: #fa8c16; }
         .badge-muted { background: #f5f5f5; color: #999; }
+        .badge-online { background: #f6ffed; color: #52c41a; margin-left: 6px; }
         .risk-ignored-row td { background: #fafafa; color: #999; }
         .risk-ignored-row td a { color: #99a9bd !important; }
         .risk-ignored-row .badge { opacity: .65; }
@@ -1789,7 +1790,8 @@ function renderDetail(data) {
                 + '<td class="col-ip">' + detailIpCell(row.ip) + '</td>'
                 + '<td class="col-region">' + escapeHtml(regionText(regionRow)) + '</td>'
                 + '<td class="col-node">' + escapeHtml(row.node_name || (row.node_id ? ('节点#' + row.node_id) : '-')) + '</td>'
-                + '<td class="col-time">' + fmtTime(row.last_seen_at) + '</td>'
+                + '<td class="col-time">' + fmtTime(row.last_seen_at)
+                    + (row.online ? '<span class="badge badge-online">实时在线</span>' : '') + '</td>'
                 + '<td class="col-actions"><a href="javascript:void(0)" class="danger-link" title="删除这条在线记录" onclick="deleteDetailRecord(\'alive\', ' + parseInt(row.id, 10) + ')"><i class="fas fa-trash"></i></a></td>'
                 + '</tr>';
         }).join('');

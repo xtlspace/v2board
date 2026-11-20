@@ -526,6 +526,46 @@ class UserPortraitController extends Controller
             ->limit(200)
             ->get();
 
+        // 与用户管理设备数使用同一份缓存判断实时在线
+        $aliveCache = Cache::get('ALIVE_IP_USER_' . $userId, []);
+        $chainForwardIgnore = (int) config('v2board.device_limit_chain_forward', 0) === 1;
+        $ignoredNodeIps = [];
+        if ($chainForwardIgnore) {
+            $nodeIps = Cache::get('ALIVE_NODE_IPS_ALL', []);
+            if (is_array($nodeIps)) {
+                foreach (array_keys($nodeIps) as $nodeIp) {
+                    $packed = $this->normalizeIpForCompare($nodeIp);
+                    if ($packed !== null) {
+                        $ignoredNodeIps[$packed] = true;
+                    }
+                }
+            }
+        }
+
+        $onlineIps = [];
+        if (is_array($aliveCache)) {
+            foreach ($aliveCache as $nodeKey => $nodeData) {
+                if ($nodeKey === 'alive_ip' || !is_array($nodeData) || empty($nodeData['aliveips']) || !is_array($nodeData['aliveips'])) {
+                    continue;
+                }
+                foreach ($nodeData['aliveips'] as $ipNodeId) {
+                    $ip = explode('_', (string) $ipNodeId)[0];
+                    $packed = $this->normalizeIpForCompare($ip);
+                    if ($packed === null) {
+                        continue;
+                    }
+                    if ($chainForwardIgnore && isset($ignoredNodeIps[$packed])) {
+                        continue;
+                    }
+                    $onlineIps[$packed] = true;
+                }
+            }
+        }
+        foreach ($aliveIps as $row) {
+            $packed = $this->normalizeIpForCompare($row->ip);
+            $row->online = $packed !== null && isset($onlineIps[$packed]);
+        }
+
         $planName = null;
         if (!empty($user->plan_id)) {
             $planName = DB::table('v2_plan')->where('id', $user->plan_id)->value('name');
@@ -581,6 +621,29 @@ class UserPortraitController extends Controller
                     ->all(),
             ],
         ]);
+    }
+
+    private function normalizeIpForCompare($ip): ?string
+    {
+        $ip = trim((string) $ip);
+        if ($ip === '') {
+            return null;
+        }
+        if (preg_match('/^\[([^\]]+)\](?::\d+)?$/', $ip, $matches)) {
+            $ip = $matches[1];
+        }
+        $ip = preg_replace('/%.*$/', '', $ip);
+        if (preg_match('/^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/', $ip, $matches)) {
+            $ip = $matches[1];
+        }
+        if (stripos($ip, '::ffff:') === 0) {
+            $v4 = substr($ip, 7);
+            if (filter_var($v4, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+                $ip = $v4;
+            }
+        }
+        $packed = @inet_pton($ip);
+        return $packed === false ? null : $packed;
     }
 
     public function getFilterOptions(Request $request)
@@ -716,7 +779,30 @@ class UserPortraitController extends Controller
             return app(RiskService::class)->buildRows($rules, $ruleIds, 0);
         });
 
+        // 颜色优先级：红 > 橙 > 黄，取用户命中的最高优先级
+        $ruleColorRank = [];
+        foreach ($rules as $rule) {
+            $color = $rule['color'] ?? 'red';
+            $ruleColorRank[(string) $rule['id']] = $color === 'red' ? 0 : ($color === 'orange' ? 1 : 2);
+        }
+        foreach ($filtered as &$row) {
+            $rank = 3;
+            foreach ((array) $row['risk_tags'] as $tagId) {
+                $value = $ruleColorRank[(string) $tagId] ?? 3;
+                if ($value < $rank) {
+                    $rank = $value;
+                }
+            }
+            $row['risk_color_rank'] = $rank;
+        }
+        unset($row);
+
         usort($filtered, function ($a, $b) use ($sort, $sortType) {
+            $rankA = $a['risk_color_rank'] ?? 3;
+            $rankB = $b['risk_color_rank'] ?? 3;
+            if ($rankA !== $rankB) {
+                return $rankA <=> $rankB;
+            }
             $left = $a[$sort] ?? 0;
             $right = $b[$sort] ?? 0;
             if ($left == $right) {
