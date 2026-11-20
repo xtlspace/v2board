@@ -174,7 +174,7 @@ class UniProxyController extends Controller
                 }
             }
 
-            // 汇总本用户涉及节点上报的全部节点 IP（同一节点可能来自多个 IP）
+            // 汇总所有节点的来源 IP（含本用户涉及的节点），忽略对接节点 IP
             $ignoredIps = [];
             if ($chainForwardIgnore) {
                 $ignoredIps = $this->chainForwardIgnoredIps(array_keys($ips_array));
@@ -256,55 +256,80 @@ class UniProxyController extends Controller
      */
     private function rememberNodeIps(Request $request): void
     {
-        $nodeKey = $this->nodeType . $this->nodeId;
         $now = time();
-        $set = Cache::get('ALIVE_NODE_IPS_' . $nodeKey, []);
+        $sources = [];
+        foreach ([$_SERVER['REMOTE_ADDR'] ?? '', $request->ip()] as $source) {
+            $canonical = $this->canonicalIpAddress($source);
+            if ($canonical !== null) {
+                $sources[$canonical] = true;
+            }
+        }
+        if (empty($sources)) {
+            return;
+        }
+
+        $ips = array_keys($sources);
+        $write = function () use ($ips, $now) {
+            // 单节点来源集合
+            $this->rememberNodeIpSet('ALIVE_NODE_IPS_' . $this->nodeType . $this->nodeId, $ips, $now);
+            // 全局节点来源集合，统计时不再依赖用户缓存里有哪些节点
+            $this->rememberNodeIpSet('ALIVE_NODE_IPS_ALL', $ips, $now);
+        };
+
+        // 多个节点可能同时上报，用锁避免读改写互相覆盖
+        try {
+            Cache::lock('ALIVE_NODE_IPS_LOCK', 3)->block(2, $write);
+        } catch (\Throwable $e) {
+            $write();
+        }
+    }
+
+    private function rememberNodeIpSet(string $key, array $ips, int $now): void
+    {
+        $set = Cache::get($key, []);
         if (!is_array($set)) {
             $set = [];
         }
-
-        $sources = [
-            $_SERVER['REMOTE_ADDR'] ?? '',
-            $request->ip(),
-        ];
-        foreach ($sources as $source) {
-            $canonical = $this->canonicalIpAddress($source);
-            if ($canonical !== null) {
-                $set[$canonical] = $now;
-            }
+        foreach ($ips as $ip) {
+            $set[$ip] = $now;
         }
-
         foreach ($set as $ip => $ts) {
             if (!is_int($ts) || $now - $ts > 1800) {
                 unset($set[$ip]);
             }
         }
-
-        Cache::put('ALIVE_NODE_IPS_' . $nodeKey, $set, 3600);
+        Cache::put($key, $set, 3600);
     }
 
     /**
-     * 汇总指定节点已记录的全部来源 IP。
+     * 汇总全部节点来源 IP，兼容旧版本按用户节点汇总的方式。
      */
     private function chainForwardIgnoredIps(array $nodetypeids): array
     {
-        $ignored = [];
+        $ignored = $this->packedIpSet(Cache::get('ALIVE_NODE_IPS_ALL', []));
+
         foreach ($nodetypeids as $nodetypeid) {
             if ($nodetypeid === 'alive_ip') {
                 continue;
             }
-            $set = Cache::get('ALIVE_NODE_IPS_' . $nodetypeid, []);
-            if (!is_array($set)) {
-                continue;
-            }
-            foreach (array_keys($set) as $ip) {
-                $packed = $this->normalizeIpAddress($ip);
-                if ($packed !== null) {
-                    $ignored[$packed] = true;
-                }
-            }
+            $ignored += $this->packedIpSet(Cache::get('ALIVE_NODE_IPS_' . $nodetypeid, []));
         }
         return $ignored;
+    }
+
+    private function packedIpSet($set): array
+    {
+        $packed = [];
+        if (!is_array($set)) {
+            return $packed;
+        }
+        foreach (array_keys($set) as $ip) {
+            $value = $this->normalizeIpAddress($ip);
+            if ($value !== null) {
+                $packed[$value] = true;
+            }
+        }
+        return $packed;
     }
 
     private function canonicalIpAddress($ip): ?string
