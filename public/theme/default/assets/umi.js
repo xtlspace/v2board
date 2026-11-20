@@ -1037,34 +1037,13 @@
             renderSubscribeBox() {
                 var e = this.props.subscribeUrl
                   , t = [];
-                return t.push({
-                    title: "Sing-box",
-                    href: "sing-box://import-remote-profile?url=" + encodeURIComponent(e) + "#" + window.settings.title
-                }), (Object(u["i"])() || Object(u["j"])()) && (t.push({
+                return (Object(u["i"])() || Object(u["j"])() || Object(u["k"])()) && t.push({
                     title: "Shadowrocket",
-                    href: "shadowrocket://add/sub://" + window.btoa(e + "&flag=shadowrocket").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "") + "?remark=" + window.settings.title + "&user=ILoveU-Meta/Rocket"
+                    href: "shadowrocket://add/sub://" + window.btoa(e).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "") + "?remark=" + window.settings.title + "&user=ILoveU-Meta/Rocket"
                 }),
                 t.push({
-                    title: "QuantumultX",
-                    href: "quantumult-x:///update-configuration?remote-resource=" + encodeURI(JSON.stringify({
-                        server_remote: [e + ", tag=" + window.settings.title]
-                    }))
-                }),
-                t.push({
-                    title: "Surge",
-                    href: "surge:///install-config?url=" + encodeURIComponent(e) + "&name=" + window.settings.title
-                })),
-                Object(u["k"])() && t.push({
                     title: "Clash",
                     href: "clash://install-config?url=" + encodeURIComponent(e) + "&name=" + window.settings.title
-                }),
-                Object(u["n"])() && (t.push({
-                    title: "Clash",
-                    href: "clash://install-config?url=" + encodeURIComponent(e + "&flag=meta") + "&name=" + window.settings.title
-                })),
-                Object(u["g"])() && t.push({
-                    title: "Clash",
-                    href: "clash://install-config?url=" + encodeURIComponent(e + "&flag=meta") + "&name=" + window.settings.title
                 }),
                 c.a.createElement("div", {
                     className: v.a.oneClickSubscribe,
@@ -24132,7 +24111,7 @@
                 }
                 ))), i.a.createElement("div", {
                     className: "v2board-copyright"
-                }, window.settings.title ? window.settings.title : "V2Board", " v1.7.4"))
+                }, window.settings.title ? window.settings.title : "V2Board"))
             }
         }
         var f = Object(c["c"])(e=>{
