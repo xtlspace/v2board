@@ -743,3 +743,8 @@ CREATE TABLE IF NOT EXISTS `v2_risk_queue` (
 
 -- 用户风险筛查忽略标记
 ALTER TABLE `v2_user` ADD COLUMN `risk_ignore` tinyint(1) NOT NULL DEFAULT '0';
+
+-- 在线记录上报节点
+ALTER TABLE `v2_alive_ip_history`
+  ADD COLUMN `node_id` int(11) DEFAULT NULL,
+  ADD COLUMN `node_name` varchar(255) DEFAULT NULL;

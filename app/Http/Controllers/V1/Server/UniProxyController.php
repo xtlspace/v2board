@@ -19,6 +19,7 @@ class UniProxyController extends Controller
     private $nodeInfo;
     private $nodeId;
     private $serverService;
+    private ?array $ignoredNodeIps = null;
 
     public function __construct(Request $request)
     {
@@ -174,10 +175,10 @@ class UniProxyController extends Controller
                 }
             }
 
-            // 汇总所有节点的来源 IP（含本用户涉及的节点），忽略对接节点 IP
+            // 汇总所有节点的来源 IP，忽略对接节点 IP（每请求只读一次缓存）
             $ignoredIps = [];
             if ($chainForwardIgnore) {
-                $ignoredIps = $this->chainForwardIgnoredIps(array_keys($ips_array));
+                $ignoredIps = $this->chainForwardIgnoredIps();
             }
 
             // 计算活跃IP数量
@@ -241,7 +242,11 @@ class UniProxyController extends Controller
         }
 
         try {
-            (new UserDistributionService())->record($recordData);
+            (new UserDistributionService())->record(
+                $recordData,
+                (int) $this->nodeInfo->id,
+                (string) $this->nodeInfo->name
+            );
         } catch (\Throwable $e) {
             Log::warning('record alive ip history failed: ' . $e->getMessage());
         }
@@ -302,19 +307,14 @@ class UniProxyController extends Controller
     }
 
     /**
-     * 汇总全部节点来源 IP，兼容旧版本按用户节点汇总的方式。
+     * 汇总全部节点来源 IP。每请求只读一次缓存，结果与上报用户数无关。
      */
-    private function chainForwardIgnoredIps(array $nodetypeids): array
+    private function chainForwardIgnoredIps(): array
     {
-        $ignored = $this->packedIpSet(Cache::get('ALIVE_NODE_IPS_ALL', []));
-
-        foreach ($nodetypeids as $nodetypeid) {
-            if ($nodetypeid === 'alive_ip') {
-                continue;
-            }
-            $ignored += $this->packedIpSet(Cache::get('ALIVE_NODE_IPS_' . $nodetypeid, []));
+        if ($this->ignoredNodeIps === null) {
+            $this->ignoredNodeIps = $this->packedIpSet(Cache::get('ALIVE_NODE_IPS_ALL', []));
         }
-        return $ignored;
+        return $this->ignoredNodeIps;
     }
 
     private function packedIpSet($set): array

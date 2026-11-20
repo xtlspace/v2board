@@ -443,7 +443,7 @@
                                     <th class="col-ip">订阅IP</th>
                                     <th class="col-region">地区</th>
                                     <th>User-Agent</th>
-                                    <th class="col-time">时间</th>
+                                    <th class="col-time">最近订阅时间</th>
                                     <th class="col-actions">操作</th>
                                 </tr>
                             </thead>
@@ -461,6 +461,7 @@
                                 <tr>
                                     <th class="col-ip">IP</th>
                                     <th class="col-region">地区</th>
+                                    <th>上报节点</th>
                                     <th class="col-time">最近在线时间</th>
                                     <th class="col-actions">操作</th>
                                 </tr>
@@ -1771,7 +1772,7 @@ function renderDetail(data) {
 
     var aliveBody = document.getElementById('detailAliveBody');
     if (!aliveIps.length) {
-        aliveBody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><i class="fas fa-inbox"></i><p>暂无在线记录</p></div></td></tr>';
+        aliveBody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><i class="fas fa-inbox"></i><p>暂无在线记录</p></div></td></tr>';
     } else {
         aliveBody.innerHTML = aliveIps.map(function(row) {
             var regionRow = {
@@ -1787,6 +1788,7 @@ function renderDetail(data) {
             return '<tr' + rowClass + '>'
                 + '<td class="col-ip">' + detailIpCell(row.ip) + '</td>'
                 + '<td class="col-region">' + escapeHtml(regionText(regionRow)) + '</td>'
+                + '<td class="col-node">' + escapeHtml(row.node_name || (row.node_id ? ('节点#' + row.node_id) : '-')) + '</td>'
                 + '<td class="col-time">' + fmtTime(row.last_seen_at) + '</td>'
                 + '<td class="col-actions"><a href="javascript:void(0)" class="danger-link" title="删除这条在线记录" onclick="deleteDetailRecord(\'alive\', ' + parseInt(row.id, 10) + ')"><i class="fas fa-trash"></i></a></td>'
                 + '</tr>';

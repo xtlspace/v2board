@@ -23,7 +23,7 @@ class UserDistributionService
         '新疆维吾尔自治区' => '新疆',
     ];
 
-    public function record(array $data): void
+    public function record(array $data, ?int $nodeId = null, ?string $nodeName = null): void
     {
         $now = time();
         $rows = [];
@@ -55,6 +55,8 @@ class UserDistributionService
                     'city' => $info['city'],
                     'isp' => $info['isp'],
                     'provider' => $info['provider'],
+                    'node_id' => $nodeId,
+                    'node_name' => $nodeName,
                     'last_seen_at' => $now,
                     'created_at' => $now,
                     'updated_at' => $now,
@@ -66,7 +68,7 @@ class UserDistributionService
             DB::table('v2_alive_ip_history')->upsert(
                 $chunk,
                 ['user_id', 'ip'],
-                ['country', 'province', 'city', 'isp', 'provider', 'last_seen_at', 'updated_at']
+                ['country', 'province', 'city', 'isp', 'provider', 'node_id', 'node_name', 'last_seen_at', 'updated_at']
             );
         }
 
