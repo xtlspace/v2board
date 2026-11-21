@@ -8,6 +8,7 @@ use App\Services\UserDistributionService;
 use App\Services\UserService;
 use App\Utils\CacheKey;
 use App\Utils\Helper;
+use App\Utils\IpNormalizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -20,6 +21,7 @@ class UniProxyController extends Controller
     private $nodeId;
     private $serverService;
     private ?array $ignoredNodeIps = null;
+    private ?array $nodeIpNodeIds = null;
 
     public function __construct(Request $request)
     {
@@ -193,7 +195,7 @@ class UniProxyController extends Controller
                             if ($chainForwardIgnore && $packed !== null && isset($ignoredIps[$packed])) {
                                 continue;
                             }
-                            $ipmap[$ip] = 1;
+                            $ipmap[$packed !== null ? $packed : $ip] = 1;
                         }
                     }
                 }
@@ -217,21 +219,8 @@ class UniProxyController extends Controller
             }
             $ips_array['alive_ip'] = $count;
 
-            // 在线记录同样剔除节点 IP
-            if ($chainForwardIgnore) {
-                $recordIps = [];
-                foreach ($ips as $ipNodeId) {
-                    $ip = explode("_", (string) $ipNodeId)[0];
-                    $packed = $this->normalizeIpAddress($ip);
-                    if ($packed !== null && isset($ignoredIps[$packed])) {
-                        continue;
-                    }
-                    $recordIps[] = $ipNodeId;
-                }
-                $recordData[$uid] = $recordIps;
-            } else {
-                $recordData[$uid] = $ips;
-            }
+            // 在线记录保留全部 IP，节点 IP 用 alive_ip_node_id 标注
+            $recordData[$uid] = $ips;
 
             $updates[$key] = $ips_array;
         }
@@ -245,7 +234,7 @@ class UniProxyController extends Controller
             (new UserDistributionService())->record(
                 $recordData,
                 (int) $this->nodeInfo->id,
-                (string) $this->nodeInfo->name
+                $this->nodeIpNodeIdMap()
             );
         } catch (\Throwable $e) {
             Log::warning('record alive ip history failed: ' . $e->getMessage());
@@ -274,11 +263,12 @@ class UniProxyController extends Controller
         }
 
         $ips = array_keys($sources);
-        $write = function () use ($ips, $now) {
+        $nodeId = (int) $this->nodeInfo->id;
+        $write = function () use ($ips, $now, $nodeId) {
             // 单节点来源集合
             $this->rememberNodeIpSet('ALIVE_NODE_IPS_' . $this->nodeType . $this->nodeId, $ips, $now);
-            // 全局节点来源集合，统计时不再依赖用户缓存里有哪些节点
-            $this->rememberNodeIpSet('ALIVE_NODE_IPS_ALL', $ips, $now);
+            // 全局节点来源集合，值为节点 ID，供在线记录标注使用
+            $this->rememberGlobalNodeIps($ips, $now, $nodeId);
         };
 
         // 多个节点可能同时上报，用锁避免读改写互相覆盖
@@ -306,6 +296,28 @@ class UniProxyController extends Controller
         Cache::put($key, $set, 3600);
     }
 
+    private function rememberGlobalNodeIps(array $ips, int $now, int $nodeId): void
+    {
+        $registry = Cache::get('ALIVE_NODE_IPS_ALL', []);
+        if (!is_array($registry)) {
+            $registry = [];
+        }
+        foreach ($ips as $ip) {
+            $registry[$ip] = ['ts' => $now, 'node_id' => $nodeId];
+        }
+        foreach ($registry as $ip => $meta) {
+            if (!is_array($meta)) {
+                unset($registry[$ip]);
+                continue;
+            }
+            $ts = (int) ($meta['ts'] ?? 0);
+            if ($ts <= 0 || $now - $ts > 1800) {
+                unset($registry[$ip]);
+            }
+        }
+        Cache::put('ALIVE_NODE_IPS_ALL', $registry, 3600);
+    }
+
     /**
      * 汇总全部节点来源 IP。每请求只读一次缓存，结果与上报用户数无关。
      */
@@ -315,6 +327,30 @@ class UniProxyController extends Controller
             $this->ignoredNodeIps = $this->packedIpSet(Cache::get('ALIVE_NODE_IPS_ALL', []));
         }
         return $this->ignoredNodeIps;
+    }
+
+    /**
+     * 全局节点 IP -> 节点 ID 映射，供在线记录标注使用。
+     */
+    private function nodeIpNodeIdMap(): array
+    {
+        if ($this->nodeIpNodeIds !== null) {
+            return $this->nodeIpNodeIds;
+        }
+        $registry = Cache::get('ALIVE_NODE_IPS_ALL', []);
+        $map = [];
+        if (is_array($registry)) {
+            foreach ($registry as $ip => $meta) {
+                if (!is_array($meta) || empty($meta['node_id'])) {
+                    continue;
+                }
+                $canonical = $this->canonicalIpAddress($ip);
+                if ($canonical !== null) {
+                    $map[$canonical] = (int) $meta['node_id'];
+                }
+            }
+        }
+        return $this->nodeIpNodeIds = $map;
     }
 
     private function packedIpSet($set): array
@@ -334,35 +370,12 @@ class UniProxyController extends Controller
 
     private function canonicalIpAddress($ip): ?string
     {
-        $packed = $this->normalizeIpAddress($ip);
-        if ($packed === null) {
-            return null;
-        }
-        $canonical = @inet_ntop($packed);
-        return $canonical === false ? null : $canonical;
+        return IpNormalizer::canonical($ip);
     }
 
     private function normalizeIpAddress($ip): ?string
     {
-        $ip = trim((string) $ip);
-        if ($ip === '') {
-            return null;
-        }
-        if (preg_match('/^\[([^\]]+)\](?::\d+)?$/', $ip, $matches)) {
-            $ip = $matches[1];
-        }
-        $ip = preg_replace('/%.*$/', '', $ip);
-        if (preg_match('/^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/', $ip, $matches)) {
-            $ip = $matches[1];
-        }
-        if (stripos($ip, '::ffff:') === 0) {
-            $v4 = substr($ip, 7);
-            if (filter_var($v4, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
-                $ip = $v4;
-            }
-        }
-        $packed = @inet_pton($ip);
-        return $packed === false ? null : $packed;
+        return IpNormalizer::packed($ip);
     }
 
     // 后端获取配置

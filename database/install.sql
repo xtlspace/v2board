@@ -380,7 +380,7 @@ CREATE TABLE `v2_alive_ip_history` (
                             `isp` varchar(128) DEFAULT NULL,
                             `provider` varchar(16) NOT NULL DEFAULT 'other',
                             `node_id` int(11) DEFAULT NULL,
-                            `node_name` varchar(255) DEFAULT NULL,
+                            `alive_ip_node_id` int(11) DEFAULT NULL,
                             `last_seen_at` int(11) NOT NULL,
                             `created_at` int(11) NOT NULL,
                             `updated_at` int(11) NOT NULL,

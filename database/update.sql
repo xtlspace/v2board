@@ -744,7 +744,24 @@ CREATE TABLE IF NOT EXISTS `v2_risk_queue` (
 -- 用户风险筛查忽略标记
 ALTER TABLE `v2_user` ADD COLUMN `risk_ignore` tinyint(1) NOT NULL DEFAULT '0';
 
--- 在线记录上报节点
-ALTER TABLE `v2_alive_ip_history`
-  ADD COLUMN `node_id` int(11) DEFAULT NULL,
-  ADD COLUMN `node_name` varchar(255) DEFAULT NULL;
+-- 在线记录上报节点（只存节点 ID）
+ALTER TABLE `v2_alive_ip_history` ADD COLUMN `node_id` int(11) DEFAULT NULL;
+
+-- 清理旧版本添加的 node_name 字段
+SET @has_alive_node_name = (
+  SELECT COUNT(*) FROM information_schema.columns
+  WHERE table_schema = DATABASE()
+    AND table_name = 'v2_alive_ip_history'
+    AND column_name = 'node_name'
+);
+SET @drop_alive_node_name_sql = IF(
+  @has_alive_node_name = 1,
+  'ALTER TABLE `v2_alive_ip_history` DROP COLUMN `node_name`',
+  'SELECT 1'
+);
+PREPARE drop_alive_node_name_stmt FROM @drop_alive_node_name_sql;
+EXECUTE drop_alive_node_name_stmt;
+DEALLOCATE PREPARE drop_alive_node_name_stmt;
+
+-- 在线记录中节点 IP 所属节点
+ALTER TABLE `v2_alive_ip_history` ADD COLUMN `alive_ip_node_id` int(11) DEFAULT NULL;

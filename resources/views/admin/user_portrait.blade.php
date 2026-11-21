@@ -85,6 +85,7 @@
         .badge-orange { background: #fff7e6; color: #fa8c16; }
         .badge-muted { background: #f5f5f5; color: #999; }
         .badge-online { background: #f6ffed; color: #52c41a; margin-left: 6px; }
+        .node-ip-tag { color: #999; font-size: 12px; margin-left: 2px; }
         .risk-ignored-row td { background: #fafafa; color: #999; }
         .risk-ignored-row td a { color: #99a9bd !important; }
         .risk-ignored-row .badge { opacity: .65; }
@@ -152,6 +153,10 @@
         .arrow { color: #999; margin: 0 6px; }
         .risk-sortable { cursor: pointer; user-select: none; }
         .risk-sortable:hover { color: #1890ff; }
+        .alive-sortable { cursor: pointer; user-select: none; }
+        .alive-sortable:hover { color: #1890ff; }
+        .alive-sortable.active i.fa-sort { opacity: 1; color: #1890ff; }
+        .alive-sortable i.fa-sort { margin-left: 4px; opacity: 0.3; font-size: 11px; }
         .risk-sortable i.fa-sort { margin-left: 4px; opacity: 0.3; font-size: 11px; }
         .risk-sortable.active i.fa-sort { opacity: 1; color: #1890ff; }
         .filter-group .risk-types { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; min-height: 33px; }
@@ -224,7 +229,8 @@
         <div class="card-body">
             <div class="tabs">
                 <button class="tab-btn active" data-tab="tabLogs">订阅记录</button>
-                <button class="tab-btn" data-tab="tabDistribution">用户分布</button>
+                <button class="tab-btn" data-tab="tabAlive">在线记录</button>
+                <button class="tab-btn" data-tab="tabDistribution">在线分布</button>
                 <button class="tab-btn" data-tab="tabDetail">用户详情</button>
                 <button class="tab-btn" data-tab="tabRules">替换规则</button>
                 <button class="tab-btn" data-tab="tabRisk">风险筛查</button>
@@ -318,6 +324,107 @@
                         <button class="btn btn-default btn-sm" id="prevPage" disabled><i class="fas fa-chevron-left"></i></button>
                         <span id="pageInfo">0/0</span>
                         <button class="btn btn-default btn-sm" id="nextPage" disabled><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tabAlive" class="tab-content">
+                <div class="filter-form">
+                    <div class="filter-group">
+                        <label>时间范围</label>
+                        <select id="aliveDateRange">
+                            <option value="">全部</option>
+                            <option value="today">今天</option>
+                            <option value="7d">近7天</option>
+                            <option value="30d">近30天</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>User ID</label>
+                        <input type="text" id="aliveUserId" placeholder="精确搜索，支持 > < >= <=">
+                    </div>
+                    <div class="filter-group">
+                        <label>IP 地址</label>
+                        <input type="text" id="aliveIp" placeholder="关键字搜索">
+                    </div>
+                    <div class="filter-group">
+                        <label>国家</label>
+                        <select id="aliveCountry">
+                            <option value="">全部</option>
+                            <option value="mainland">中国大陆</option>
+                            <option value="other">其他</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>地区</label>
+                        <select id="aliveRegion" disabled>
+                            <option value="">请先选择国家</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>城市</label>
+                        <input type="text" id="aliveCity" placeholder="关键字搜索">
+                    </div>
+                    <div class="filter-group">
+                        <label>运营商</label>
+                        <input type="text" id="aliveIsp" placeholder="输入运营商关键字">
+                    </div>
+                    <div class="filter-group">
+                        <label>上报节点</label>
+                        <select id="aliveNode">
+                            <option value="">全部</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>记录类型</label>
+                        <select id="aliveIpKind">
+                            <option value="">全部</option>
+                            <option value="user">仅用户 IP</option>
+                            <option value="node">仅节点 IP</option>
+                        </select>
+                    </div>
+                    <div class="filter-group" style="padding-bottom:1px">
+                        <label>&nbsp;</label>
+                        <div style="display:flex;gap:8px">
+                            <button class="btn btn-primary" id="aliveSearchBtn"><i class="fas fa-search"></i>搜索</button>
+                            <button class="btn btn-default" id="aliveResetBtn"><i class="fas fa-undo"></i>重置</button>
+                            <button class="btn btn-danger" id="aliveClearBtn"><i class="fas fa-trash"></i>清除</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="col-id alive-sortable" data-sort="id">ID <i class="fas fa-sort"></i></th>
+                                <th class="col-user alive-sortable" data-sort="user_id">User <i class="fas fa-sort"></i></th>
+                                <th class="col-ip alive-sortable" data-sort="ip">IP <i class="fas fa-sort"></i></th>
+                                <th class="col-region alive-sortable" data-sort="province">地区 <i class="fas fa-sort"></i></th>
+                                <th class="alive-sortable" data-sort="provider">运营商 <i class="fas fa-sort"></i></th>
+                                <th class="alive-sortable" data-sort="node_id">上报节点 <i class="fas fa-sort"></i></th>
+                                <th class="col-time alive-sortable active" data-sort="last_seen_at">最近在线 <i class="fas fa-sort"></i></th>
+                                <th class="col-actions">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="aliveBody">
+                            <tr><td colspan="8"><div class="loading"><i class="fas fa-spinner"></i><p>加载中...</p></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination">
+                    <div class="pagination-info" id="aliveTotalInfo">共 0 条</div>
+                    <div class="pagination-controls">
+                        <span>每页</span>
+                        <select class="page-size-select" id="alivePageSize">
+                            <option value="10">10</option>
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                        <span>条</span>
+                        <button class="btn btn-default btn-sm" id="alivePrevPage" disabled><i class="fas fa-chevron-left"></i></button>
+                        <span id="alivePageInfo">0/0</span>
+                        <button class="btn btn-default btn-sm" id="aliveNextPage" disabled><i class="fas fa-chevron-right"></i></button>
                     </div>
                 </div>
             </div>
@@ -455,6 +562,7 @@
                     <div class="toolbar" style="margin-top:20px;justify-content:flex-start;gap:12px">
                         <span class="toolbar-title">在线记录 <span class="text-muted" id="detailAliveTip" style="font-weight:400;font-size:12px"></span></span>
                         <button class="btn btn-danger" id="detailClearAliveBtn"><i class="fas fa-trash"></i>清除记录</button>
+                        <span id="detailAliveDevice" style="margin-left:auto;font-size:13px;color:#555">在线设备 - / -</span>
                     </div>
                     <div class="table-wrapper">
                         <table>
@@ -510,6 +618,7 @@
                     <span class="toolbar-title">风险筛查</span>
                     <div style="display:flex;gap:8px">
                         <button class="btn btn-primary btn-sm" id="riskSearchBtn"><i class="fas fa-search"></i>筛查</button>
+                        <button class="btn btn-default btn-sm" id="riskIgnoreBtn"><i class="fas fa-user-slash"></i>忽略用户</button>
                         <button class="btn btn-default btn-sm" id="riskDefinitionBtn"><i class="fas fa-cog"></i>风险定义</button>
                     </div>
                 </div>
@@ -775,6 +884,44 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="riskIgnoreModal" style="z-index: 1050;">
+    <div class="modal" style="width: 720px;">
+        <div class="modal-header">
+            <h3>忽略用户</h3>
+            <span class="modal-close" onclick="closeRiskIgnoreModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="toolbar">
+                <span class="toolbar-title">已忽略 <span class="text-muted" id="ignoreTotalInfo" style="font-weight:400;font-size:12px">共 0 人</span></span>
+                <button class="btn btn-default btn-sm" id="restoreAllIgnoreBtn"><i class="fas fa-rotate-left"></i>全部恢复</button>
+            </div>
+            <div class="table-wrapper" style="max-height: 420px; overflow: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 120px;">User ID</th>
+                            <th>邮箱</th>
+                            <th style="width: 100px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ignoreBody"></tbody>
+                </table>
+            </div>
+            <div class="pagination" id="ignorePagination" style="display:none">
+                <div class="pagination-info"><span id="ignorePageInfo"></span></div>
+                <div class="pagination-controls">
+                    <button class="btn btn-default btn-sm" id="ignorePrevPage"><i class="fas fa-chevron-left"></i></button>
+                    <span id="ignorePageNum">0/0</span>
+                    <button class="btn btn-default btn-sm" id="ignoreNextPage"><i class="fas fa-chevron-right"></i></button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-default" onclick="closeRiskIgnoreModal()">关闭</button>
+        </div>
+    </div>
+</div>
+
 <script>
 var securePath = '{{$secure_path}}';
 var apiBase = '/api/v1/' + securePath;
@@ -944,7 +1091,7 @@ function renderChinaMap(rank) {
             inRange: { color: ['#e6f7ff', '#1890ff'] }
         },
         series: [{
-            name: '用户分布',
+            name: '在线分布',
             type: 'map',
             map: 'china-mainland',
             roam: false,
@@ -1048,7 +1195,7 @@ document.getElementById('cleanupHistoryBtn').addEventListener('click', function(
         alert('天数不能超过 3650');
         return;
     }
-    if (!confirm('确认清理 ' + days + ' 天前的用户分布历史数据？此操作不可恢复。')) {
+    if (!confirm('确认清理 ' + days + ' 天前的在线分布历史数据？此操作不可恢复。')) {
         return;
     }
     apiFetch(apiBase + '/user_portrait/distributionClear', {
@@ -1108,6 +1255,8 @@ var filterLabels = {
 var dateRangeLabels = { today: '今天', '7d': '近7天', '30d': '近30天' };
 var countryGroupLabels = { mainland: '中国大陆', other: '其他' };
 var filterOptionsData = { mainland_regions: [], other_regions: [] };
+var aliveFilterOptionsData = { mainland_regions: [], other_regions: [] };
+var aliveNodeOptions = [];
 var areaLabelMap = {};
 
 var ipLookupBase = @json($ip_lookup_url ?? 'https://iplark.com/');
@@ -1296,6 +1445,15 @@ function loadFilterOptions() {
             filterOptionsData.other_regions.forEach(function(item) {
                 areaLabelMap[item.value] = item.label;
             });
+
+            aliveFilterOptionsData = {
+                mainland_regions: res.data.alive_mainland_regions || [],
+                other_regions: res.data.alive_other_regions || []
+            };
+            aliveNodeOptions = res.data.nodes || [];
+            populateAliveNodeOptions();
+            populateAliveRegionOptions();
+
             populateRegionOptions();
         }).catch(function() {});
 }
@@ -1319,6 +1477,188 @@ function buildFilters() {
     var isp = document.getElementById('filterIsp').value.trim();
     if (isp) f.ip_isp = isp;
     return f;
+}
+
+// =========== Alive log state & functions ===========
+var aliveState = { current: 1, pageSize: 10, sort: 'last_seen_at', sortType: 'DESC', filters: {}, total: 0 };
+var aliveRequestId = 0;
+
+function populateAliveNodeOptions() {
+    var sel = document.getElementById('aliveNode');
+    if (!sel) return;
+    var current = sel.value;
+    sel.innerHTML = '';
+    sel.add(new Option('全部', ''));
+    aliveNodeOptions.forEach(function(node) {
+        sel.add(new Option(node.name || ('节点#' + node.id), String(node.id)));
+    });
+    if (current) sel.value = current;
+}
+
+function populateAliveRegionOptions(previous) {
+    var countrySel = document.getElementById('aliveCountry');
+    var regionSel = document.getElementById('aliveRegion');
+    if (!countrySel || !regionSel) return;
+    var country = countrySel.value;
+    regionSel.innerHTML = '';
+    if (!country) {
+        regionSel.disabled = true;
+        regionSel.add(new Option('请先选择国家', ''));
+        return;
+    }
+    regionSel.disabled = false;
+    regionSel.add(new Option('全部', ''));
+    var list = country === 'mainland' ? aliveFilterOptionsData.mainland_regions : aliveFilterOptionsData.other_regions;
+    list.forEach(function(item) {
+        if (typeof item === 'string') {
+            regionSel.add(new Option(item, item));
+        } else {
+            regionSel.add(new Option(item.label, item.value));
+        }
+    });
+    if (previous) {
+        regionSel.value = previous;
+    }
+}
+
+function buildAliveFilters() {
+    var f = {};
+    var dateRange = document.getElementById('aliveDateRange').value;
+    if (dateRange) f.date_range = dateRange;
+    var userId = document.getElementById('aliveUserId').value.trim();
+    if (userId) f.user_id = userId;
+    var ip = document.getElementById('aliveIp').value.trim();
+    if (ip) f.ip = ip;
+    var countryGroup = document.getElementById('aliveCountry').value;
+    if (countryGroup) f.country_group = countryGroup;
+    var area = document.getElementById('aliveRegion').value;
+    if (countryGroup && area) f.area = area;
+    var city = document.getElementById('aliveCity').value.trim();
+    if (city) f.ip_city = city;
+    var isp = document.getElementById('aliveIsp').value.trim();
+    if (isp) f.ip_isp = isp;
+    var nodeId = document.getElementById('aliveNode').value;
+    if (nodeId) f.node_id = nodeId;
+    var ipKind = document.getElementById('aliveIpKind').value;
+    if (ipKind) f.ip_kind = ipKind;
+    return f;
+}
+
+function loadAliveData() {
+    var body = document.getElementById('aliveBody');
+    if (!body) return;
+    aliveState.filters = buildAliveFilters();
+    var requestId = ++aliveRequestId;
+    body.innerHTML = '<tr><td colspan="8"><div class="loading"><i class="fas fa-spinner"></i><p>加载中...</p></div></td></tr>';
+
+    var params = new URLSearchParams();
+    params.set('current', aliveState.current);
+    params.set('pageSize', aliveState.pageSize);
+    params.set('sort', aliveState.sort);
+    params.set('sort_type', aliveState.sortType);
+    Object.keys(aliveState.filters).forEach(function(key) {
+        if (aliveState.filters[key]) params.set(key, aliveState.filters[key]);
+    });
+
+    apiFetch(apiBase + '/user_portrait/fetchAlive?' + params.toString())
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+            if (requestId !== aliveRequestId) return;
+            var rows = res.data || [];
+            aliveState.total = res.total || 0;
+            renderAliveRows(rows);
+            updateAlivePagination();
+        })
+        .catch(function() {
+            if (requestId !== aliveRequestId) return;
+            body.innerHTML = '<tr><td colspan="8"><div class="error-state"><i class="fas fa-exclamation-triangle"></i><p>加载失败</p></div></td></tr>';
+        });
+}
+
+function renderAliveRows(rows) {
+    var body = document.getElementById('aliveBody');
+    if (!rows.length) {
+        body.innerHTML = '<tr><td colspan="8"><div class="empty-state"><i class="fas fa-inbox"></i><p>暂无在线记录</p></div></td></tr>';
+        return;
+    }
+    body.innerHTML = rows.map(function(row) {
+        var regionRow = {
+            ip_country: row.country,
+            ip_region: row.province,
+            ip_city: row.city,
+            ip_isp: row.isp
+        };
+        var ipTag = '';
+        if (row.alive_ip_node_id) {
+            ipTag = '<span class="node-ip-tag">（' + escapeHtml(row.alive_ip_node_name || ('节点#' + row.alive_ip_node_id)) + '）</span>';
+        }
+        var ipHtml = detailIpCell(row.ip, ipTag);
+        var nodeText = row.node_name || (row.node_id ? ('节点#' + row.node_id) : '-');
+        return '<tr>'
+            + '<td class="col-id">' + escapeHtml(row.id) + '</td>'
+            + '<td class="col-user"><a href="javascript:void(0)" onclick="openUserDetail(' + parseInt(row.user_id, 10) + ')" style="color:#1890ff">' + escapeHtml(row.user_id) + '</a></td>'
+            + '<td class="col-ip">' + ipHtml + '</td>'
+            + '<td class="col-region">' + escapeHtml(regionText(regionRow)) + '</td>'
+            + '<td>' + escapeHtml(providerLabel(row.provider)) + '</td>'
+            + '<td>' + escapeHtml(nodeText) + '</td>'
+            + '<td class="col-time">' + fmtTime(row.last_seen_at) + '</td>'
+            + '<td class="col-actions"><a href="javascript:void(0)" class="danger-link" title="删除这条在线记录" onclick="deleteAliveRow(' + parseInt(row.id, 10) + ')"><i class="fas fa-trash"></i></a></td>'
+            + '</tr>';
+    }).join('');
+}
+
+function updateAlivePagination() {
+    var totalPages = Math.ceil(aliveState.total / aliveState.pageSize) || 1;
+    document.getElementById('aliveTotalInfo').textContent = '共 ' + aliveState.total + ' 条';
+    document.getElementById('alivePageInfo').textContent = aliveState.current + '/' + totalPages;
+    document.getElementById('alivePrevPage').disabled = aliveState.current <= 1;
+    document.getElementById('aliveNextPage').disabled = aliveState.current >= totalPages;
+}
+
+function resetAliveFilters() {
+    ['aliveDateRange', 'aliveUserId', 'aliveIp', 'aliveCountry', 'aliveCity', 'aliveIsp', 'aliveNode', 'aliveIpKind'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    populateAliveRegionOptions();
+    aliveState.current = 1;
+    loadAliveData();
+}
+
+function deleteAliveRow(id) {
+    if (!confirm('确认删除这条在线记录？此操作不可恢复。')) return;
+    var params = new URLSearchParams();
+    params.set('type', 'alive');
+    params.set('id', id);
+    apiFetch(apiBase + '/user_portrait/deleteRecord', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString()
+    }).then(function(r) { return r.json(); })
+        .then(function() { loadAliveData(); })
+        .catch(function() { alert('删除失败'); });
+}
+
+function clearAliveLogs() {
+    var filters = buildAliveFilters();
+    var message = Object.keys(filters).length
+        ? '确认清除当前筛选条件下的在线记录？此操作不可恢复。'
+        : '当前没有筛选条件，确认清除全部在线记录？此操作不可恢复。';
+    if (!confirm(message)) return;
+
+    var params = new URLSearchParams();
+    Object.keys(filters).forEach(function(key) { params.set(key, filters[key]); });
+
+    apiFetch(apiBase + '/user_portrait/clearAliveLogs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString()
+    }).then(function(r) { return r.json(); })
+        .then(function(res) {
+            loadAliveData();
+            alert('已清除 ' + (res.count || 0) + ' 条');
+        })
+        .catch(function() { alert('清除失败'); });
 }
 
 function loadLogData() {
@@ -1604,10 +1944,11 @@ function runResolve(type, userId, source, lastId, doneCount, total, onDone) {
     });
 }
 
-function detailIpCell(ip) {
+function detailIpCell(ip, suffix) {
     if (!ip) return '-';
     return escapeHtml(ip)
-        + '<a class="ip-lookup" href="' + escapeHtml(ipLookupUrl(ip)) + '" target="_blank" rel="noopener noreferrer" title="查询此 IP"><i class="fas fa-search"></i></a>';
+        + '<a class="ip-lookup" href="' + escapeHtml(ipLookupUrl(ip)) + '" target="_blank" rel="noopener noreferrer" title="查询此 IP"><i class="fas fa-search"></i></a>'
+        + (suffix || '');
 }
 
 function detailTip(shown, total) {
@@ -1736,6 +2077,9 @@ function renderDetail(data) {
 
     document.getElementById('detailSubTip').textContent = detailTip(subLogs.length, data.sub_total);
     document.getElementById('detailAliveTip').textContent = detailTip(aliveIps.length, data.alive_total);
+    var deviceOnline = parseInt(data.device_online, 10) || 0;
+    var deviceLimit = parseInt(data.device_limit, 10) || 0;
+    document.getElementById('detailAliveDevice').textContent = '在线设备 ' + deviceOnline + ' / ' + (deviceLimit > 0 ? deviceLimit : '∞');
     document.getElementById('detailClearSubBtn').disabled = !(data.sub_total > 0);
     document.getElementById('detailClearAliveBtn').disabled = !(data.alive_total > 0);
 
@@ -1786,10 +2130,20 @@ function renderDetail(data) {
             var provinceKey = mainlandProvinceKey(row.province);
             var diff = !overseas && provinceKey !== '' && !subProvinceSet[provinceKey];
             var rowClass = overseas ? ' class="overseas-row"' : (diff ? ' class="province-diff-row"' : '');
+            var nodeNames = data.alive_node_names || {};
+            var ipTag = '';
+            if (row.alive_ip_node_id) {
+                var nodeName = nodeNames[String(row.alive_ip_node_id)];
+                ipTag = '<span class="node-ip-tag">（' + escapeHtml(nodeName || ('节点#' + row.alive_ip_node_id)) + '）</span>';
+            }
+            var ipHtml = detailIpCell(row.ip, ipTag);
+            var reportNode = row.node_id
+                ? (nodeNames[String(row.node_id)] || ('节点#' + row.node_id))
+                : '-';
             return '<tr' + rowClass + '>'
-                + '<td class="col-ip">' + detailIpCell(row.ip) + '</td>'
+                + '<td class="col-ip">' + ipHtml + '</td>'
                 + '<td class="col-region">' + escapeHtml(regionText(regionRow)) + '</td>'
-                + '<td class="col-node">' + escapeHtml(row.node_name || (row.node_id ? ('节点#' + row.node_id) : '-')) + '</td>'
+                + '<td class="col-node">' + escapeHtml(reportNode) + '</td>'
                 + '<td class="col-time">' + fmtTime(row.last_seen_at)
                     + (row.online ? '<span class="badge badge-online">实时在线</span>' : '') + '</td>'
                 + '<td class="col-actions"><a href="javascript:void(0)" class="danger-link" title="删除这条在线记录" onclick="deleteDetailRecord(\'alive\', ' + parseInt(row.id, 10) + ')"><i class="fas fa-trash"></i></a></td>'
@@ -2056,6 +2410,7 @@ document.getElementById('saveRuleBtn').addEventListener('click', function() {
 document.querySelectorAll('.tab-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
         var tab = this.getAttribute('data-tab');
+        if (tab === 'tabAlive') loadAliveData();
         if (tab === 'tabDistribution') loadDistribution();
         if (tab === 'tabDetail') initDetailTab();
         if (tab === 'tabRules') loadRules();
@@ -2639,6 +2994,21 @@ function initRiskDefinition() {
     if (riskDefInited) return;
     riskDefInited = true;
     document.getElementById('riskDefinitionBtn').addEventListener('click', openRiskRuleModal);
+    document.getElementById('riskIgnoreBtn').addEventListener('click', openRiskIgnoreModal);
+    document.getElementById('restoreAllIgnoreBtn').addEventListener('click', restoreAllIgnoredUsers);
+    document.getElementById('ignorePrevPage').addEventListener('click', function() {
+        if (ignoreState.current > 1) {
+            ignoreState.current--;
+            loadIgnoredUsers();
+        }
+    });
+    document.getElementById('ignoreNextPage').addEventListener('click', function() {
+        var totalPages = Math.ceil(ignoreState.total / ignoreState.pageSize);
+        if (ignoreState.current < totalPages) {
+            ignoreState.current++;
+            loadIgnoredUsers();
+        }
+    });
     document.getElementById('addRiskRuleBtn').addEventListener('click', addRiskRuleDraft);
     document.getElementById('riskRuleSaveBtn').addEventListener('click', saveRiskRuleSettings);
     document.getElementById('riskEditorConfirmBtn').addEventListener('click', confirmRiskEditor);
@@ -2650,6 +3020,123 @@ function initRiskDefinition() {
         }
         box.appendChild(createRiskGroup({ match: 'all', conditions: [] }));
         renumberRiskGroups(box);
+    });
+}
+
+var ignoreState = { current: 1, pageSize: 20, total: 0 };
+
+function openRiskIgnoreModal() {
+    ignoreState.current = 1;
+    document.getElementById('riskIgnoreModal').classList.add('show');
+    loadIgnoredUsers();
+}
+
+function closeRiskIgnoreModal() {
+    document.getElementById('riskIgnoreModal').classList.remove('show');
+}
+
+function loadIgnoredUsers() {
+    var body = document.getElementById('ignoreBody');
+    body.innerHTML = '<tr><td colspan="3"><div class="loading"><i class="fas fa-spinner"></i><p>加载中...</p></div></td></tr>';
+
+    var params = new URLSearchParams();
+    params.set('current', ignoreState.current);
+    params.set('pageSize', ignoreState.pageSize);
+
+    apiFetch(apiBase + '/user_portrait/ignoredUsers?' + params.toString())
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+            var data = res.data || [];
+            ignoreState.total = res.total || 0;
+
+            var totalPages = Math.ceil(ignoreState.total / ignoreState.pageSize) || 1;
+            if (ignoreState.current > totalPages) {
+                ignoreState.current = totalPages;
+                loadIgnoredUsers();
+                return;
+            }
+
+            if (!data.length) {
+                body.innerHTML = '<tr><td colspan="3"><div class="empty-state"><i class="fas fa-user-check"></i><p>暂无忽略用户</p></div></td></tr>';
+                updateIgnorePagination();
+                return;
+            }
+
+            body.innerHTML = data.map(function(row) {
+                return '<tr>'
+                    + '<td>' + escapeHtml(row.id) + '</td>'
+                    + '<td>' + escapeHtml(row.email || '-') + '</td>'
+                    + '<td><a href="javascript:void(0)" class="danger-link" onclick="restoreIgnoredUser(' + parseInt(row.id, 10) + ')"><i class="fas fa-rotate-left"></i>恢复</a></td>'
+                    + '</tr>';
+            }).join('');
+            updateIgnorePagination();
+        })
+        .catch(function() {
+            body.innerHTML = '<tr><td colspan="3"><div class="error-state"><i class="fas fa-exclamation-triangle"></i><p>加载失败</p></div></td></tr>';
+        });
+}
+
+function updateIgnorePagination() {
+    var pagination = document.getElementById('ignorePagination');
+    var totalPages = Math.ceil(ignoreState.total / ignoreState.pageSize) || 1;
+    document.getElementById('ignoreTotalInfo').textContent = '共 ' + ignoreState.total + ' 人';
+    document.getElementById('ignorePageNum').textContent = ignoreState.current + '/' + totalPages;
+
+    if (ignoreState.total <= ignoreState.pageSize) {
+        pagination.style.display = 'none';
+    } else {
+        pagination.style.display = 'flex';
+        document.getElementById('ignorePageInfo').textContent = '共 ' + ignoreState.total + ' 人';
+        document.getElementById('ignorePrevPage').disabled = ignoreState.current <= 1;
+        document.getElementById('ignoreNextPage').disabled = ignoreState.current >= totalPages;
+    }
+}
+
+function restoreIgnoredUser(userId) {
+    var params = new URLSearchParams();
+    params.set('user_id', userId);
+
+    apiFetch(apiBase + '/user_portrait/clearIgnoredUsers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString()
+    }).then(function(r) {
+        if (r.ok) return r.json();
+        return r.json().catch(function() { return {}; }).then(function(err) {
+            throw new Error(err.message || ('HTTP ' + r.status));
+        });
+    }).then(function() {
+        loadIgnoredUsers();
+        riskRulesPromise = null;
+        loadRiskData();
+    }).catch(function(err) {
+        alert('恢复失败：' + (err && err.message ? err.message : '请重试'));
+    });
+}
+
+function restoreAllIgnoredUsers() {
+    if (ignoreState.total <= 0) return;
+    if (!confirm('确认恢复全部被忽略的用户？')) return;
+
+    var params = new URLSearchParams();
+    params.set('all', '1');
+
+    apiFetch(apiBase + '/user_portrait/clearIgnoredUsers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString()
+    }).then(function(r) {
+        if (r.ok) return r.json();
+        return r.json().catch(function() { return {}; }).then(function(err) {
+            throw new Error(err.message || ('HTTP ' + r.status));
+        });
+    }).then(function() {
+        ignoreState.current = 1;
+        loadIgnoredUsers();
+        riskRulesPromise = null;
+        loadRiskData();
+    }).catch(function(err) {
+        alert('恢复失败：' + (err && err.message ? err.message : '请重试'));
     });
 }
 
@@ -2964,6 +3451,43 @@ document.addEventListener('DOMContentLoaded', function() {
         state.pageSize = parseInt(this.value);
         state.current = 1;
         loadLogData();
+    });
+
+    document.getElementById('aliveSearchBtn').addEventListener('click', function() {
+        aliveState.current = 1;
+        loadAliveData();
+    });
+    document.getElementById('aliveResetBtn').addEventListener('click', resetAliveFilters);
+    document.getElementById('aliveClearBtn').addEventListener('click', clearAliveLogs);
+    document.getElementById('aliveCountry').addEventListener('change', function() {
+        populateAliveRegionOptions();
+    });
+    document.getElementById('alivePrevPage').addEventListener('click', function() {
+        if (aliveState.current > 1) { aliveState.current--; loadAliveData(); }
+    });
+    document.getElementById('aliveNextPage').addEventListener('click', function() {
+        var totalPages = Math.ceil(aliveState.total / aliveState.pageSize);
+        if (aliveState.current < totalPages) { aliveState.current++; loadAliveData(); }
+    });
+    document.getElementById('alivePageSize').addEventListener('change', function() {
+        aliveState.pageSize = parseInt(this.value, 10);
+        aliveState.current = 1;
+        loadAliveData();
+    });
+    document.querySelectorAll('.alive-sortable').forEach(function(th) {
+        th.addEventListener('click', function() {
+            var key = this.getAttribute('data-sort');
+            if (aliveState.sort === key) {
+                aliveState.sortType = aliveState.sortType === 'DESC' ? 'ASC' : 'DESC';
+            } else {
+                aliveState.sort = key;
+                aliveState.sortType = 'DESC';
+            }
+            document.querySelectorAll('.alive-sortable').forEach(function(t) { t.classList.remove('active'); });
+            this.classList.add('active');
+            aliveState.current = 1;
+            loadAliveData();
+        });
     });
 
     document.getElementById('riskSearchBtn').addEventListener('click', function() {

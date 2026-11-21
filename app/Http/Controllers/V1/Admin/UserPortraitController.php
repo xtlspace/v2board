@@ -10,11 +10,13 @@ use App\Services\RiskService;
 use App\Services\UserDistributionService;
 use App\Utils\ConfigCache;
 use App\Utils\IPLocation;
+use App\Utils\IpNormalizer;
 use App\Utils\OnlineIp\ProviderRegistry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class UserPortraitController extends Controller
 {
@@ -564,6 +566,31 @@ class UserPortraitController extends Controller
         foreach ($aliveIps as $row) {
             $packed = $this->normalizeIpForCompare($row->ip);
             $row->online = $packed !== null && isset($onlineIps[$packed]);
+            if (!isset($row->alive_ip_node_id)) {
+                $row->alive_ip_node_id = null;
+            }
+            if (!isset($row->node_id)) {
+                $row->node_id = null;
+            }
+        }
+
+        $aliveNodeIdSet = [];
+        foreach ($aliveIps as $row) {
+            if (!empty($row->alive_ip_node_id)) {
+                $aliveNodeIdSet[(int) $row->alive_ip_node_id] = true;
+            }
+            if (!empty($row->node_id)) {
+                $aliveNodeIdSet[(int) $row->node_id] = true;
+            }
+        }
+        $aliveNodeNames = [];
+        if (!empty($aliveNodeIdSet)) {
+            $names = DB::table('v2_server_v2node')
+                ->whereIn('id', array_keys($aliveNodeIdSet))
+                ->pluck('name', 'id');
+            foreach ($names as $id => $name) {
+                $aliveNodeNames[(string) $id] = (string) $name;
+            }
         }
 
         $planName = null;
@@ -584,6 +611,12 @@ class UserPortraitController extends Controller
         } catch (\Exception $e) {
             // IP 归属地解析失败不影响详情
         }
+
+        $deviceOnline = 0;
+        if (is_array($aliveCache) && isset($aliveCache['alive_ip'])) {
+            $deviceOnline = (int) $aliveCache['alive_ip'];
+        }
+        $deviceLimit = isset($user->device_limit) ? (int) $user->device_limit : 0;
 
         return response([
             'data' => [
@@ -611,6 +644,9 @@ class UserPortraitController extends Controller
                     ->pluck('ip_region')
                     ->all(),
                 'alive_ips' => $aliveIps,
+                'alive_node_names' => $aliveNodeNames,
+                'device_online' => $deviceOnline,
+                'device_limit' => $deviceLimit,
                 'alive_total' => $aliveTotal,
                 'alive_provinces' => DB::table('v2_alive_ip_history')
                     ->where('user_id', $userId)
@@ -625,25 +661,7 @@ class UserPortraitController extends Controller
 
     private function normalizeIpForCompare($ip): ?string
     {
-        $ip = trim((string) $ip);
-        if ($ip === '') {
-            return null;
-        }
-        if (preg_match('/^\[([^\]]+)\](?::\d+)?$/', $ip, $matches)) {
-            $ip = $matches[1];
-        }
-        $ip = preg_replace('/%.*$/', '', $ip);
-        if (preg_match('/^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/', $ip, $matches)) {
-            $ip = $matches[1];
-        }
-        if (stripos($ip, '::ffff:') === 0) {
-            $v4 = substr($ip, 7);
-            if (filter_var($v4, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
-                $ip = $v4;
-            }
-        }
-        $packed = @inet_pton($ip);
-        return $packed === false ? null : $packed;
+        return IpNormalizer::packed($ip);
     }
 
     public function getFilterOptions(Request $request)
@@ -683,10 +701,49 @@ class UserPortraitController extends Controller
             }
         }
 
+        $aliveMainlandRegions = DB::table('v2_alive_ip_history')
+            ->where('country', '中国')
+            ->whereNotNull('province')
+            ->where('province', '!=', '')
+            ->whereNotIn('province', ['香港', '澳门', '台湾'])
+            ->distinct()->orderBy('province')->pluck('province')->all();
+
+        $aliveOtherRegions = [];
+        $aliveCountries = DB::table('v2_alive_ip_history')
+            ->whereNotNull('country')
+            ->where('country', '!=', '')
+            ->where('country', '!=', '中国')
+            ->distinct()->orderBy('country')->pluck('country')->all();
+        foreach ($aliveCountries as $country) {
+            $aliveOtherRegions[] = [
+                'value' => 'country:' . $country,
+                'label' => $country,
+            ];
+        }
+        $aliveSpecial = DB::table('v2_alive_ip_history')
+            ->where('country', '中国')
+            ->whereIn('province', ['香港', '澳门', '台湾'])
+            ->distinct()->pluck('province')->all();
+        foreach (['香港', '澳门', '台湾'] as $region) {
+            if (in_array($region, $aliveSpecial, true)) {
+                $aliveOtherRegions[] = [
+                    'value' => 'region:' . $region,
+                    'label' => $specialLabels[$region],
+                ];
+            }
+        }
+
+        $nodes = DB::table('v2_server_v2node')
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
         return response([
             'data' => [
                 'mainland_regions' => $mainlandRegions,
                 'other_regions' => $otherRegions,
+                'alive_mainland_regions' => $aliveMainlandRegions,
+                'alive_other_regions' => $aliveOtherRegions,
+                'nodes' => $nodes,
             ]
         ]);
     }
@@ -861,6 +918,53 @@ class UserPortraitController extends Controller
         ]]);
     }
 
+    public function ignoredUsers(Request $request)
+    {
+        $current = max(1, (int) $request->input('current', 1));
+        $pageSize = (int) $request->input('pageSize', 20);
+        if ($pageSize < 10) {
+            $pageSize = 10;
+        }
+        if ($pageSize > 100) {
+            $pageSize = 100;
+        }
+
+        try {
+            $builder = DB::table('v2_user')->where('risk_ignore', 1);
+            $total = (clone $builder)->count();
+            $rows = $builder->orderByDesc('id')
+                ->forPage($current, $pageSize)
+                ->get(['id', 'email']);
+        } catch (\Throwable $e) {
+            return response(['data' => [], 'total' => 0]);
+        }
+
+        return response(['data' => $rows, 'total' => $total]);
+    }
+
+    public function clearIgnoredUsers(Request $request)
+    {
+        $all = (int) $request->input('all', 0) === 1;
+        $userId = (int) $request->input('user_id', 0);
+        if (!$all && $userId <= 0) {
+            abort(500, '参数错误');
+        }
+
+        try {
+            $query = DB::table('v2_user')->where('risk_ignore', 1);
+            if (!$all) {
+                $query->where('id', $userId);
+            }
+            $count = $query->update(['risk_ignore' => 0]);
+        } catch (\Throwable $e) {
+            abort(500, '更新失败，请先执行数据库更新以添加 risk_ignore 字段');
+        }
+
+        Cache::forever('risk_ignore_version', microtime(true));
+
+        return response(['data' => true, 'count' => $count]);
+    }
+
     private function clearRiskNotifyState(int $userId): void
     {
         $state = Cache::get('risk_notify_state', []);
@@ -893,13 +997,17 @@ class UserPortraitController extends Controller
 
         $data = Cache::remember($cacheKey, 60, function () use ($range, $seconds) {
             $since = time() - $seconds;
-            $query = function () use ($since) {
+            $excludeNodeIp = Schema::hasColumn('v2_alive_ip_history', 'alive_ip_node_id');
+            $query = function () use ($since, $excludeNodeIp) {
                 return DB::table('v2_alive_ip_history')
                     ->where('last_seen_at', '>=', $since)
                     ->where('country', 'like', '%中国%')
                     ->whereNotNull('province')
                     ->where('province', '!=', '')
-                    ->whereNotIn('province', ['香港', '澳门', '台湾']);
+                    ->whereNotIn('province', ['香港', '澳门', '台湾'])
+                    ->when($excludeNodeIp, function ($builder) {
+                        $builder->whereNull('alive_ip_node_id');
+                    });
             };
 
             $totalRow = $query()
@@ -1012,6 +1120,74 @@ class UserPortraitController extends Controller
         ]);
     }
 
+    public function fetchAlive(Request $request)
+    {
+        $current = max(1, (int) $request->input('current', 1));
+        $pageSize = (int) $request->input('pageSize', 10);
+        if ($pageSize < 10) {
+            $pageSize = 10;
+        }
+        if ($pageSize > 100) {
+            $pageSize = 100;
+        }
+        $sortType = in_array($request->input('sort_type'), ['ASC', 'DESC']) ? $request->input('sort_type') : 'DESC';
+        $sortWhitelist = [
+            'id', 'user_id', 'ip', 'country', 'province', 'provider',
+            'node_id', 'alive_ip_node_id', 'last_seen_at',
+        ];
+        $sort = in_array($request->input('sort'), $sortWhitelist, true) ? $request->input('sort') : 'last_seen_at';
+
+        $builder = DB::table('v2_alive_ip_history')->orderBy($sort, $sortType);
+        $this->applyAliveFilters($request, $builder);
+
+        $total = (clone $builder)->count();
+        $rows = $builder->forPage($current, $pageSize)->get();
+
+        $nodeIds = [];
+        foreach ($rows as $row) {
+            if (!empty($row->node_id)) {
+                $nodeIds[(int) $row->node_id] = true;
+            }
+            if (isset($row->alive_ip_node_id) && !empty($row->alive_ip_node_id)) {
+                $nodeIds[(int) $row->alive_ip_node_id] = true;
+            }
+        }
+        $nodeNames = [];
+        if (!empty($nodeIds)) {
+            $nodeNames = DB::table('v2_server_v2node')
+                ->whereIn('id', array_keys($nodeIds))
+                ->pluck('name', 'id');
+        }
+
+        foreach ($rows as $row) {
+            $nodeId = !empty($row->node_id) ? (int) $row->node_id : 0;
+            $row->node_name = $nodeId > 0
+                ? ($nodeNames[$nodeId] ?? ('节点#' . $nodeId))
+                : '';
+
+            $aliveNodeId = isset($row->alive_ip_node_id) ? (int) $row->alive_ip_node_id : 0;
+            $row->alive_ip_node_id = $aliveNodeId > 0 ? $aliveNodeId : null;
+            $row->alive_ip_node_name = $aliveNodeId > 0
+                ? ($nodeNames[$aliveNodeId] ?? ('节点#' . $aliveNodeId))
+                : '';
+        }
+
+        return response(['data' => $rows, 'total' => $total]);
+    }
+
+    public function clearAliveLogs(Request $request)
+    {
+        $builder = DB::table('v2_alive_ip_history');
+        $this->applyAliveFilters($request, $builder);
+        $count = $builder->delete();
+
+        foreach (['1h', '1d', '7d', '30d'] as $range) {
+            Cache::forget('user_portrait_distribution|' . $range);
+        }
+
+        return response(['data' => true, 'count' => $count]);
+    }
+
     private function applyFilters(Request $request, $builder)
     {
         if ($request->filled('date_range')) {
@@ -1091,6 +1267,92 @@ class UserPortraitController extends Controller
         }
         if ($request->filled('ip_isp')) {
             $builder->where('ip_isp', 'like', '%' . $request->input('ip_isp') . '%');
+        }
+    }
+
+    private function applyAliveFilters(Request $request, $builder)
+    {
+        if ($request->filled('date_range')) {
+            $range = $request->input('date_range');
+            if ($range === 'today') {
+                $builder->where('last_seen_at', '>=', strtotime('today'));
+            } elseif ($range === '7d') {
+                $builder->where('last_seen_at', '>=', strtotime('-7 days'));
+            } elseif ($range === '30d') {
+                $builder->where('last_seen_at', '>=', strtotime('-30 days'));
+            }
+        }
+        if ($request->filled('user_id')) {
+            $userId = $request->input('user_id');
+            if (preg_match('/^(>=|<=|>|<)(\d+)$/', $userId, $m)) {
+                $builder->where('user_id', $m[1], (int) $m[2]);
+            } else {
+                $builder->where('user_id', (int) $userId);
+            }
+        }
+        if ($request->filled('ip')) {
+            $builder->where('ip', 'like', '%' . $request->input('ip') . '%');
+        }
+
+        $countryGroup = $request->input('country_group');
+        $countryGroup = is_string($countryGroup) ? $countryGroup : null;
+        $area = $request->input('area', '');
+        $area = is_string($area) ? $area : '';
+        if ($countryGroup === 'mainland') {
+            $builder->where('country', '中国')
+                ->whereNotNull('province')
+                ->where('province', '!=', '')
+                ->whereNotIn('province', ['香港', '澳门', '台湾']);
+            if ($area !== '') {
+                $builder->where('province', $area);
+            }
+        } elseif ($countryGroup === 'other') {
+            $builder->where(function ($query) {
+                $query->where(function ($q) {
+                    $q->whereNotNull('country')
+                        ->where('country', '!=', '')
+                        ->where('country', '!=', '中国');
+                })->orWhere(function ($q) {
+                    $q->where('country', '中国')
+                        ->whereIn('province', ['香港', '澳门', '台湾']);
+                });
+            });
+            if ($area !== '') {
+                if (str_starts_with($area, 'region:')) {
+                    $builder->where('country', '中国')
+                        ->where('province', substr($area, 7));
+                } else {
+                    $country = str_starts_with($area, 'country:') ? substr($area, 8) : $area;
+                    $builder->where('country', $country);
+                }
+            }
+        } else {
+            if ($request->filled('ip_country')) {
+                $builder->where('country', $request->input('ip_country'));
+            }
+            if ($request->filled('ip_region')) {
+                $builder->where('province', $request->input('ip_region'));
+            }
+        }
+
+        if ($request->filled('ip_city')) {
+            $builder->where('city', 'like', '%' . $request->input('ip_city') . '%');
+        }
+        if ($request->filled('ip_isp')) {
+            $builder->where('isp', 'like', '%' . $request->input('ip_isp') . '%');
+        }
+        if ($request->filled('node_id')) {
+            $builder->where('node_id', (int) $request->input('node_id'));
+        }
+
+        $ipKind = (string) $request->input('ip_kind', '');
+        if (in_array($ipKind, ['user', 'node'], true)
+            && Schema::hasColumn('v2_alive_ip_history', 'alive_ip_node_id')) {
+            if ($ipKind === 'node') {
+                $builder->whereNotNull('alive_ip_node_id');
+            } else {
+                $builder->whereNull('alive_ip_node_id');
+            }
         }
     }
 }

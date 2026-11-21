@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Utils\IPLocation;
+use App\Utils\IpNormalizer;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -23,7 +24,7 @@ class UserDistributionService
         '新疆维吾尔自治区' => '新疆',
     ];
 
-    public function record(array $data, ?int $nodeId = null, ?string $nodeName = null): void
+    public function record(array $data, ?int $nodeId = null, array $nodeIpNodeIds = []): void
     {
         $now = time();
         $rows = [];
@@ -47,6 +48,8 @@ class UserDistributionService
                     continue;
                 }
 
+                $aliveIpNodeId = isset($nodeIpNodeIds[$ip]) ? (int) $nodeIpNodeIds[$ip] : null;
+
                 $rows[] = [
                     'user_id' => $userId,
                     'ip' => $ip,
@@ -56,7 +59,7 @@ class UserDistributionService
                     'isp' => $info['isp'],
                     'provider' => $info['provider'],
                     'node_id' => $nodeId,
-                    'node_name' => $nodeName,
+                    'alive_ip_node_id' => $aliveIpNodeId,
                     'last_seen_at' => $now,
                     'created_at' => $now,
                     'updated_at' => $now,
@@ -68,7 +71,7 @@ class UserDistributionService
             DB::table('v2_alive_ip_history')->upsert(
                 $chunk,
                 ['user_id', 'ip'],
-                ['country', 'province', 'city', 'isp', 'provider', 'node_id', 'node_name', 'last_seen_at', 'updated_at']
+                ['country', 'province', 'city', 'isp', 'provider', 'node_id', 'alive_ip_node_id', 'last_seen_at', 'updated_at']
             );
         }
 
@@ -89,15 +92,7 @@ class UserDistributionService
             return null;
         }
         $ip = explode('_', (string) $value)[0];
-        $ip = trim($ip);
-        if (preg_match('/^\[(.+)\]$/', $ip, $matches)) {
-            $ip = $matches[1];
-        }
-        $ip = preg_replace('/%.*$/', '', $ip);
-        if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
-            return null;
-        }
-        return $ip;
+        return IpNormalizer::canonical($ip);
     }
 
     private function resolveLocation(string $ip, IPLocation $location): ?array

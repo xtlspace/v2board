@@ -198,20 +198,32 @@ class RiskService
             ->groupBy('user_id')
             ->get();
 
-        $aliveRows = DB::table('v2_alive_ip_history')
-            ->select('user_id')
-            ->selectRaw("GROUP_CONCAT(DISTINCT province SEPARATOR ',') AS regions")
-            ->selectRaw("GROUP_CONCAT(DISTINCT country SEPARATOR ',') AS countries")
-            ->selectRaw("GROUP_CONCAT(DISTINCT isp SEPARATOR ',') AS isps")
-            ->selectRaw('MAX(last_seen_at) AS last_seen_at')
-            ->when($since > 0, function ($query) use ($since) {
-                $query->where('last_seen_at', '>=', $since);
-            })
-            ->when(!empty($userIds), function ($query) use ($userIds) {
-                $query->whereIn('user_id', $userIds);
-            })
-            ->groupBy('user_id')
-            ->get();
+        $aliveQuery = function (bool $excludeNodeIp) use ($since, $userIds) {
+            return DB::table('v2_alive_ip_history')
+                ->select('user_id')
+                ->selectRaw("GROUP_CONCAT(DISTINCT province SEPARATOR ',') AS regions")
+                ->selectRaw("GROUP_CONCAT(DISTINCT country SEPARATOR ',') AS countries")
+                ->selectRaw("GROUP_CONCAT(DISTINCT isp SEPARATOR ',') AS isps")
+                ->selectRaw('MAX(last_seen_at) AS last_seen_at')
+                ->when($since > 0, function ($query) use ($since) {
+                    $query->where('last_seen_at', '>=', $since);
+                })
+                ->when(!empty($userIds), function ($query) use ($userIds) {
+                    $query->whereIn('user_id', $userIds);
+                })
+                ->when($excludeNodeIp, function ($query) {
+                    $query->whereNull('alive_ip_node_id');
+                })
+                ->groupBy('user_id')
+                ->get();
+        };
+
+        try {
+            $aliveRows = $aliveQuery(true);
+        } catch (\Throwable $e) {
+            // 未执行数据库迁移时降级为不过滤
+            $aliveRows = $aliveQuery(false);
+        }
 
         $blank = [
             'sub_regions_raw' => [],
