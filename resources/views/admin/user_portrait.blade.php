@@ -2129,7 +2129,9 @@ function renderDetail(data) {
             var overseas = isOverseasLocation(row.country, row.province);
             var provinceKey = mainlandProvinceKey(row.province);
             var diff = !overseas && provinceKey !== '' && !subProvinceSet[provinceKey];
-            var rowClass = overseas ? ' class="overseas-row"' : (diff ? ' class="province-diff-row"' : '');
+            var rowClass = row.alive_ip_node_id
+                ? ''
+                : (overseas ? ' class="overseas-row"' : (diff ? ' class="province-diff-row"' : ''));
             var nodeNames = data.alive_node_names || {};
             var ipTag = '';
             if (row.alive_ip_node_id) {
