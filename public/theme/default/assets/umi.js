@@ -32445,10 +32445,25 @@
         class g extends f.a.Component {
             constructor(e) {
                 super(e),
-                this.state = {}
+                this.state = {
+                    dialerProxyEnabled: false
+                }
             }
             componentDidMount() {
-                this.fetchData()
+                this.fetchData(),
+                this.fetchDialerProxyStatus()
+            }
+            fetchDialerProxyStatus() {
+                var token = window.localStorage.getItem("authorization");
+                if (!token) return;
+                var host = window.settings.host || window.location.origin;
+                fetch(host + "/api/v1/user/dialerProxy", {
+                    headers: { authorization: token }
+                }).then(r=>r.json()).then(res=>{
+                    if (res && res.data && res.data.enabled) {
+                        this.setState({ dialerProxyEnabled: true })
+                    }
+                }).catch(()=>{})
             }
             fetchData() {
                 this.props.dispatch({
@@ -32554,7 +32569,12 @@
                     scroll: {
                         x: 900
                     }
-                }))) : f.a.createElement("div", {
+                }), this.state.dialerProxyEnabled ? f.a.createElement("div", {
+                    className: "p-3 text-center"
+                }, f.a.createElement("a", {
+                    className: "btn btn-primary",
+                    href: "/dialer-proxy"
+                }, "\u94fe\u5f0f\u4ee3\u7406")) : null)) : f.a.createElement("div", {
                     className: "alert alert-dark",
                     role: "alert"
                 }, f.a.createElement("p", {

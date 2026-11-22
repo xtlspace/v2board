@@ -3,6 +3,7 @@
 namespace App\Protocols;
 
 use App\Utils\Helper;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\Yaml\Yaml;
 
 class ClashMeta
@@ -22,7 +23,6 @@ class ClashMeta
     {
         $servers = $this->servers;
         $user = $this->user;
-        $dialerProxy = trim(str_replace(["\r", "\n"], '', (string) config('v2board.clash_dialer_proxy', '')));
         $appName = config('v2board.app_name', 'V2Board');
         header("subscription-userinfo: upload={$user['u']}; download={$user['d']}; total={$user['transfer_enable']}; expire={$user['expired_at']}");
         header('profile-update-interval: 24');
@@ -44,19 +44,11 @@ class ClashMeta
             }
             switch ($item['type']) {
                 case 'shadowsocks':
-                    $node = self::buildShadowsocks($user['uuid'], $item);
-                    if ($dialerProxy !== '') {
-                        $node['dialer-proxy'] = $dialerProxy;
-                    }
-                    $proxy[] = $node;
+                    $proxy[] = self::buildShadowsocks($user['uuid'], $item);
                     $proxies[] = $item['name'];
                     break;
                 case 'vless':
-                    $node = self::buildVless($user['uuid'], $item);
-                    if ($dialerProxy !== '') {
-                        $node['dialer-proxy'] = $dialerProxy;
-                    }
-                    $proxy[] = $node;
+                    $proxy[] = self::buildVless($user['uuid'], $item);
                     $proxies[] = $item['name'];
                     break;
                 case 'tuic':
@@ -64,11 +56,7 @@ class ClashMeta
                     $proxies[] = $item['name'];
                     break;
                 case 'anytls':
-                    $node = self::buildAnyTLS($user['uuid'], $item);
-                    if ($dialerProxy !== '') {
-                        $node['dialer-proxy'] = $dialerProxy;
-                    }
-                    $proxy[] = $node;
+                    $proxy[] = self::buildAnyTLS($user['uuid'], $item);
                     $proxies[] = $item['name'];
                     break;
                 case 'hysteria':
@@ -80,6 +68,46 @@ class ClashMeta
                     $proxies[] = $item['name'];
                     break;
             }
+        }
+
+        $dialerRules = [];
+        if ((int) config('v2board.dialer_proxy_enable', 0) === 1) {
+            $userId = (int) ($user['id'] ?? 0);
+            if ($userId > 0) {
+                $rules = [];
+                try {
+                    $rules = DB::table('v2_user_dialer_proxy')
+                        ->where('user_id', $userId)
+                        ->get(['in_node_id', 'out_node_id']);
+                } catch (\Throwable $e) {
+                    $rules = [];
+                }
+                if (count($rules) > 0) {
+                    $nodeIds = [];
+                    foreach ($rules as $rule) {
+                        $nodeIds[(int) $rule->in_node_id] = true;
+                        $nodeIds[(int) $rule->out_node_id] = true;
+                    }
+                    $names = DB::table('v2_server_v2node')
+                        ->whereIn('id', array_keys($nodeIds))
+                        ->pluck('name', 'id');
+                    foreach ($rules as $rule) {
+                        $inName = $names[(int) $rule->in_node_id] ?? null;
+                        $outName = $names[(int) $rule->out_node_id] ?? null;
+                        if ($inName && $outName && in_array($inName, $proxies, true)) {
+                            $dialerRules[$outName] = $inName;
+                        }
+                    }
+                }
+            }
+        }
+        if (!empty($dialerRules)) {
+            foreach ($proxy as &$node) {
+                if (isset($dialerRules[$node['name']]) && in_array($node['type'], ['ss', 'vless', 'anytls'], true)) {
+                    $node['dialer-proxy'] = $dialerRules[$node['name']];
+                }
+            }
+            unset($node);
         }
 
 	#$config['proxies'] = array_merge($config['proxies'] ? $config['proxies'] : [], $proxy);

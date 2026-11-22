@@ -284,6 +284,8 @@ CREATE TABLE `v2_server_v2node` (
                                     `obfs` varchar(64) DEFAULT NULL COMMENT 'hysteria1混淆密码/hysteria2混淆类型',
                                     `obfs_password` varchar(255) DEFAULT NULL COMMENT 'hysteria2混淆密码',
                                     `padding_scheme` text COMMENT 'anytls填充配置',
+                                    `dialer_proxy_in` tinyint(1) NOT NULL DEFAULT '0',
+                                    `dialer_proxy_out` tinyint(1) NOT NULL DEFAULT '0',
                                     `created_at` int(11) NOT NULL,
                                     `updated_at` int(11) NOT NULL,
                                     PRIMARY KEY (`id`)
@@ -392,6 +394,19 @@ CREATE TABLE `v2_alive_ip_history` (
 
 
 DROP TABLE IF EXISTS `v2_sub_rule`;
+CREATE TABLE IF NOT EXISTS `v2_user_dialer_proxy` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `in_node_id` int(11) NOT NULL,
+  `out_node_id` int(11) NOT NULL,
+  `created_at` int(11) NOT NULL,
+  `updated_at` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_user_out` (`user_id`,`out_node_id`),
+  KEY `idx_user` (`user_id`),
+  KEY `idx_in_node` (`in_node_id`),
+  KEY `idx_out_node` (`out_node_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE TABLE `v2_sub_rule` (
                              `id` int(11) NOT NULL AUTO_INCREMENT,
                              `remark` varchar(255) NOT NULL,

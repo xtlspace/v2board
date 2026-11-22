@@ -765,3 +765,23 @@ DEALLOCATE PREPARE drop_alive_node_name_stmt;
 
 -- 在线记录中节点 IP 所属节点
 ALTER TABLE `v2_alive_ip_history` ADD COLUMN `alive_ip_node_id` int(11) DEFAULT NULL;
+
+-- 链式代理：节点入口/出口标记
+ALTER TABLE `v2_server_v2node`
+  ADD COLUMN `dialer_proxy_in` tinyint(1) NOT NULL DEFAULT '0',
+  ADD COLUMN `dialer_proxy_out` tinyint(1) NOT NULL DEFAULT '0';
+
+-- 链式代理：用户规则
+CREATE TABLE IF NOT EXISTS `v2_user_dialer_proxy` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `in_node_id` int(11) NOT NULL,
+  `out_node_id` int(11) NOT NULL,
+  `created_at` int(11) NOT NULL,
+  `updated_at` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_user_out` (`user_id`,`out_node_id`),
+  KEY `idx_user` (`user_id`),
+  KEY `idx_in_node` (`in_node_id`),
+  KEY `idx_out_node` (`out_node_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -5959,14 +5959,11 @@
                     checked: parseInt(r.allow_new_period),
                     onChange: e=>this.set("subscribe", "allow_new_period", e ? 1 : 0)
                 })), f.a.createElement(m, {
-                    title: "启用链式加速",
-                    description: "填写Mihomo的dialer-proxy代理组名称，仅TCP协议支持，需提前修改Clash配置文件"
-                }, f.a.createElement("input", {
-                    type: "text",
-                    className: "form-control",
-                    placeholder: "为空时不启用",
-                    defaultValue: r.clash_dialer_proxy,
-                    onChange: e=>this.set("subscribe", "clash_dialer_proxy", e.target.value)
+                    title: "启用链式代理",
+                    description: "开启后用户可在节点状态页配置链式代理入口/出口，仅Mihomo内核可用"
+                }, f.a.createElement(l["a"], {
+                    checked: parseInt(r.dialer_proxy_enable),
+                    onChange: e=>this.set("subscribe", "dialer_proxy_enable", e ? 1 : 0)
                 })), f.a.createElement(m, {
                     title: "\u5f53\u8ba2\u9605\u65b0\u8d2d\u65f6\u89e6\u53d1\u4e8b\u4ef6",
                     description: "\u65b0\u8d2d\u8ba2\u9605\u5b8c\u6210\u65f6\u5c06\u89e6\u53d1\u8be5\u4efb\u52a1\u3002"
@@ -100663,6 +100660,20 @@
                 ))), y.a.createElement("div", {
                     className: "row"
                 }, y.a.createElement("div", {
+                    className: "form-group col-md-6 col-xs-12"
+                }, y.a.createElement("label", null, "\u94fe\u5f0f\u4ee3\u7406\u5165\u53e3"), y.a.createElement("div", null, y.a.createElement("input", {
+                    type: "checkbox",
+                    checked: !!parseInt(e.dialer_proxy_in),
+                    onChange: e=>this.formChange("dialer_proxy_in", e.target.checked ? 1 : 0)
+                }), " \u5141\u8bb8\u4f5c\u4e3a\u5165\u53e3")), y.a.createElement("div", {
+                    className: "form-group col-md-6 col-xs-12"
+                }, y.a.createElement("label", null, "\u94fe\u5f0f\u4ee3\u7406\u51fa\u53e3"), y.a.createElement("div", null, y.a.createElement("input", {
+                    type: "checkbox",
+                    checked: !!parseInt(e.dialer_proxy_out),
+                    onChange: e=>this.formChange("dialer_proxy_out", e.target.checked ? 1 : 0)
+                }), " \u5141\u8bb8\u4f5c\u4e3a\u51fa\u53e3"))), y.a.createElement("div", {
+                    className: "row"
+                }, y.a.createElement("div", {
                     className: "form-group col-md-3 col-xs-12"
                 }, y.a.createElement("label", null, "HYSTERIA\u7248\u672c"), y.a.createElement(N["a"], {
                     value: parseInt(e.version) ? parseInt(e.version) : 1,
@@ -101360,6 +101371,20 @@
                 ))), y.a.createElement("div", {
                     className: "row"
                 }, y.a.createElement("div", {
+                    className: "form-group col-md-6 col-xs-12"
+                }, y.a.createElement("label", null, "\u94fe\u5f0f\u4ee3\u7406\u5165\u53e3"), y.a.createElement("div", null, y.a.createElement("input", {
+                    type: "checkbox",
+                    checked: !!parseInt(e.dialer_proxy_in),
+                    onChange: e=>this.formChange("dialer_proxy_in", e.target.checked ? 1 : 0)
+                }), " \u5141\u8bb8\u4f5c\u4e3a\u5165\u53e3")), y.a.createElement("div", {
+                    className: "form-group col-md-6 col-xs-12"
+                }, y.a.createElement("label", null, "\u94fe\u5f0f\u4ee3\u7406\u51fa\u53e3"), y.a.createElement("div", null, y.a.createElement("input", {
+                    type: "checkbox",
+                    checked: !!parseInt(e.dialer_proxy_out),
+                    onChange: e=>this.formChange("dialer_proxy_out", e.target.checked ? 1 : 0)
+                }), " \u5141\u8bb8\u4f5c\u4e3a\u51fa\u53e3"))), y.a.createElement("div", {
+                    className: "row"
+                }, y.a.createElement("div", {
                     className: "form-group col-md-8 col-xs-12"
                 }, y.a.createElement("label", null, "\u8282\u70b9\u5730\u5740"), y.a.createElement(s["a"], {
                     placeholder: "\u8bf7\u8f93\u5165\u8fde\u63a5\u5730\u5740",
@@ -101652,6 +101677,20 @@
                     },
                     e.name)
                 }))), y.a.createElement("div", {
+                    className: "row"
+                }, y.a.createElement("div", {
+                    className: "form-group col-md-6 col-xs-12"
+                }, y.a.createElement("label", null, "\u94fe\u5f0f\u4ee3\u7406\u5165\u53e3"), y.a.createElement("div", null, y.a.createElement("input", {
+                    type: "checkbox",
+                    checked: !!parseInt(e.dialer_proxy_in),
+                    onChange: e=>this.formChange("dialer_proxy_in", e.target.checked ? 1 : 0)
+                }), " \u5141\u8bb8\u4f5c\u4e3a\u5165\u53e3")), y.a.createElement("div", {
+                    className: "form-group col-md-6 col-xs-12"
+                }, y.a.createElement("label", null, "\u94fe\u5f0f\u4ee3\u7406\u51fa\u53e3"), y.a.createElement("div", null, y.a.createElement("input", {
+                    type: "checkbox",
+                    checked: !!parseInt(e.dialer_proxy_out),
+                    onChange: e=>this.formChange("dialer_proxy_out", e.target.checked ? 1 : 0)
+                }), " \u5141\u8bb8\u4f5c\u4e3a\u51fa\u53e3"))), y.a.createElement("div", {
                     className: "row"
                 },
                 y.a.createElement("div", {
@@ -102021,6 +102060,20 @@
                     },
                     e.name)
                 }))), y.a.createElement("div", {
+                    className: "row"
+                }, y.a.createElement("div", {
+                    className: "form-group col-md-6 col-xs-12"
+                }, y.a.createElement("label", null, "\u94fe\u5f0f\u4ee3\u7406\u5165\u53e3"), y.a.createElement("div", null, y.a.createElement("input", {
+                    type: "checkbox",
+                    checked: !!parseInt(e.dialer_proxy_in),
+                    onChange: e=>this.formChange("dialer_proxy_in", e.target.checked ? 1 : 0)
+                }), " \u5141\u8bb8\u4f5c\u4e3a\u5165\u53e3")), y.a.createElement("div", {
+                    className: "form-group col-md-6 col-xs-12"
+                }, y.a.createElement("label", null, "\u94fe\u5f0f\u4ee3\u7406\u51fa\u53e3"), y.a.createElement("div", null, y.a.createElement("input", {
+                    type: "checkbox",
+                    checked: !!parseInt(e.dialer_proxy_out),
+                    onChange: e=>this.formChange("dialer_proxy_out", e.target.checked ? 1 : 0)
+                }), " \u5141\u8bb8\u4f5c\u4e3a\u51fa\u53e3"))), y.a.createElement("div", {
                     className: "row"
                 },
                 y.a.createElement("div", {
@@ -102449,6 +102502,20 @@
                     },
                     e.name)
                 }))), y.a.createElement("div", {
+                    className: "row"
+                }, y.a.createElement("div", {
+                    className: "form-group col-md-6 col-xs-12"
+                }, y.a.createElement("label", null, "\u94fe\u5f0f\u4ee3\u7406\u5165\u53e3"), y.a.createElement("div", null, y.a.createElement("input", {
+                    type: "checkbox",
+                    checked: !!parseInt(e.dialer_proxy_in),
+                    onChange: e=>this.formChange("dialer_proxy_in", e.target.checked ? 1 : 0)
+                }), " \u5141\u8bb8\u4f5c\u4e3a\u5165\u53e3")), y.a.createElement("div", {
+                    className: "form-group col-md-6 col-xs-12"
+                }, y.a.createElement("label", null, "\u94fe\u5f0f\u4ee3\u7406\u51fa\u53e3"), y.a.createElement("div", null, y.a.createElement("input", {
+                    type: "checkbox",
+                    checked: !!parseInt(e.dialer_proxy_out),
+                    onChange: e=>this.formChange("dialer_proxy_out", e.target.checked ? 1 : 0)
+                }), " \u5141\u8bb8\u4f5c\u4e3a\u51fa\u53e3"))), y.a.createElement("div", {
                     className: "row"
                 },
                 y.a.createElement("div", {

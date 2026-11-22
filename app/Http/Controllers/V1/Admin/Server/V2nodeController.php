@@ -5,6 +5,7 @@ namespace App\Http\Controllers\V1\Admin\Server;
 use App\Http\Controllers\Controller;
 use App\Models\ServerV2node;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use ParagonIE_Sodium_Compat as SodiumCompat;
 use App\Utils\Helper;
 
@@ -43,6 +44,8 @@ class V2nodeController extends Controller
             'rate' => 'required',
             'speed_limit' => 'nullable|integer',
             'show' => 'nullable|in:0,1',
+            'dialer_proxy_in' => 'nullable|in:0,1',
+            'dialer_proxy_out' => 'nullable|in:0,1',
             'sort' => 'nullable'
         ]);
         if ($params['protocol'] == 'anytls' && $params['tls'] === 0) {
@@ -183,6 +186,7 @@ class V2nodeController extends Controller
             } catch (\Exception $e) {
                 abort(500, '保存失败');
             }
+            $this->cleanupDialerProxyRules((int) $server->id, $request, $params);
             return response([
                 'data' => true
             ]);
@@ -203,6 +207,10 @@ class V2nodeController extends Controller
             if (!$server) {
                 abort(500, '节点ID不存在');
             }
+            DB::table('v2_user_dialer_proxy')
+                ->where('in_node_id', $server->id)
+                ->orWhere('out_node_id', $server->id)
+                ->delete();
         }
         return response([
             'data' => $server->delete()
@@ -225,9 +233,32 @@ class V2nodeController extends Controller
         } catch (\Exception $e) {
             abort(500, '保存失败');
         }
+        if (isset($params['show']) && (int) $params['show'] === 0) {
+            DB::table('v2_user_dialer_proxy')
+                ->where('in_node_id', $server->id)
+                ->orWhere('out_node_id', $server->id)
+                ->delete();
+        }
         return response([
             'data' => true
         ]);
+    }
+
+    private function cleanupDialerProxyRules(int $nodeId, Request $request, array $params): void
+    {
+        if (isset($params['show']) && (int) $params['show'] === 0) {
+            DB::table('v2_user_dialer_proxy')
+                ->where('in_node_id', $nodeId)
+                ->orWhere('out_node_id', $nodeId)
+                ->delete();
+            return;
+        }
+        if ($request->has('dialer_proxy_in') && (int) ($params['dialer_proxy_in'] ?? 0) === 0) {
+            DB::table('v2_user_dialer_proxy')->where('in_node_id', $nodeId)->delete();
+        }
+        if ($request->has('dialer_proxy_out') && (int) ($params['dialer_proxy_out'] ?? 0) === 0) {
+            DB::table('v2_user_dialer_proxy')->where('out_node_id', $nodeId)->delete();
+        }
     }
 
     public function copy(Request $request)
