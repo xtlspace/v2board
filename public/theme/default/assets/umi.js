@@ -23991,7 +23991,14 @@
                         icon: i.a.createElement("i", {
                             className: "nav-main-link-icon si si-check"
                         })
-                    }, {
+                    }, ...(window.settings.dialer_proxy_enable ? [{
+                        title: "\u94fe\u5f0f\u4ee3\u7406",
+                        type: "item",
+                        href: "/dialer-proxy",
+                        icon: i.a.createElement("i", {
+                            className: "nav-main-link-icon si si-link"
+                        })
+                    }] : []), {
                         title: Object(u["formatMessage"])({
                             id: "\u8d22\u52a1"
                         }),
@@ -32445,25 +32452,10 @@
         class g extends f.a.Component {
             constructor(e) {
                 super(e),
-                this.state = {
-                    dialerProxyEnabled: false
-                }
+                this.state = {}
             }
             componentDidMount() {
-                this.fetchData(),
-                this.fetchDialerProxyStatus()
-            }
-            fetchDialerProxyStatus() {
-                var token = window.localStorage.getItem("authorization");
-                if (!token) return;
-                var host = window.settings.host || window.location.origin;
-                fetch(host + "/api/v1/user/dialerProxy", {
-                    headers: { authorization: token }
-                }).then(r=>r.json()).then(res=>{
-                    if (res && res.data && res.data.enabled) {
-                        this.setState({ dialerProxyEnabled: true })
-                    }
-                }).catch(()=>{})
+                this.fetchData()
             }
             fetchData() {
                 this.props.dispatch({
@@ -32569,12 +32561,7 @@
                     scroll: {
                         x: 900
                     }
-                }), this.state.dialerProxyEnabled ? f.a.createElement("div", {
-                    className: "p-3 text-center"
-                }, f.a.createElement("a", {
-                    className: "btn btn-primary",
-                    href: "/dialer-proxy"
-                }, "\u94fe\u5f0f\u4ee3\u7406")) : null)) : f.a.createElement("div", {
+                }))) : f.a.createElement("div", {
                     className: "alert alert-dark",
                     role: "alert"
                 }, f.a.createElement("p", {
@@ -45247,6 +45234,10 @@
             path: "/node",
             exact: !0,
             component: n("W+MR").default
+        }, {
+            path: "/dialer-proxy",
+            exact: !0,
+            component: n("DialerProxyPage").default
         }, {
             path: "/order/:trade_no",
             exact: !0,

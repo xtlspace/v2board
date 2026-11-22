@@ -3,6 +3,10 @@
 set -Eeuo pipefail
 umask 022
 
+# 避免 git diff / git log 在终端进入分页器，导致更新卡在 (END)
+export GIT_PAGER=cat
+export PAGER=cat
+
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 cd "$ROOT_DIR"
 
@@ -320,8 +324,8 @@ if [[ "$SKIP_GIT" -eq 0 ]]; then
     echo "旧提交: $OLD_HEAD"
     echo "目标提交: $TARGET ($branch)"
     if [[ "$TARGET" != "$OLD_HEAD" ]]; then
-        "${GIT[@]}" log --oneline --no-decorate "$OLD_HEAD..$TARGET" | head -20 || true
-        "${GIT[@]}" diff --stat "$OLD_HEAD" "$TARGET" || true
+        "${GIT[@]}" --no-pager log --oneline --no-decorate "$OLD_HEAD..$TARGET" | head -20 || true
+        "${GIT[@]}" --no-pager diff --stat "$OLD_HEAD" "$TARGET" || true
     fi
 else
     GIT=(git -c "safe.directory=$ROOT_DIR")

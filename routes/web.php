@@ -25,7 +25,8 @@ Route::get('/', function (Request $request) {
         'theme' => config('v2board.frontend_theme', 'default'),
         'version' => config('app.version'),
         'description' => config('v2board.app_description', 'V2Board is best'),
-        'logo' => config('v2board.logo')
+        'logo' => config('v2board.logo'),
+        'dialer_proxy_enable' => (int) config('v2board.dialer_proxy_enable', 0)
     ];
 
     if (!config("theme.{$renderParams['theme']}")) {

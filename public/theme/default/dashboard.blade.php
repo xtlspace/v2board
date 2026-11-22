@@ -44,7 +44,8 @@
             i18n: [
                 '{{$language}}'
             ],
-            logo: '{{$logo}}'
+            logo: '{{$logo}}',
+            dialer_proxy_enable: {{ (int)($dialer_proxy_enable ?? 0) }}
         }
     </script>
     <script src="/theme/{{$theme}}/assets/i18n/{{$language}}.js?v={{$version}}"></script>
