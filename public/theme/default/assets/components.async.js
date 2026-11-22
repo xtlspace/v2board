@@ -10,7 +10,7 @@
     class Page extends i.a.Component {
         constructor(e) {
             super(e);
-            this.state = { loading: true, enabled: false, inNodes: [], outNodes: [], rules: [], tip: false }
+            this.state = { loading: true, enabled: false, inNodes: [], outNodes: [], rules: [], showUpdateTip: false }
         }
         componentDidMount() {
             this.load()
@@ -54,12 +54,12 @@
         addRule() {
             var rules = this.state.rules.slice();
             rules.push({ in_node_id: null, out_node_id: null, editing: true });
-            this.setState({ rules: rules, tip: false })
+            this.setState({ rules: rules, showUpdateTip: false })
         }
         deleteRule(index) {
             var rules = this.state.rules.slice();
             rules.splice(index, 1);
-            this.setState({ rules: rules, tip: false }, this.saveAll)
+            this.setState({ rules: rules, showUpdateTip: false }, this.saveAll)
         }
         saveAll() {
             var self = this;
@@ -90,7 +90,7 @@
                     rules: self.state.rules.map(function(rule) {
                         return Object.assign({}, rule, { editing: false })
                     }),
-                    tip: true
+                    showUpdateTip: true
                 })
             }).catch(function(err) {
                 alert("保存失败：" + (err && err.message ? err.message : "请重试"))
@@ -146,12 +146,24 @@
                     )),
                     r("div", { style: { textAlign: "center", marginTop: 16 } },
                         r("button", { type: "button", className: "btn btn-primary", onClick: function() { self.addRule() } }, "+ 新增规则")
-                    ),
-                    s.tip ? r("div", { style: { marginTop: 16, color: "#389e0d" } }, "保存成功，请更新订阅 ", r("a", { href: "/#/" }, "更新订阅")) : null
+                    )
                 ))
             }
+            var modal = s.showUpdateTip ? r("div", {
+                style: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,.45)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center" },
+                onClick: function() { self.setState({ showUpdateTip: false }) }
+            }, r("div", {
+                style: { width: 360, maxWidth: "90vw", background: "#fff", borderRadius: 8, boxShadow: "0 8px 28px rgba(0,0,0,.2)", padding: "22px 24px" },
+                onClick: function(ev) { ev.stopPropagation() }
+            }, r("h4", { style: { margin: "0 0 10px", fontSize: 17 } }, "保存成功"),
+                r("p", { style: { color: "#666", fontSize: 14, margin: "0 0 20px" } }, "规则已保存，请更新订阅使配置生效。"),
+                r("div", { style: { display: "flex", justifyContent: "flex-end", gap: 10 } },
+                    r("button", { type: "button", className: "btn btn-primary", onClick: function() { self.setState({ showUpdateTip: false }) } }, "确认")
+                )
+            )) : null;
             return r(p, Object.assign({}, this.props, { title: "链式代理" }), r("main", { id: "main-container" },
-                r("div", { className: "content content-full" }, r("div", { className: "row" }, r("div", { className: "col-md-12" }, content)))))
+                r("div", { className: "content content-full" }, r("div", { className: "row" }, r("div", { className: "col-md-12" }, content))),
+                modal))
         }
     }
     t["default"] = Object(d["c"])(function(e) {

@@ -28,8 +28,12 @@
         button:disabled { opacity: .55; cursor: not-allowed; }
         .add-wrap { text-align: center; margin-top: 18px; }
         .empty { color: #999; text-align: center; padding: 26px 0; font-size: 14px; }
-        .tip { margin-top: 16px; padding: 12px 14px; border-radius: 8px; background: #f6ffed; border: 1px solid #b7eb8f; color: #389e0d; font-size: 14px; display: none; }
-        .tip a { color: var(--primary); margin-left: 8px; }
+        .modal-mask { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.45); z-index: 2000; align-items: center; justify-content: center; }
+        .modal-mask.show { display: flex; }
+        .modal-card { width: 360px; max-width: 90vw; background: #fff; border-radius: 8px; box-shadow: 0 8px 28px rgba(0,0,0,.2); padding: 22px 24px; }
+        .modal-card h4 { margin: 0 0 10px; font-size: 17px; }
+        .modal-card p { color: #666; font-size: 14px; margin: 0 0 20px; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
         .error { margin-top: 16px; padding: 12px 14px; border-radius: 8px; background: #fff2f0; border: 1px solid #ffccc7; color: #ff4d4f; font-size: 14px; display: none; }
         .loading { color: #999; text-align: center; padding: 40px 0; }
     </style>
@@ -53,7 +57,15 @@
         </div>
     </div>
 
-    <div class="tip" id="saveTip">保存成功，请更新订阅 <a href="/">更新订阅</a></div>
+    <div class="modal-mask" id="saveModal">
+        <div class="modal-card">
+            <h4>保存成功</h4>
+            <p>规则已保存，请更新订阅使配置生效。</p>
+            <div class="modal-actions">
+                <button type="button" class="primary" id="saveLaterBtn">确认</button>
+            </div>
+        </div>
+    </div>
     <div class="error" id="errorTip"></div>
 </div>
 
@@ -195,7 +207,7 @@
 
     function saveAll() {
         hideError();
-        $('saveTip').style.display = 'none';
+        $('saveModal').classList.remove('show');
 
         var rules = collectRules();
         if (rules.length !== state.rules.length) {
@@ -218,7 +230,7 @@
         }).then(function () {
             state.rules.forEach(function (rule) { rule._editing = false; });
             render();
-            $('saveTip').style.display = 'block';
+            $('saveModal').classList.add('show');
         }).catch(function (error) {
             showError('保存失败：' + (error && error.message ? error.message : '请重试'));
         });
@@ -266,6 +278,12 @@
     }
 
     $('addBtn').addEventListener('click', addRule);
+    $('saveLaterBtn').addEventListener('click', function () {
+        $('saveModal').classList.remove('show');
+    });
+    $('saveModal').addEventListener('click', function (event) {
+        if (event.target === this) this.classList.remove('show');
+    });
     load();
 })();
 </script>
