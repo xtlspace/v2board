@@ -33,6 +33,7 @@
         .modal-card { width: 360px; max-width: 90vw; background: #fff; border-radius: 8px; box-shadow: 0 8px 28px rgba(0,0,0,.2); padding: 22px 24px; }
         .modal-card h4 { margin: 0 0 10px; font-size: 17px; }
         .modal-card p { color: #666; font-size: 14px; margin: 0 0 20px; }
+        .modal-node-list { text-align: center; font-weight: 600; font-size: 15px; line-height: 1.9; margin: 12px 0 20px; color: #333; }
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
         .error { margin-top: 16px; padding: 12px 14px; border-radius: 8px; background: #fff2f0; border: 1px solid #ffccc7; color: #ff4d4f; font-size: 14px; display: none; }
         .loading { color: #999; text-align: center; padding: 40px 0; }
@@ -59,8 +60,8 @@
 
     <div class="modal-mask" id="saveModal">
         <div class="modal-card">
-            <h4>保存成功</h4>
-            <p id="saveModalText">规则已保存，请更新订阅使配置生效。</p>
+            <p id="saveModalText">保存成功，请更新订阅后使用节点</p>
+            <div class="modal-node-list" id="saveModalNodes"></div>
             <div class="modal-actions">
                 <button type="button" class="primary" id="saveLaterBtn">确认</button>
             </div>
@@ -164,15 +165,16 @@
             saveBtn.className = 'primary';
             saveBtn.textContent = '保存';
             saveBtn.disabled = !rule._editing;
-            saveBtn.addEventListener('click', saveAll);
+            saveBtn.addEventListener('click', function () {
+                saveRule(index);
+            });
 
             var deleteBtn = document.createElement('button');
             deleteBtn.type = 'button';
             deleteBtn.className = 'danger';
             deleteBtn.textContent = '删除';
             deleteBtn.addEventListener('click', function () {
-                state.rules.splice(index, 1);
-                saveAll();
+                deleteRule(index);
             });
 
             actions.appendChild(editBtn);
@@ -191,66 +193,97 @@
 
     function addRule() {
         if (state.rules.length >= 20) return;
-        state.rules.push({ in_node_id: null, out_node_id: null, _editing: true });
+        state.rules.push({ id: null, in_node_id: null, out_node_id: null, _editing: true });
         render();
     }
 
-    function collectRules() {
-        var rules = [];
-        state.rules.forEach(function (rule) {
-            if (!rule.in_node_id || !rule.out_node_id) return;
-            if (String(rule.in_node_id) === String(rule.out_node_id)) return;
-            rules.push({ in_node_id: rule.in_node_id, out_node_id: rule.out_node_id });
-        });
-        return rules;
-    }
-
-    function saveAll() {
+    function deleteRule(index) {
         hideError();
-        $('saveModal').classList.remove('show');
-
-        var rules = collectRules();
-        if (rules.length !== state.rules.length) {
-            showError('请为每条规则选择不同的入口和出口');
+        var rule = state.rules[index];
+        if (!rule) return;
+        var remove = function () {
+            state.rules.splice(index, 1);
+            render();
+        };
+        if (!rule.id) {
+            remove();
             return;
         }
-        var seenPairs = {};
-        for (var i = 0; i < rules.length; i++) {
-            var pairKey = rules[i].in_node_id + ':' + rules[i].out_node_id;
-            if (seenPairs[pairKey]) {
-                showError('不能重复添加相同的入口和出口组合');
-                return;
-            }
-            seenPairs[pairKey] = true;
-        }
-
-        fetch(apiBase + '/user/dialerProxy/save', {
+        fetch(apiBase + '/user/dialerProxy/delete', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 authorization: token || ''
             },
-            body: JSON.stringify({ rules: rules })
+            body: JSON.stringify({ id: rule.id })
         }).then(function (response) {
             return response.json().then(function (body) {
                 if (!response.ok) throw new Error(body.message || ('HTTP ' + response.status));
                 return body;
             });
-        }).then(function () {
-            state.rules.forEach(function (rule) { rule._editing = false; });
-            render();
-            var generated = [];
-            rules.forEach(function (rule) {
-                var inName = nodeName(state.inNodes, rule.in_node_id);
-                var outName = nodeName(state.outNodes, rule.out_node_id);
-                if (inName && outName) generated.push(outName + '(' + inName + ')');
+        }).then(remove).catch(function (error) {
+            showError('删除失败：' + (error && error.message ? error.message : '请重试'));
+        });
+    }
+
+    function saveRule(index) {
+        hideError();
+        $('saveModal').classList.remove('show');
+
+        var rule = state.rules[index];
+        if (!rule) return;
+        if (!rule.in_node_id || !rule.out_node_id || String(rule.in_node_id) === String(rule.out_node_id)) {
+            showError('请为每条规则选择不同的入口和出口');
+            return;
+        }
+        for (var i = 0; i < state.rules.length; i++) {
+            if (i === index) continue;
+            var other = state.rules[i];
+            if (String(other.in_node_id) === String(rule.in_node_id)
+                && String(other.out_node_id) === String(rule.out_node_id)) {
+                showError('规则重复');
+                return;
+            }
+        }
+
+        fetch(apiBase + '/user/dialerProxy/saveOne', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                authorization: token || ''
+            },
+            body: JSON.stringify({
+                id: rule.id || 0,
+                in_node_id: rule.in_node_id,
+                out_node_id: rule.out_node_id
+            })
+        }).then(function (response) {
+            return response.json().then(function (body) {
+                if (!response.ok) throw new Error(body.message || ('HTTP ' + response.status));
+                return body;
             });
-            $('saveModalText').textContent = generated.length
-                ? '规则已保存，请更新订阅后使用节点“' + generated.join('”、“') + '”'
-                : '规则已保存，请更新订阅使配置生效。';
+        }).then(function (body) {
+            var savedId = body && body.data ? body.data.id : null;
+            rule.id = savedId || rule.id;
+            rule._editing = false;
+            render();
+
+            var inName = nodeName(state.inNodes, rule.in_node_id);
+            var outName = nodeName(state.outNodes, rule.out_node_id);
+            var nodeBox = $('saveModalNodes');
+            nodeBox.innerHTML = '';
+            if (inName && outName) {
+                var line = document.createElement('div');
+                line.textContent = outName + '(' + inName + ')';
+                nodeBox.appendChild(line);
+            }
+            $('saveModalText').textContent = (inName && outName)
+                ? '保存成功，请更新订阅后使用节点'
+                : '保存成功，请更新订阅使配置生效。';
             $('saveModal').classList.add('show');
         }).catch(function (error) {
-            showError('保存失败：' + (error && error.message ? error.message : '请重试'));
+            showError((error && error.message === '规则重复' ? '' : '保存失败：')
+                + (error && error.message ? error.message : '请重试'));
         });
     }
 
@@ -274,6 +307,7 @@
             state.outNodes = data.out_nodes || [];
             state.rules = (data.rules || []).map(function (rule) {
                 return {
+                    id: rule.id || null,
                     in_node_id: rule.in_node_id,
                     out_node_id: rule.out_node_id,
                     _editing: false

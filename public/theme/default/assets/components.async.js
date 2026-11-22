@@ -38,7 +38,7 @@
                         inNodes: data.in_nodes || [],
                         outNodes: data.out_nodes || [],
                         rules: (data.rules || []).map(function(rule) {
-                            return { in_node_id: rule.in_node_id, out_node_id: rule.out_node_id, editing: false }
+                            return { id: rule.id || null, in_node_id: rule.in_node_id, out_node_id: rule.out_node_id, editing: false }
                         })
                     })
                 })
@@ -63,73 +63,101 @@
         }
         addRule() {
             var rules = this.state.rules.slice();
-            rules.push({ in_node_id: null, out_node_id: null, editing: true });
+            rules.push({ id: null, in_node_id: null, out_node_id: null, editing: true });
             this.setState({ rules: rules })
         }
         deleteRule(index) {
-            var rules = this.state.rules.slice();
-            rules.splice(index, 1);
-            this.setState({ rules: rules }, this.saveAll)
-        }
-        saveAll() {
             var self = this;
-            var rules = [];
-            var invalid = false;
-            var seenPair = {};
-            this.state.rules.forEach(function(rule) {
-                if (!rule.in_node_id || !rule.out_node_id || String(rule.in_node_id) === String(rule.out_node_id)) {
-                    invalid = true;
-                    return
-                }
-                var pairKey = rule.in_node_id + ":" + rule.out_node_id;
-                if (seenPair[pairKey]) {
-                    invalid = true;
-                    return
-                }
-                seenPair[pairKey] = true;
-                rules.push({ in_node_id: rule.in_node_id, out_node_id: rule.out_node_id })
-            });
-            if (invalid || rules.length !== this.state.rules.length) {
-                m["a"].warning({
-                    title: "提示",
-                    content: "请为每条规则选择不同的入口和出口，且不能重复添加相同组合",
-                    okText: "确认"
-                });
+            var rule = this.state.rules[index];
+            if (!rule) return;
+            var remove = function() {
+                var rules = self.state.rules.slice();
+                rules.splice(index, 1);
+                self.setState({ rules: rules })
+            };
+            if (!rule.id) {
+                remove();
                 return
             }
-            var generated = [];
-            rules.forEach(function(rule) {
-                var inName = nodeName(self.state.inNodes, rule.in_node_id);
-                var outName = nodeName(self.state.outNodes, rule.out_node_id);
-                if (inName && outName) generated.push(outName + "(" + inName + ")")
-            });
-            var successContent = generated.length
-                ? "规则已保存，请更新订阅后使用节点“" + generated.join("”、“") + "”"
-                : "规则已保存，请更新订阅使配置生效。";
-            fetch(apiBase() + "/user/dialerProxy/save", {
+            fetch(apiBase() + "/user/dialerProxy/delete", {
                 method: "POST",
                 headers: { "Content-Type": "application/json", authorization: getToken() },
-                body: JSON.stringify({ rules: rules })
+                body: JSON.stringify({ id: rule.id })
             }).then(function(res) {
                 return res.json().then(function(body) {
                     if (!res.ok) throw new Error(body.message || ("HTTP " + res.status));
                     return body
                 })
-            }).then(function() {
-                self.setState({
-                    rules: self.state.rules.map(function(rule) {
-                        return Object.assign({}, rule, { editing: false })
-                    })
+            }).then(remove).catch(function(err) {
+                m["a"].error({
+                    title: "删除失败",
+                    content: err && err.message ? err.message : "请重试",
+                    okText: "确认"
+                })
+            })
+        }
+        saveRule(index) {
+            var self = this;
+            var rule = this.state.rules[index];
+            if (!rule) return;
+            if (!rule.in_node_id || !rule.out_node_id || String(rule.in_node_id) === String(rule.out_node_id)) {
+                m["a"].warning({
+                    title: "提示",
+                    content: "请为每条规则选择不同的入口和出口",
+                    okText: "确认"
                 });
+                return
+            }
+            for (var i = 0; i < this.state.rules.length; i++) {
+                if (i === index) continue;
+                var other = this.state.rules[i];
+                if (String(other.in_node_id) === String(rule.in_node_id)
+                    && String(other.out_node_id) === String(rule.out_node_id)) {
+                    m["a"].warning({
+                        title: "提示",
+                        content: "规则重复",
+                        okText: "确认"
+                    });
+                    return
+                }
+            }
+            fetch(apiBase() + "/user/dialerProxy/saveOne", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", authorization: getToken() },
+                body: JSON.stringify({
+                    id: rule.id || 0,
+                    in_node_id: rule.in_node_id,
+                    out_node_id: rule.out_node_id
+                })
+            }).then(function(res) {
+                return res.json().then(function(body) {
+                    if (!res.ok) throw new Error(body.message || ("HTTP " + res.status));
+                    return body
+                })
+            }).then(function(body) {
+                var savedId = body && body.data ? body.data.id : null;
+                var rules = self.state.rules.slice();
+                rules[index] = Object.assign({}, rules[index], {
+                    id: savedId || rules[index].id,
+                    editing: false
+                });
+                self.setState({ rules: rules });
+
+                var inName = nodeName(self.state.inNodes, rule.in_node_id);
+                var outName = nodeName(self.state.outNodes, rule.out_node_id);
+                var nodeNameText = outName + "(" + inName + ")";
                 m["a"].success({
-                    title: "保存成功",
-                    content: successContent,
+                    content: r("div", null,
+                        r("div", null, "保存成功，请更新订阅后使用节点"),
+                        r("div", { style: { marginTop: 12, textAlign: "center", fontWeight: 600, fontSize: 15 } }, nodeNameText)
+                    ),
                     okText: "确认"
                 })
             }).catch(function(err) {
-                m["a"].error({
-                    title: "保存失败",
-                    content: err && err.message ? err.message : "请重试",
+                var message = err && err.message ? err.message : "请重试";
+                m["a"].warning({
+                    title: message === "规则重复" ? "提示" : "保存失败",
+                    content: message,
                     okText: "确认"
                 })
             })
@@ -162,7 +190,7 @@
                 r("td", null,
                     r("button", { type: "button", className: "btn btn-sm btn-default", disabled: !!rule.editing, onClick: function() { self.updateRule(index, "editing", true) } }, "编辑"),
                     " ",
-                    r("button", { type: "button", className: "btn btn-sm btn-primary", disabled: !rule.editing, onClick: function() { self.saveAll() } }, "保存"),
+                    r("button", { type: "button", className: "btn btn-sm btn-primary", disabled: !rule.editing, onClick: function() { self.saveRule(index) } }, "保存"),
                     " ",
                     r("button", { type: "button", className: "btn btn-sm btn-danger", onClick: function() { self.deleteRule(index) } }, "删除")
                 )

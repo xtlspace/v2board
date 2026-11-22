@@ -22,6 +22,8 @@ class UserRoute
             $router->get ('/getSubscribe', 'V1\\User\\UserController@getSubscribe');
             $router->get ('/dialerProxy', 'V1\\User\\DialerProxyController@fetch');
             $router->post('/dialerProxy/save', 'V1\\User\\DialerProxyController@save');
+            $router->post('/dialerProxy/saveOne', 'V1\\User\\DialerProxyController@saveOne');
+            $router->post('/dialerProxy/delete', 'V1\\User\\DialerProxyController@delete');
             $router->get ('/getStat', 'V1\\User\\UserController@getStat');
             $router->get ('/checkLogin', 'V1\\User\\UserController@checkLogin');
             $router->post('/transfer', 'V1\\User\\UserController@transfer');
