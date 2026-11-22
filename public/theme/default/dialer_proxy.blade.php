@@ -60,7 +60,7 @@
     <div class="modal-mask" id="saveModal">
         <div class="modal-card">
             <h4>保存成功</h4>
-            <p>规则已保存，请更新订阅使配置生效。</p>
+            <p id="saveModalText">规则已保存，请更新订阅使配置生效。</p>
             <div class="modal-actions">
                 <button type="button" class="primary" id="saveLaterBtn">确认</button>
             </div>
@@ -214,6 +214,15 @@
             showError('请为每条规则选择不同的入口和出口');
             return;
         }
+        var seenPairs = {};
+        for (var i = 0; i < rules.length; i++) {
+            var pairKey = rules[i].in_node_id + ':' + rules[i].out_node_id;
+            if (seenPairs[pairKey]) {
+                showError('不能重复添加相同的入口和出口组合');
+                return;
+            }
+            seenPairs[pairKey] = true;
+        }
 
         fetch(apiBase + '/user/dialerProxy/save', {
             method: 'POST',
@@ -230,6 +239,15 @@
         }).then(function () {
             state.rules.forEach(function (rule) { rule._editing = false; });
             render();
+            var generated = [];
+            rules.forEach(function (rule) {
+                var inName = nodeName(state.inNodes, rule.in_node_id);
+                var outName = nodeName(state.outNodes, rule.out_node_id);
+                if (inName && outName) generated.push(outName + '(' + inName + ')');
+            });
+            $('saveModalText').textContent = generated.length
+                ? '规则已保存，请更新订阅后使用节点“' + generated.join('”、“') + '”'
+                : '规则已保存，请更新订阅使配置生效。';
             $('saveModal').classList.add('show');
         }).catch(function (error) {
             showError('保存失败：' + (error && error.message ? error.message : '请重试'));

@@ -105,7 +105,7 @@ class DialerProxyController extends Controller
         }
 
         $clean = [];
-        $seenOut = [];
+        $seenPair = [];
         foreach (array_slice($rules, 0, 20) as $rule) {
             if (!is_array($rule)) {
                 continue;
@@ -118,10 +118,11 @@ class DialerProxyController extends Controller
             if (!isset($inIds[$inId]) || !isset($outIds[$outId])) {
                 continue;
             }
-            if (isset($seenOut[$outId])) {
+            $pairKey = $inId . ':' . $outId;
+            if (isset($seenPair[$pairKey])) {
                 continue;
             }
-            $seenOut[$outId] = true;
+            $seenPair[$pairKey] = true;
             $clean[] = [
                 'user_id' => $user->id,
                 'in_node_id' => $inId,

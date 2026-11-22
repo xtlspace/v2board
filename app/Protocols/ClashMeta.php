@@ -70,7 +70,7 @@ class ClashMeta
             }
         }
 
-        $dialerRules = [];
+        $dialerClones = [];
         if ((int) config('v2board.dialer_proxy_enable', 0) === 1) {
             $userId = (int) ($user['id'] ?? 0);
             if ($userId > 0) {
@@ -91,23 +91,62 @@ class ClashMeta
                     $names = DB::table('v2_server_v2node')
                         ->whereIn('id', array_keys($nodeIds))
                         ->pluck('name', 'id');
+
+                    $originalNames = $proxies;
+                    $nameToIndex = array_flip($originalNames);
+                    $usedNames = array_flip($originalNames);
+
                     foreach ($rules as $rule) {
                         $inName = $names[(int) $rule->in_node_id] ?? null;
                         $outName = $names[(int) $rule->out_node_id] ?? null;
-                        if ($inName && $outName && in_array($inName, $proxies, true)) {
-                            $dialerRules[$outName] = $inName;
+                        if (!$inName || !$outName) {
+                            continue;
                         }
+                        // 入口、出口都必须是原始节点，组合节点不能再次参与
+                        if (!in_array($inName, $originalNames, true) || !isset($nameToIndex[$outName])) {
+                            continue;
+                        }
+                        $baseIndex = $nameToIndex[$outName];
+                        $baseType = $proxy[$baseIndex]['type'] ?? '';
+                        if (!in_array($baseType, ['ss', 'vless', 'anytls'], true)) {
+                            continue;
+                        }
+
+                        $newName = $outName . '(' . $inName . ')';
+                        $suffix = 2;
+                        while (isset($usedNames[$newName])) {
+                            $newName = $outName . '(' . $inName . ')#' . $suffix;
+                            $suffix++;
+                        }
+                        $usedNames[$newName] = true;
+                        $dialerClones[$baseIndex][] = [
+                            'name' => $newName,
+                            'dialer' => $inName,
+                        ];
                     }
                 }
             }
         }
-        if (!empty($dialerRules)) {
-            foreach ($proxy as &$node) {
-                if (isset($dialerRules[$node['name']]) && in_array($node['type'], ['ss', 'vless', 'anytls'], true)) {
-                    $node['dialer-proxy'] = $dialerRules[$node['name']];
+
+        if (!empty($dialerClones)) {
+            $newProxy = [];
+            $newNames = [];
+            foreach ($proxy as $index => $node) {
+                $newProxy[] = $node;
+                $newNames[] = $node['name'];
+                if (!isset($dialerClones[$index])) {
+                    continue;
+                }
+                foreach ($dialerClones[$index] as $cloneInfo) {
+                    $clone = $node;
+                    $clone['name'] = $cloneInfo['name'];
+                    $clone['dialer-proxy'] = $cloneInfo['dialer'];
+                    $newProxy[] = $clone;
+                    $newNames[] = $cloneInfo['name'];
                 }
             }
-            unset($node);
+            $proxy = $newProxy;
+            $proxies = $newNames;
         }
 
 	#$config['proxies'] = array_merge($config['proxies'] ? $config['proxies'] : [], $proxy);

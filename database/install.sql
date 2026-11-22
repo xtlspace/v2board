@@ -402,7 +402,7 @@ CREATE TABLE IF NOT EXISTS `v2_user_dialer_proxy` (
   `created_at` int(11) NOT NULL,
   `updated_at` int(11) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uniq_user_out` (`user_id`,`out_node_id`),
+  UNIQUE KEY `uniq_user_pair` (`user_id`,`in_node_id`,`out_node_id`),
   KEY `idx_user` (`user_id`),
   KEY `idx_in_node` (`in_node_id`),
   KEY `idx_out_node` (`out_node_id`)

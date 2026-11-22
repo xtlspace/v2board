@@ -780,8 +780,39 @@ CREATE TABLE IF NOT EXISTS `v2_user_dialer_proxy` (
   `created_at` int(11) NOT NULL,
   `updated_at` int(11) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uniq_user_out` (`user_id`,`out_node_id`),
+  UNIQUE KEY `uniq_user_pair` (`user_id`,`in_node_id`,`out_node_id`),
   KEY `idx_user` (`user_id`),
   KEY `idx_in_node` (`in_node_id`),
   KEY `idx_out_node` (`out_node_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 兼容旧索引：允许入口或出口单独重复
+SET @has_old_dialer_index = (
+  SELECT COUNT(*) FROM information_schema.statistics
+  WHERE table_schema = DATABASE()
+    AND table_name = 'v2_user_dialer_proxy'
+    AND index_name = 'uniq_user_out'
+);
+SET @drop_old_dialer_index_sql = IF(
+  @has_old_dialer_index > 0,
+  'ALTER TABLE `v2_user_dialer_proxy` DROP INDEX `uniq_user_out`',
+  'SELECT 1'
+);
+PREPARE drop_old_dialer_index_stmt FROM @drop_old_dialer_index_sql;
+EXECUTE drop_old_dialer_index_stmt;
+DEALLOCATE PREPARE drop_old_dialer_index_stmt;
+
+SET @has_new_dialer_index = (
+  SELECT COUNT(*) FROM information_schema.statistics
+  WHERE table_schema = DATABASE()
+    AND table_name = 'v2_user_dialer_proxy'
+    AND index_name = 'uniq_user_pair'
+);
+SET @add_new_dialer_index_sql = IF(
+  @has_new_dialer_index = 0,
+  'ALTER TABLE `v2_user_dialer_proxy` ADD UNIQUE KEY `uniq_user_pair` (`user_id`,`in_node_id`,`out_node_id`)',
+  'SELECT 1'
+);
+PREPARE add_new_dialer_index_stmt FROM @add_new_dialer_index_sql;
+EXECUTE add_new_dialer_index_stmt;
+DEALLOCATE PREPARE add_new_dialer_index_stmt;

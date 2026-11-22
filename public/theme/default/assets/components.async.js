@@ -7,6 +7,12 @@
     function getToken() {
         return window.localStorage.getItem("authorization") || ""
     }
+    function nodeName(nodes, id) {
+        for (var i = 0; i < nodes.length; i++) {
+            if (String(nodes[i].id) === String(id)) return nodes[i].name
+        }
+        return ""
+    }
     class Page extends i.a.Component {
         constructor(e) {
             super(e);
@@ -69,21 +75,37 @@
             var self = this;
             var rules = [];
             var invalid = false;
+            var seenPair = {};
             this.state.rules.forEach(function(rule) {
                 if (!rule.in_node_id || !rule.out_node_id || String(rule.in_node_id) === String(rule.out_node_id)) {
                     invalid = true;
                     return
                 }
+                var pairKey = rule.in_node_id + ":" + rule.out_node_id;
+                if (seenPair[pairKey]) {
+                    invalid = true;
+                    return
+                }
+                seenPair[pairKey] = true;
                 rules.push({ in_node_id: rule.in_node_id, out_node_id: rule.out_node_id })
             });
             if (invalid || rules.length !== this.state.rules.length) {
                 m["a"].warning({
                     title: "提示",
-                    content: "请为每条规则选择不同的入口和出口",
+                    content: "请为每条规则选择不同的入口和出口，且不能重复添加相同组合",
                     okText: "确认"
                 });
                 return
             }
+            var generated = [];
+            rules.forEach(function(rule) {
+                var inName = nodeName(self.state.inNodes, rule.in_node_id);
+                var outName = nodeName(self.state.outNodes, rule.out_node_id);
+                if (inName && outName) generated.push(outName + "(" + inName + ")")
+            });
+            var successContent = generated.length
+                ? "规则已保存，请更新订阅后使用节点“" + generated.join("”、“") + "”"
+                : "规则已保存，请更新订阅使配置生效。";
             fetch(apiBase() + "/user/dialerProxy/save", {
                 method: "POST",
                 headers: { "Content-Type": "application/json", authorization: getToken() },
@@ -101,7 +123,7 @@
                 });
                 m["a"].success({
                     title: "保存成功",
-                    content: "规则已保存，请更新订阅使配置生效。",
+                    content: successContent,
                     okText: "确认"
                 })
             }).catch(function(err) {
