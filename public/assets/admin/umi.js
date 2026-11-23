@@ -102522,30 +102522,40 @@
                 y.a.createElement("div", {
                     className: "form-group col-md-6 col-xs-12"
                 },
-                y.a.createElement("label", null, "\u8fde\u63a5\u5730\u5740"), y.a.createElement("div", {
+                y.a.createElement("div", {
                     style: {
                         display: "flex",
                         alignItems: "center",
-                        gap: 8
+                        gap: 8,
+                        marginBottom: 8
                     }
-                }, y.a.createElement(s["a"], {
+                }, y.a.createElement("label", {
                     style: {
-                        flex: 1
-                    },
-                    placeholder: "\u5730\u5740\u6216IP",
-                    value: e.host,
-                    onChange: e=>this.formChange("host", e.target.value)
-                }), y.a.createElement("label", {
+                        margin: 0
+                    }
+                }, "\u8fde\u63a5\u5730\u5740"), y.a.createElement("label", {
                     style: {
                         margin: 0,
-                        whiteSpace: "nowrap"
+                        whiteSpace: "nowrap",
+                        fontSize: 12,
+                        fontWeight: 400
                     },
                     title: "\u52fe\u9009\u540e\u5c06\u8fde\u63a5\u5730\u5740\u89e3\u6790\u4e3a\u8282\u70b9\u771f\u5b9e IP"
                 }, y.a.createElement("input", {
                     type: "checkbox",
+                    style: {
+                        width: 14,
+                        height: 14,
+                        margin: 0,
+                        verticalAlign: "middle"
+                    },
                     checked: !!parseInt(e.realm_ip),
                     onChange: e=>this.formChange("realm_ip", e.target.checked ? 1 : 0)
-                }), " \u771f\u5b9e\u5730\u5740"))),
+                }), "\u771f\u5b9e\u5730\u5740")), y.a.createElement(s["a"], {
+                    placeholder: "\u5730\u5740\u6216IP",
+                    value: e.host,
+                    onChange: e=>this.formChange("host", e.target.value)
+                })),
                 y.a.createElement("div", {
                     className: "form-group col-md-6 col-xs-12"
                 },
