@@ -81,6 +81,15 @@ class IpNormalizer
             return false;
         }
 
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
+            $packed = @inet_pton($ip);
+            if ($packed === false) {
+                return false;
+            }
+            // 只有 2000::/3 视为公网 IPv6
+            return (ord($packed[0]) & 0xE0) !== 0x20;
+        }
+
         if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
             $long = ip2long($ip);
             if ($long !== false && (($long & 0xFFC00000) === 0x64400000)) {
