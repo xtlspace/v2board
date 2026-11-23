@@ -102535,19 +102535,23 @@
                     }
                 }, "\u8fde\u63a5\u5730\u5740"), y.a.createElement("label", {
                     style: {
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 3,
                         margin: 0,
                         whiteSpace: "nowrap",
                         fontSize: 12,
-                        fontWeight: 400
+                        fontWeight: 600,
+                        color: "#333"
                     },
                     title: "\u52fe\u9009\u540e\u5c06\u8fde\u63a5\u5730\u5740\u89e3\u6790\u4e3a\u8282\u70b9\u771f\u5b9e IP"
                 }, y.a.createElement("input", {
                     type: "checkbox",
                     style: {
-                        width: 14,
-                        height: 14,
+                        width: 12,
+                        height: 12,
                         margin: 0,
-                        verticalAlign: "middle"
+                        flex: "0 0 auto"
                     },
                     checked: !!parseInt(e.realm_ip),
                     onChange: e=>this.formChange("realm_ip", e.target.checked ? 1 : 0)
