@@ -13,6 +13,33 @@
         }
         return ""
     }
+    var dialerProxyCss = "#main-container>.dialer-proxy-content{flex:1 0 auto;display:flex;flex-direction:column}" +
+        ".dialer-proxy-page{display:flex;flex-direction:column;flex:1 0 auto;min-height:0}" +
+        ".dialer-proxy-page>.row{flex:0 0 auto}" +
+        ".dialer-proxy-page .dialer-proxy-actions{display:flex;justify-content:flex-end;gap:6px}" +
+        ".dialer-proxy-page .dialer-proxy-add-wrap{flex:1 0 auto;display:grid;grid-template-columns:1fr 1fr 220px;align-content:center;align-items:center;padding:0 20px}" +
+        ".dialer-proxy-page .dialer-proxy-add{grid-column:1/3;display:flex;justify-content:center}" +
+        "@media (max-width:767.98px){" +
+        ".dialer-proxy-page .block-content{padding:16px}" +
+        ".dialer-proxy-page .block-content>p{font-size:12px;line-height:1.7;margin-bottom:12px!important}" +
+        ".dialer-proxy-page .table-responsive{overflow:visible}" +
+        ".dialer-proxy-page table{border:0;margin-bottom:0}" +
+        ".dialer-proxy-page thead{display:none}" +
+        ".dialer-proxy-page tbody,.dialer-proxy-page tr,.dialer-proxy-page td{display:block;width:100%}" +
+        ".dialer-proxy-page tr{border:1px solid #e6e9ef;border-radius:10px;padding:14px;margin-bottom:12px;background:#fff}" +
+        ".dialer-proxy-page td{border:0!important;padding:0 0 10px!important}" +
+        ".dialer-proxy-page td:last-child{padding-bottom:0!important}" +
+        ".dialer-proxy-page td[data-label]::before{content:attr(data-label);display:block;font-size:12px;color:#8a94a6;margin-bottom:6px;line-height:1}" +
+        ".dialer-proxy-page td[data-label='操作']::before{display:none}" +
+        ".dialer-proxy-page .form-control{height:42px;font-size:14px}" +
+        ".dialer-proxy-page .dialer-proxy-actions{gap:8px}" +
+        ".dialer-proxy-page .dialer-proxy-actions .btn{flex:1;min-height:38px;font-size:14px}" +
+        ".dialer-proxy-page .dialer-proxy-add-wrap{grid-template-columns:1fr;padding:0 16px}" +
+        ".dialer-proxy-page .dialer-proxy-add{grid-column:1/-1;width:100%}" +
+        ".dialer-proxy-page .dialer-proxy-add .btn{width:100%;min-height:42px;font-size:14px}" +
+        "}" +
+        ".dialer-proxy-success-modal{max-width:calc(100vw - 32px)}" +
+        ".dialer-proxy-success-modal .ant-modal-confirm-content{word-break:break-word}";
     class Page extends i.a.Component {
         constructor(e) {
             super(e);
@@ -147,9 +174,10 @@
                 var outName = nodeName(self.state.outNodes, rule.out_node_id);
                 var nodeNameText = outName + "(" + inName + ")";
                 m["a"].success({
+                    className: "dialer-proxy-success-modal",
                     content: r("div", null,
                         r("div", null, "保存成功，请更新订阅后使用节点"),
-                        r("div", { style: { marginTop: 12, textAlign: "center", fontWeight: 600, fontSize: 15 } }, nodeNameText)
+                        r("div", { style: { marginTop: 12, textAlign: "center", fontWeight: 600, fontSize: 15, wordBreak: "break-word" } }, nodeNameText)
                     ),
                     okText: "确认"
                 })
@@ -171,7 +199,7 @@
                 return String(node.id) !== String(rule.in_node_id)
             });
             return r("tr", { key: index },
-                r("td", null, r("select", {
+                r("td", { "data-label": "入口" }, r("select", {
                     className: "form-control",
                     disabled: !rule.editing,
                     value: rule.in_node_id || "",
@@ -179,7 +207,7 @@
                 }, r("option", { value: "" }, "请选择入口"), inOptions.map(function(node) {
                     return r("option", { key: node.id, value: node.id }, node.name)
                 }))),
-                r("td", null, r("select", {
+                r("td", { "data-label": "出口" }, r("select", {
                     className: "form-control",
                     disabled: !rule.editing,
                     value: rule.out_node_id || "",
@@ -187,12 +215,13 @@
                 }, r("option", { value: "" }, "请选择出口"), outOptions.map(function(node) {
                     return r("option", { key: node.id, value: node.id }, node.name)
                 }))),
-                r("td", null,
-                    r("button", { type: "button", className: "btn btn-sm btn-default", disabled: !!rule.editing, onClick: function() { self.updateRule(index, "editing", true) } }, "编辑"),
-                    " ",
-                    r("button", { type: "button", className: "btn btn-sm btn-primary", disabled: !rule.editing, onClick: function() { self.saveRule(index) } }, "保存"),
-                    " ",
-                    r("button", { type: "button", className: "btn btn-sm btn-danger", onClick: function() { self.deleteRule(index) } }, "删除")
+                r("td", { "data-label": "操作" },
+                    r("div", { className: "dialer-proxy-actions" },
+                        rule.editing
+                            ? r("button", { type: "button", className: "btn btn-sm btn-primary", onClick: function() { self.saveRule(index) } }, "保存")
+                            : r("button", { type: "button", className: "btn btn-sm btn-default", onClick: function() { self.updateRule(index, "editing", true) } }, "编辑"),
+                        r("button", { type: "button", className: "btn btn-sm btn-danger", onClick: function() { self.deleteRule(index) } }, "删除")
+                    )
                 )
             )
         }
@@ -209,14 +238,22 @@
                     r("div", { className: "table-responsive" }, r("table", { className: "table table-bordered" },
                         r("thead", null, r("tr", null, r("th", null, "入口"), r("th", null, "出口"), r("th", { style: { width: 220 } }, "操作"))),
                         r("tbody", null, s.rules.length ? s.rules.map(function(rule, index) { return self.renderRow(rule, index) }) : r("tr", null, r("td", { colSpan: 3, style: { textAlign: "center", color: "#999" } }, "暂无规则")))
-                    )),
-                    r("div", { style: { textAlign: "center", marginTop: 16 } },
-                        r("button", { type: "button", className: "btn btn-primary", onClick: function() { self.addRule() } }, "+ 新增规则")
-                    )
+                    ))
                 ))
             }
             return r(p, Object.assign({}, this.props, { title: "链式代理" }), r("main", { id: "main-container" },
-                r("div", { className: "content content-full" }, r("div", { className: "row" }, r("div", { className: "col-md-12" }, content)))))
+                r("div", { className: "content content-full dialer-proxy-content" },
+                    r("div", { className: "dialer-proxy-page" },
+                        r("style", null, dialerProxyCss),
+                        r("div", { className: "row" }, r("div", { className: "col-md-12" }, content)),
+                        (!s.loading && s.enabled) ? r("div", { className: "dialer-proxy-add-wrap" },
+                            r("div", { className: "dialer-proxy-add" },
+                                r("button", { type: "button", className: "btn btn-primary", onClick: function() { self.addRule() } }, "+ 新增规则")
+                            )
+                        ) : null
+                    )
+                )
+            ))
         }
     }
     t["default"] = Object(d["c"])(function(e) {

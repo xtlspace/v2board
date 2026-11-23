@@ -8,7 +8,7 @@
         :root { --primary: {{ $primary_color }}; }
         * { box-sizing: border-box; }
         body { margin: 0; background: #f4f6fb; color: #333; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
-        .wrap { max-width: 980px; margin: 0 auto; padding: 28px 16px 60px; }
+        .wrap { max-width: 980px; margin: 0 auto; padding: 28px 16px 60px; min-height: 100vh; display: flex; flex-direction: column; }
         .head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
         .head h1 { font-size: 22px; margin: 0; }
         .desc { color: #777; font-size: 13px; line-height: 1.7; margin: 0 0 20px; }
@@ -17,6 +17,8 @@
         .rule-head { color: #888; font-size: 13px; padding: 0 4px 10px; border-bottom: 1px solid #f0f0f0; }
         .rule-row { padding: 12px 4px; border-bottom: 1px solid #f5f5f5; }
         .rule-row:last-child { border-bottom: none; }
+        .field { min-width: 0; }
+        .field-label { display: none; }
         select { width: 100%; padding: 8px 10px; border: 1px solid #d9d9d9; border-radius: 6px; background: #fff; font-size: 14px; outline: none; }
         select:focus { border-color: var(--primary); }
         select:disabled { background: #fafafa; color: #999; }
@@ -26,7 +28,8 @@
         button.primary:hover { filter: brightness(1.08); }
         button.danger { color: #ff4d4f; border-color: #ffccc7; }
         button:disabled { opacity: .55; cursor: not-allowed; }
-        .add-wrap { text-align: center; margin-top: 18px; }
+        .add-wrap { flex: 1 0 auto; display: grid; grid-template-columns: 1fr 1fr 190px; align-content: center; align-items: center; padding: 0 18px; }
+        .add-wrap button { grid-column: 1 / 3; justify-self: center; }
         .empty { color: #999; text-align: center; padding: 26px 0; font-size: 14px; }
         .modal-mask { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.45); z-index: 2000; align-items: center; justify-content: center; }
         .modal-mask.show { display: flex; }
@@ -37,6 +40,24 @@
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
         .error { margin-top: 16px; padding: 12px 14px; border-radius: 8px; background: #fff2f0; border: 1px solid #ffccc7; color: #ff4d4f; font-size: 14px; display: none; }
         .loading { color: #999; text-align: center; padding: 40px 0; }
+        @media (max-width: 767.98px) {
+            .wrap { padding: 20px 12px 48px; }
+            .head h1 { font-size: 19px; }
+            .desc { font-size: 12px; margin-bottom: 14px; }
+            .card { padding: 12px; }
+            .rule-head { display: none; }
+            .rule-row { grid-template-columns: 1fr; gap: 10px; padding: 14px; margin-bottom: 12px; border: 1px solid #e6e9ef; border-radius: 10px; background: #fff; }
+            .rule-row:last-child { margin-bottom: 0; border-bottom: 1px solid #e6e9ef; }
+            .field-label { display: block; font-size: 12px; color: #8a94a6; margin-bottom: 6px; line-height: 1; }
+            select { height: 42px; font-size: 14px; }
+            .actions { gap: 8px; }
+            .actions button { flex: 1; min-height: 38px; padding: 8px 6px; font-size: 14px; }
+            .add-wrap { grid-template-columns: 1fr; padding: 0 12px; }
+            .add-wrap button { grid-column: 1 / -1; justify-self: center; width: 100%; min-height: 42px; font-size: 14px; }
+            .modal-card { width: calc(100vw - 32px); padding: 20px 18px; }
+            .modal-actions button { width: 100%; }
+            .modal-node-list { word-break: break-word; }
+        }
     </style>
 </head>
 <body>
@@ -53,9 +74,10 @@
             <div style="text-align:right">操作</div>
         </div>
         <div id="ruleList"><div class="loading">加载中...</div></div>
-        <div class="add-wrap" id="addWrap" style="display:none">
-            <button type="button" class="primary" id="addBtn">+ 新增规则</button>
-        </div>
+    </div>
+
+    <div class="add-wrap" id="addWrap" style="display:none">
+        <button type="button" class="primary" id="addBtn">+ 新增规则</button>
     </div>
 
     <div class="modal-mask" id="saveModal">
@@ -93,6 +115,17 @@
             if (String(nodes[i].id) === String(id)) return nodes[i].name;
         }
         return '';
+    }
+
+    function makeField(label, select) {
+        var field = document.createElement('div');
+        field.className = 'field';
+        var labelEl = document.createElement('span');
+        labelEl.className = 'field-label';
+        labelEl.textContent = label;
+        field.appendChild(labelEl);
+        field.appendChild(select);
+        return field;
     }
 
     function fillSelect(select, nodes, selectedId, excludeId, placeholder) {
@@ -177,17 +210,20 @@
                 deleteRule(index);
             });
 
-            actions.appendChild(editBtn);
-            actions.appendChild(saveBtn);
+            if (rule._editing) {
+                actions.appendChild(saveBtn);
+            } else {
+                actions.appendChild(editBtn);
+            }
             actions.appendChild(deleteBtn);
 
-            row.appendChild(entrySel);
-            row.appendChild(exitSel);
+            row.appendChild(makeField('入口', entrySel));
+            row.appendChild(makeField('出口', exitSel));
             row.appendChild(actions);
             list.appendChild(row);
         });
 
-        $('addWrap').style.display = state.enabled ? 'block' : 'none';
+        $('addWrap').style.display = state.enabled ? 'grid' : 'none';
         $('addBtn').disabled = state.rules.length >= 20;
     }
 
