@@ -950,7 +950,7 @@ var distributionState = { range: '1h', provider: 'all', data: null, chart: null 
 var chinaMapPromise = null;
 
 function providerLabel(provider) {
-    var labels = { telecom: '电信', unicom: '联通', mobile: '移动', cable: '广电', edu: '教育网', other: '其他' };
+    var labels = { telecom: '电信', unicom: '联通', mobile: '移动', cable: '广电', edu: '教育网', other: '其他', lan: '局域网' };
     return labels[provider] || provider;
 }
 
@@ -2129,14 +2129,20 @@ function renderDetail(data) {
             var overseas = isOverseasLocation(row.country, row.province);
             var provinceKey = mainlandProvinceKey(row.province);
             var diff = !overseas && provinceKey !== '' && !subProvinceSet[provinceKey];
-            var rowClass = row.alive_ip_node_id
+            var isLan = row.provider === 'lan';
+            var rowClass = isLan
                 ? ''
-                : (overseas ? ' class="overseas-row"' : (diff ? ' class="province-diff-row"' : ''));
+                : (row.alive_ip_node_id
+                    ? ''
+                    : (overseas ? ' class="overseas-row"' : (diff ? ' class="province-diff-row"' : '')));
             var nodeNames = data.alive_node_names || {};
             var ipTag = '';
             if (row.alive_ip_node_id) {
                 var nodeName = nodeNames[String(row.alive_ip_node_id)];
                 ipTag = '<span class="node-ip-tag">（' + escapeHtml(nodeName || ('节点#' + row.alive_ip_node_id)) + '）</span>';
+            }
+            if (isLan) {
+                ipTag += ' <span class="badge badge-muted">局域网</span>';
             }
             var ipHtml = detailIpCell(row.ip, ipTag);
             var reportNode = row.node_id

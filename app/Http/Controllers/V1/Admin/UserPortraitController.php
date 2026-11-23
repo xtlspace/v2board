@@ -994,6 +994,7 @@ class UserPortraitController extends Controller
             $query = function () use ($since, $excludeNodeIp) {
                 return DB::table('v2_alive_ip_history')
                     ->where('last_seen_at', '>=', $since)
+                    ->where('provider', '!=', 'lan')
                     ->where('country', 'like', '%中国%')
                     ->whereNotNull('province')
                     ->where('province', '!=', '')

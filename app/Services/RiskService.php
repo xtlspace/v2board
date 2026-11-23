@@ -211,6 +211,7 @@ class RiskService
                 ->when(!empty($userIds), function ($query) use ($userIds) {
                     $query->whereIn('user_id', $userIds);
                 })
+                ->where('provider', '!=', 'lan')
                 ->when($excludeNodeIp, function ($query) {
                     $query->whereNull('alive_ip_node_id');
                 })

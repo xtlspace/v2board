@@ -43,9 +43,19 @@ class UserDistributionService
                 }
                 $seen[$userId][$ip] = true;
 
-                $info = $this->resolveLocation($ip, $location);
-                if ($info === null) {
-                    continue;
+                if (IpNormalizer::isLan($ip)) {
+                    $info = [
+                        'country' => null,
+                        'province' => null,
+                        'city' => null,
+                        'isp' => null,
+                        'provider' => 'lan',
+                    ];
+                } else {
+                    $info = $this->resolveLocation($ip, $location);
+                    if ($info === null) {
+                        continue;
+                    }
                 }
 
                 $aliveIpNodeId = isset($nodeIpNodeIds[$ip]) ? (int) $nodeIpNodeIds[$ip] : null;

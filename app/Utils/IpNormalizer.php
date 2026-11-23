@@ -54,4 +54,45 @@ class IpNormalizer
         $canonical = @inet_ntop($packed);
         return $canonical === false ? null : $canonical;
     }
+
+    /**
+     * 判断是否为局域网 / 保留地址。
+     */
+    public static function isLan($ip): bool
+    {
+        $ip = trim((string) $ip);
+        if ($ip === '') {
+            return false;
+        }
+        if (preg_match('/^\[([^\]]+)\](?::\d+)?$/', $ip, $matches)) {
+            $ip = $matches[1];
+        }
+        $ip = preg_replace('/%.*$/', '', $ip);
+        if (preg_match('/^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/', $ip, $matches)) {
+            $ip = $matches[1];
+        }
+        if (stripos($ip, '::ffff:') === 0) {
+            $v4 = substr($ip, 7);
+            if (filter_var($v4, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+                $ip = $v4;
+            }
+        }
+        if (filter_var($ip, FILTER_VALIDATE_IP) === false) {
+            return false;
+        }
+
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+            $long = ip2long($ip);
+            if ($long !== false && (($long & 0xFFC00000) === 0x64400000)) {
+                // 100.64.0.0/10 CGNAT
+                return true;
+            }
+        }
+
+        return filter_var(
+            $ip,
+            FILTER_VALIDATE_IP,
+            FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+        ) === false;
+    }
 }

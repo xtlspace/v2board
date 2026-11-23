@@ -193,6 +193,9 @@ class UniProxyController extends Controller
                     if ($nodetypeid !== 'alive_ip' && is_array($newdata) && isset($newdata['aliveips'])) {
                         foreach ($newdata['aliveips'] as $ip_NodeId) {
                             $ip = explode("_", $ip_NodeId)[0];
+                            if (IpNormalizer::isLan($ip)) {
+                                continue;
+                            }
                             $packed = $this->normalizeIpAddress($ip);
                             if ($chainForwardIgnore && $packed !== null && isset($ignoredIps[$packed])) {
                                 continue;
@@ -206,11 +209,20 @@ class UniProxyController extends Controller
                 foreach ($ips_array as $nodetypeid => $newdata) {
                     if ($nodetypeid !== 'alive_ip' && is_array($newdata) && isset($newdata['aliveips'])) {
                         if (!$chainForwardIgnore) {
-                            $count += count($newdata['aliveips']);
+                            foreach ($newdata['aliveips'] as $ip_NodeId) {
+                                $ip = explode("_", $ip_NodeId)[0];
+                                if (IpNormalizer::isLan($ip)) {
+                                    continue;
+                                }
+                                $count++;
+                            }
                             continue;
                         }
                         foreach ($newdata['aliveips'] as $ip_NodeId) {
                             $ip = explode("_", $ip_NodeId)[0];
+                            if (IpNormalizer::isLan($ip)) {
+                                continue;
+                            }
                             $packed = $this->normalizeIpAddress($ip);
                             if ($packed === null || !isset($ignoredIps[$packed])) {
                                 $count++;
