@@ -2,6 +2,7 @@
     "use strict";
     var a = n("q1tI"), i = n.n(a), p = n("L12J")["a"], d = n("/MKj"), m = n("kLXV"), r = i.a.createElement;
     var hist = n("3a4m"), Hist = n.n(hist);
+    var btn = n("2/Rp")["a"];
     function apiBase() {
         return (window.settings && window.settings.host ? window.settings.host : window.location.origin) + "/api/v1"
     }
@@ -36,7 +37,7 @@
         ".dialer-proxy-page td[data-label='操作']::before{display:none}" +
         ".dialer-proxy-page .form-control{height:42px;font-size:14px}" +
         ".dialer-proxy-page .dialer-proxy-actions{gap:8px}" +
-        ".dialer-proxy-page .dialer-proxy-actions .btn{flex:1;min-height:38px;font-size:14px}" +
+        ".dialer-proxy-page .dialer-proxy-actions .dialer-proxy-btn{flex:1;min-height:38px;font-size:14px}" +
         ".dialer-proxy-page .dialer-proxy-add-wrap{flex:1 0 auto;grid-template-columns:1fr;padding:0 16px;align-content:center;margin-top:0}" +
         ".dialer-proxy-page .dialer-proxy-add{grid-column:1/-1;width:100%}" +
         ".dialer-proxy-page .dialer-proxy-add .btn{width:100%;min-height:42px;font-size:14px}" +
@@ -235,9 +236,9 @@
                 r("td", { "data-label": "操作" },
                     r("div", { className: "dialer-proxy-actions" },
                         rule.editing
-                            ? r("button", { type: "button", className: "btn btn-sm btn-primary", onClick: function() { self.saveRule(index) } }, "保存")
-                            : r("button", { type: "button", className: "btn btn-sm btn-default", onClick: function() { self.updateRule(index, "editing", true) } }, "编辑"),
-                        r("button", { type: "button", className: "btn btn-sm btn-danger", onClick: function() { self.deleteRule(index) } }, "删除")
+                            ? r(btn, { type: "primary", className: "dialer-proxy-btn", onClick: function() { self.saveRule(index) } }, "保存")
+                            : r(btn, { type: "primary", className: "dialer-proxy-btn", onClick: function() { self.updateRule(index, "editing", true) } }, "编辑"),
+                        r(btn, { type: "danger", className: "dialer-proxy-btn", onClick: function() { self.deleteRule(index) } }, "删除")
                     )
                 )
             )
