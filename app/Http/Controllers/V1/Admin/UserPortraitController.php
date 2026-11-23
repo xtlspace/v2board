@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AliveIpHistory;
 use App\Models\SubLog;
 use App\Models\SubRule;
+use App\Services\NodeIpRegistry;
 use App\Services\RiskService;
 use App\Services\UserDistributionService;
 use App\Utils\ConfigCache;
@@ -533,15 +534,7 @@ class UserPortraitController extends Controller
         $chainForwardIgnore = (int) config('v2board.device_limit_chain_forward', 0) === 1;
         $ignoredNodeIps = [];
         if ($chainForwardIgnore) {
-            $nodeIps = Cache::get('ALIVE_NODE_IPS_ALL', []);
-            if (is_array($nodeIps)) {
-                foreach (array_keys($nodeIps) as $nodeIp) {
-                    $packed = $this->normalizeIpForCompare($nodeIp);
-                    if ($packed !== null) {
-                        $ignoredNodeIps[$packed] = true;
-                    }
-                }
-            }
+            $ignoredNodeIps = (new NodeIpRegistry())->packedIpSet();
         }
 
         $onlineIps = [];

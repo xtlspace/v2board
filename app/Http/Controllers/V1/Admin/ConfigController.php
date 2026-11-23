@@ -138,7 +138,8 @@ class ConfigController extends Controller
                 'server_node_report_min_traffic' => config('v2board.server_node_report_min_traffic', 0),
                 'server_device_online_min_traffic' => config('v2board.server_device_online_min_traffic', 0),
                 'device_limit_mode' => config('v2board.device_limit_mode', 0),
-                'device_limit_chain_forward' => config('v2board.device_limit_chain_forward', 0)
+                'device_limit_chain_forward' => config('v2board.device_limit_chain_forward', 0),
+                'device_limit_chain_forward_node_ips' => config('v2board.device_limit_chain_forward_node_ips', '')
             ],
             'email' => [
                 'email_template' => config('v2board.email_template', 'default'),

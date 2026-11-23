@@ -6354,7 +6354,16 @@
                 }, f.a.createElement(l["a"], {
                     checked: parseInt(u.device_limit_chain_forward),
                     onChange: e=>this.set("server", "device_limit_chain_forward", e ? 1 : 0)
-                }))), f.a.createElement(s["a"].TabPane, {
+                })), parseInt(u.device_limit_chain_forward) === 1 ? f.a.createElement(m, {
+                    title: "额外节点IP",
+                    description: "格式：nodeid1|ip1,nodeid2|ip2，IP 可填写域名；多个用英文逗号分隔"
+                }, f.a.createElement("input", {
+                    type: "text",
+                    className: "form-control",
+                    placeholder: "101|1.1.1.1,102|example.com",
+                    defaultValue: u.device_limit_chain_forward_node_ips || "",
+                    onChange: e=>this.set("server", "device_limit_chain_forward_node_ips", e.target.value)
+                })) : null), f.a.createElement(s["a"].TabPane, {
                     tab: "\u90ae\u4ef6",
                     key: "email"
                 }, f.a.createElement("div", {

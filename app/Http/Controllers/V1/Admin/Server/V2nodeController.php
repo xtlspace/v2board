@@ -4,6 +4,7 @@ namespace App\Http\Controllers\V1\Admin\Server;
 
 use App\Http\Controllers\Controller;
 use App\Models\ServerV2node;
+use App\Services\NodeIpRegistry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use ParagonIE_Sodium_Compat as SodiumCompat;
@@ -211,6 +212,10 @@ class V2nodeController extends Controller
                 ->where('in_node_id', $server->id)
                 ->orWhere('out_node_id', $server->id)
                 ->delete();
+            try {
+                (new NodeIpRegistry())->forget((int) $server->id);
+            } catch (\Throwable $e) {
+            }
         }
         return response([
             'data' => $server->delete()

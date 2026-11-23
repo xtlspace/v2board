@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\V1\Server;
 
 use App\Http\Controllers\Controller;
+use App\Services\NodeIpRegistry;
 use App\Services\ServerService;
 use App\Services\UserDistributionService;
 use App\Services\UserService;
@@ -22,6 +23,7 @@ class UniProxyController extends Controller
     private $serverService;
     private ?array $ignoredNodeIps = null;
     private ?array $nodeIpNodeIds = null;
+    private ?NodeIpRegistry $nodeIpRegistry = null;
 
     public function __construct(Request $request)
     {
@@ -98,6 +100,8 @@ class UniProxyController extends Controller
     // 后端获取在线数据
     public function alivelist(Request $request)
     {
+        $this->rememberNodeIps($request);
+
         $alive = Cache::remember('ALIVE_LIST', 60, function () {
             $userService = new UserService();
             $users = $userService->getDeviceLimitedUsers();
@@ -129,8 +133,6 @@ class UniProxyController extends Controller
     // 后端提交在线数据
     public function alive(Request $request)
     {
-        $this->rememberNodeIps($request);
-
         $data = $request->json()->all();
         if (empty($data)) {
             $data = $_POST;
@@ -246,131 +248,51 @@ class UniProxyController extends Controller
     }
 
     /**
-     * 记录节点访问 /alive 的来源 IP，同一节点可能对应多个 IP。
+     * 记录 /alivelist 请求的 REMOTE_ADDR，并同步后台额外节点 IP 配置。
      */
     private function rememberNodeIps(Request $request): void
     {
-        $now = time();
-        $sources = [];
-        foreach ([$_SERVER['REMOTE_ADDR'] ?? '', $request->ip()] as $source) {
-            $canonical = $this->canonicalIpAddress($source);
-            if ($canonical !== null) {
-                $sources[$canonical] = true;
-            }
-        }
-        if (empty($sources)) {
-            return;
+        $remote = (string) $request->server('REMOTE_ADDR', '');
+        $canonical = IpNormalizer::canonical($remote);
+        if ($canonical !== null) {
+            $this->nodeIpRegistry()->report((int) $this->nodeInfo->id, [$canonical]);
         }
 
-        $ips = array_keys($sources);
-        $nodeId = (int) $this->nodeInfo->id;
-        $write = function () use ($ips, $now, $nodeId) {
-            // 单节点来源集合
-            $this->rememberNodeIpSet('ALIVE_NODE_IPS_' . $this->nodeType . $this->nodeId, $ips, $now);
-            // 全局节点来源集合，值为节点 ID，供在线记录标注使用
-            $this->rememberGlobalNodeIps($ips, $now, $nodeId);
-        };
-
-        // 多个节点可能同时上报，用锁避免读改写互相覆盖
-        try {
-            Cache::lock('ALIVE_NODE_IPS_LOCK', 3)->block(2, $write);
-        } catch (\Throwable $e) {
-            $write();
+        if ((int) config('v2board.device_limit_chain_forward', 0) === 1) {
+            $this->nodeIpRegistry()->syncConfigured(
+                (string) config('v2board.device_limit_chain_forward_node_ips', '')
+            );
         }
     }
 
-    private function rememberNodeIpSet(string $key, array $ips, int $now): void
+    private function nodeIpRegistry(): NodeIpRegistry
     {
-        $set = Cache::get($key, []);
-        if (!is_array($set)) {
-            $set = [];
+        if ($this->nodeIpRegistry === null) {
+            $this->nodeIpRegistry = new NodeIpRegistry();
         }
-        foreach ($ips as $ip) {
-            $set[$ip] = $now;
-        }
-        foreach ($set as $ip => $ts) {
-            if (!is_int($ts) || $now - $ts > 1800) {
-                unset($set[$ip]);
-            }
-        }
-        Cache::put($key, $set, 3600);
-    }
-
-    private function rememberGlobalNodeIps(array $ips, int $now, int $nodeId): void
-    {
-        $registry = Cache::get('ALIVE_NODE_IPS_ALL', []);
-        if (!is_array($registry)) {
-            $registry = [];
-        }
-        foreach ($ips as $ip) {
-            $registry[$ip] = ['ts' => $now, 'node_id' => $nodeId];
-        }
-        foreach ($registry as $ip => $meta) {
-            if (!is_array($meta)) {
-                unset($registry[$ip]);
-                continue;
-            }
-            $ts = (int) ($meta['ts'] ?? 0);
-            if ($ts <= 0 || $now - $ts > 1800) {
-                unset($registry[$ip]);
-            }
-        }
-        Cache::put('ALIVE_NODE_IPS_ALL', $registry, 3600);
+        return $this->nodeIpRegistry;
     }
 
     /**
-     * 汇总全部节点来源 IP。每请求只读一次缓存，结果与上报用户数无关。
+     * 汇总全部节点上报的 IP。每请求只读一次缓存。
      */
     private function chainForwardIgnoredIps(): array
     {
         if ($this->ignoredNodeIps === null) {
-            $this->ignoredNodeIps = $this->packedIpSet(Cache::get('ALIVE_NODE_IPS_ALL', []));
+            $this->ignoredNodeIps = $this->nodeIpRegistry()->packedIpSet();
         }
         return $this->ignoredNodeIps;
     }
 
     /**
-     * 全局节点 IP -> 节点 ID 映射，供在线记录标注使用。
+     * 节点 IP -> 最小节点 ID 映射，供在线记录标注使用。
      */
     private function nodeIpNodeIdMap(): array
     {
-        if ($this->nodeIpNodeIds !== null) {
-            return $this->nodeIpNodeIds;
+        if ($this->nodeIpNodeIds === null) {
+            $this->nodeIpNodeIds = $this->nodeIpRegistry()->ipNodeMap();
         }
-        $registry = Cache::get('ALIVE_NODE_IPS_ALL', []);
-        $map = [];
-        if (is_array($registry)) {
-            foreach ($registry as $ip => $meta) {
-                if (!is_array($meta) || empty($meta['node_id'])) {
-                    continue;
-                }
-                $canonical = $this->canonicalIpAddress($ip);
-                if ($canonical !== null) {
-                    $map[$canonical] = (int) $meta['node_id'];
-                }
-            }
-        }
-        return $this->nodeIpNodeIds = $map;
-    }
-
-    private function packedIpSet($set): array
-    {
-        $packed = [];
-        if (!is_array($set)) {
-            return $packed;
-        }
-        foreach (array_keys($set) as $ip) {
-            $value = $this->normalizeIpAddress($ip);
-            if ($value !== null) {
-                $packed[$value] = true;
-            }
-        }
-        return $packed;
-    }
-
-    private function canonicalIpAddress($ip): ?string
-    {
-        return IpNormalizer::canonical($ip);
+        return $this->nodeIpNodeIds;
     }
 
     private function normalizeIpAddress($ip): ?string
