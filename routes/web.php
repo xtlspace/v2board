@@ -38,24 +38,6 @@ Route::get('/', function (Request $request) {
     return view('theme::' . config('v2board.frontend_theme', 'default') . '.dashboard', $renderParams);
 });
 
-Route::get('/dialer-proxy', function () {
-    $theme = config('v2board.frontend_theme', 'default');
-    if (!config("theme.{$theme}")) {
-        (new ThemeService($theme))->init();
-    }
-    $themeConfig = config("theme.{$theme}") ?: [];
-    $colors = [
-        'darkblue' => '#3b5998',
-        'black' => '#343a40',
-        'default' => '#0665d0',
-        'green' => '#319795'
-    ];
-    $themeColor = $themeConfig['theme_color'] ?? 'default';
-    return view('theme::' . $theme . '.dialer_proxy', [
-        'primary_color' => $colors[$themeColor] ?? '#0665d0'
-    ]);
-});
-
 //TODO:: 兼容
 Route::get('/' . config('v2board.secure_path', config('v2board.frontend_admin_path', hash('crc32b', config('app.key')))), function () {
     return view('admin', [
