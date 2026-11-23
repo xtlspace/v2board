@@ -258,6 +258,7 @@ CREATE TABLE `v2_server_v2node` (
                                     `name` varchar(255) NOT NULL,
                                     `parent_id` int(11) DEFAULT NULL,
                                     `host` varchar(255) NOT NULL,
+                                    `realm_ip` tinyint(1) NOT NULL DEFAULT '0',
                                     `listen_ip` varchar(255) NOT NULL DEFAULT '0.0.0.0',
                                     `port` varchar(11) NOT NULL,
                                     `server_port` int(11) NOT NULL,

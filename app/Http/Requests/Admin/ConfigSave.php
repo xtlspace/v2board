@@ -66,7 +66,6 @@ class ConfigSave extends FormRequest
         'server_push_interval' => 'integer',
         'device_limit_mode' => 'in:0,1',
         'device_limit_chain_forward' => 'in:0,1',
-        'device_limit_chain_forward_node_ips' => 'nullable|string|max:2000',
         'server_node_report_min_traffic' => 'integer', 
         'server_device_online_min_traffic' => 'integer', 
         // frontend

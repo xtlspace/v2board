@@ -15,6 +15,7 @@ Schedule::call(function () {
 })->everyMinute();
 
 Schedule::command('traffic:update')->everyMinute()->withoutOverlapping();
+Schedule::command('v2board:sync-realm-ip')->everyTwoMinutes()->withoutOverlapping();
 Schedule::command('v2board:statistics')->dailyAt('0:10');
 Schedule::command('check:order')->everyMinute()->withoutOverlapping();
 Schedule::command('check:commission')->everyFifteenMinutes();

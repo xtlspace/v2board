@@ -6354,16 +6354,7 @@
                 }, f.a.createElement(l["a"], {
                     checked: parseInt(u.device_limit_chain_forward),
                     onChange: e=>this.set("server", "device_limit_chain_forward", e ? 1 : 0)
-                })), parseInt(u.device_limit_chain_forward) === 1 ? f.a.createElement(m, {
-                    title: "额外节点IP",
-                    description: "格式：nodeid1|ip1,nodeid2|ip2，IP 可填写域名；多个用英文逗号分隔"
-                }, f.a.createElement("input", {
-                    type: "text",
-                    className: "form-control",
-                    placeholder: "101|1.1.1.1,102|example.com",
-                    defaultValue: u.device_limit_chain_forward_node_ips || "",
-                    onChange: e=>this.set("server", "device_limit_chain_forward_node_ips", e.target.value)
-                })) : null), f.a.createElement(s["a"].TabPane, {
+                }))), f.a.createElement(s["a"].TabPane, {
                     tab: "\u90ae\u4ef6",
                     key: "email"
                 }, f.a.createElement("div", {
@@ -102243,7 +102234,8 @@
                         network: "tcp",
                         disable_sni: 0,
                         zero_rtt_handshake: 0,
-                        flow: null
+                        flow: null,
+                        realm_ip: 0
                     },
                     visible: !1,
                     childDrawer: {
@@ -102530,11 +102522,30 @@
                 y.a.createElement("div", {
                     className: "form-group col-md-6 col-xs-12"
                 },
-                y.a.createElement("label", null, "\u8fde\u63a5\u5730\u5740"), y.a.createElement(s["a"], {
+                y.a.createElement("label", null, "\u8fde\u63a5\u5730\u5740"), y.a.createElement("div", {
+                    style: {
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8
+                    }
+                }, y.a.createElement(s["a"], {
+                    style: {
+                        flex: 1
+                    },
                     placeholder: "\u5730\u5740\u6216IP",
                     value: e.host,
                     onChange: e=>this.formChange("host", e.target.value)
-                })),
+                }), y.a.createElement("label", {
+                    style: {
+                        margin: 0,
+                        whiteSpace: "nowrap"
+                    },
+                    title: "\u52fe\u9009\u540e\u5c06\u8fde\u63a5\u5730\u5740\u89e3\u6790\u4e3a\u8282\u70b9\u771f\u5b9e IP"
+                }, y.a.createElement("input", {
+                    type: "checkbox",
+                    checked: !!parseInt(e.realm_ip),
+                    onChange: e=>this.formChange("realm_ip", e.target.checked ? 1 : 0)
+                }), " \u771f\u5b9e\u5730\u5740"))),
                 y.a.createElement("div", {
                     className: "form-group col-md-6 col-xs-12"
                 },

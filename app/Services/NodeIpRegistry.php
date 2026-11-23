@@ -9,10 +9,9 @@ class NodeIpRegistry
 {
     private const CACHE_KEY = 'ALIVE_NODE_REPORTED_IPS';
     private const LOCK_KEY = 'ALIVE_NODE_REPORTED_IPS_LOCK';
-    private const CONFIG_SYNC_HASH_KEY = 'ALIVE_NODE_IPS_CONFIG_HASH';
-    private const CONFIG_SYNC_AT_KEY = 'ALIVE_NODE_IPS_CONFIG_SYNCED_AT';
-    private const CONFIG_SYNC_INTERVAL = 120;
-    private const MAX_CONFIG_PAIRS = 200;
+    private const REALM_SYNC_INTERVAL = 120;
+    private const REALM_HASH_PREFIX = 'ALIVE_NODE_REALM_HASH_';
+    private const REALM_AT_PREFIX = 'ALIVE_NODE_REALM_SYNCED_AT_';
     private const MAX_IPS_PER_NODE = 16;
     private const IP_TTL = 300;
     private const NODE_TTL = 3600;
@@ -89,114 +88,43 @@ class NodeIpRegistry
     }
 
     /**
-     * 同步后台配置的额外节点 IP。
+     * 将节点的真实地址（IP 或域名）加入缓存。
      *
-     * 格式：nodeid1|ip1,nodeid2|ip2
-     * ip 可以是 IPv4、IPv6 或域名。
+     * 每个节点最多每 2 分钟解析一次，避免频繁 DNS。
      */
-    public function syncConfigured(string $raw): void
+    public function reportHost(int $nodeId, string $host): void
     {
-        $raw = trim($raw);
-        if ($raw === '') {
+        if ($nodeId <= 0) {
+            return;
+        }
+        $host = trim($host);
+        if ($host === '') {
             return;
         }
 
         $now = time();
-        $hash = md5($raw);
-        $lastHash = (string) Cache::get(self::CONFIG_SYNC_HASH_KEY, '');
-        $lastAt = (int) Cache::get(self::CONFIG_SYNC_AT_KEY, 0);
-        if ($lastHash === $hash && $now - $lastAt < self::CONFIG_SYNC_INTERVAL) {
+        $hashKey = self::REALM_HASH_PREFIX . $nodeId;
+        $atKey = self::REALM_AT_PREFIX . $nodeId;
+        $hash = md5($host);
+        $lastHash = (string) Cache::get($hashKey, '');
+        $lastAt = (int) Cache::get($atKey, 0);
+        if ($lastHash === $hash && $now - $lastAt < self::REALM_SYNC_INTERVAL) {
             return;
         }
+        Cache::put($hashKey, $hash, self::REALM_SYNC_INTERVAL * 2);
+        Cache::put($atKey, $now, self::REALM_SYNC_INTERVAL * 2);
 
-        // 先占位，避免并发请求同时做 DNS 解析
-        Cache::put(self::CONFIG_SYNC_AT_KEY, $now, self::CONFIG_SYNC_INTERVAL * 2);
-        Cache::put(self::CONFIG_SYNC_HASH_KEY, $hash, self::CONFIG_SYNC_INTERVAL * 2);
-
-        $entries = $this->resolveConfigured($raw);
-        if (empty($entries)) {
+        $ips = $this->resolveHost($host);
+        if (empty($ips)) {
             return;
         }
-
-        $write = function () use ($entries, $now) {
-            $registry = $this->load();
-            foreach ($entries as $nodeId => $ips) {
-                $key = (string) $nodeId;
-                $entry = $registry[$key] ?? [];
-                $merged = is_array($entry['ips'] ?? null) ? $entry['ips'] : [];
-                foreach ($ips as $ip) {
-                    $merged[$ip] = $now;
-                }
-                foreach ($merged as $ip => $ts) {
-                    $ts = (int) $ts;
-                    if ($ts <= 0 || $now - $ts > self::IP_TTL) {
-                        unset($merged[$ip]);
-                    }
-                }
-                if (empty($merged)) {
-                    unset($registry[$key]);
-                } else {
-                    $registry[$key] = [
-                        'ips' => $merged,
-                        'ts' => $now,
-                    ];
-                }
-            }
-            $this->prune($registry, $now);
-            Cache::put(self::CACHE_KEY, $registry, self::NODE_TTL);
-        };
-
-        $this->withLock($write);
-    }
-
-    /**
-     * @return array<int, string[]>
-     */
-    private function resolveConfigured(string $raw): array
-    {
-        $entries = [];
-        $pairs = array_slice(explode(',', $raw), 0, self::MAX_CONFIG_PAIRS);
-        foreach ($pairs as $pair) {
-            $pair = trim($pair);
-            if ($pair === '') {
-                continue;
-            }
-            $parts = explode('|', $pair, 2);
-            if (count($parts) !== 2) {
-                continue;
-            }
-            $nodeId = (int) trim($parts[0]);
-            $target = trim($parts[1]);
-            if ($nodeId <= 0 || $target === '') {
-                continue;
-            }
-
-            $ips = $this->resolveConfiguredTarget($target);
-            if (empty($ips)) {
-                continue;
-            }
-            if (!isset($entries[$nodeId])) {
-                $entries[$nodeId] = [];
-            }
-            foreach ($ips as $ip) {
-                if (count($entries[$nodeId]) >= self::MAX_IPS_PER_NODE) {
-                    break;
-                }
-                $entries[$nodeId][$ip] = true;
-            }
-        }
-
-        $result = [];
-        foreach ($entries as $nodeId => $ips) {
-            $result[$nodeId] = array_keys($ips);
-        }
-        return $result;
+        $this->report($nodeId, array_slice($ips, 0, self::MAX_IPS_PER_NODE));
     }
 
     /**
      * @return string[]
      */
-    private function resolveConfiguredTarget(string $target): array
+    private function resolveHost(string $target): array
     {
         $canonical = IpNormalizer::canonical($target);
         if ($canonical !== null) {

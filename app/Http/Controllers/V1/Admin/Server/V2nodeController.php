@@ -7,6 +7,7 @@ use App\Models\ServerV2node;
 use App\Services\NodeIpRegistry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use ParagonIE_Sodium_Compat as SodiumCompat;
 use App\Utils\Helper;
 
@@ -47,6 +48,7 @@ class V2nodeController extends Controller
             'show' => 'nullable|in:0,1',
             'dialer_proxy_in' => 'nullable|in:0,1',
             'dialer_proxy_out' => 'nullable|in:0,1',
+            'realm_ip' => 'nullable|in:0,1',
             'sort' => 'nullable'
         ]);
         if ($params['protocol'] == 'anytls' && $params['tls'] === 0) {
@@ -182,20 +184,29 @@ class V2nodeController extends Controller
             if (!$server) {
                 abort(500, '服务器不存在');
             }
+            $oldRealmIp = (int) $server->realm_ip;
             try {
                 $server->update($params);
             } catch (\Exception $e) {
                 abort(500, '保存失败');
             }
             $this->cleanupDialerProxyRules((int) $server->id, $request, $params);
+            $this->syncRealmIp(
+                (int) $server->id,
+                (int) $server->realm_ip,
+                (string) $server->host,
+                $oldRealmIp
+            );
             return response([
                 'data' => true
             ]);
         }
 
-        if (!ServerV2node::create($params)) {
+        $server = ServerV2node::create($params);
+        if (!$server) {
             abort(500, '创建失败');
         }
+        $this->syncRealmIp((int) $server->id, (int) $server->realm_ip, (string) $server->host, 0);
         return response([
             'data' => true
         ]);
@@ -269,16 +280,35 @@ class V2nodeController extends Controller
     public function copy(Request $request)
     {
         $server = ServerV2node::find($request->input('id'));
-        $server->show = 0;
         if (!$server) {
             abort(500, '服务器不存在');
         }
-        if (!ServerV2node::create($server->toArray())) {
+        $data = $server->toArray();
+        unset($data['id']);
+        $data['show'] = 0;
+        $data['realm_ip'] = 0;
+        if (!ServerV2node::create($data)) {
             abort(500, '复制失败');
         }
 
         return response([
             'data' => true
         ]);
+    }
+
+    private function syncRealmIp(int $nodeId, int $realmIp, string $host, int $oldRealmIp): void
+    {
+        try {
+            $registry = new NodeIpRegistry();
+            if ($realmIp === 1) {
+                $registry->reportHost($nodeId, $host);
+                return;
+            }
+            if ($oldRealmIp === 1) {
+                $registry->forget($nodeId);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('sync realm ip failed: ' . $e->getMessage());
+        }
     }
 }

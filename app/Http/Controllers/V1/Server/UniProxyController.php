@@ -248,7 +248,7 @@ class UniProxyController extends Controller
     }
 
     /**
-     * 记录 /alivelist 请求的 REMOTE_ADDR，并同步后台额外节点 IP 配置。
+     * 记录 /alivelist 请求的 REMOTE_ADDR。
      */
     private function rememberNodeIps(Request $request): void
     {
@@ -256,12 +256,6 @@ class UniProxyController extends Controller
         $canonical = IpNormalizer::canonical($remote);
         if ($canonical !== null) {
             $this->nodeIpRegistry()->report((int) $this->nodeInfo->id, [$canonical]);
-        }
-
-        if ((int) config('v2board.device_limit_chain_forward', 0) === 1) {
-            $this->nodeIpRegistry()->syncConfigured(
-                (string) config('v2board.device_limit_chain_forward_node_ips', '')
-            );
         }
     }
 

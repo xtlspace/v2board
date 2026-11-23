@@ -766,6 +766,9 @@ DEALLOCATE PREPARE drop_alive_node_name_stmt;
 -- 在线记录中节点 IP 所属节点
 ALTER TABLE `v2_alive_ip_history` ADD COLUMN `alive_ip_node_id` int(11) DEFAULT NULL;
 
+-- 节点真实地址标记
+ALTER TABLE `v2_server_v2node` ADD COLUMN `realm_ip` tinyint(1) NOT NULL DEFAULT '0';
+
 -- 链式代理：节点入口/出口标记
 ALTER TABLE `v2_server_v2node`
   ADD COLUMN `dialer_proxy_in` tinyint(1) NOT NULL DEFAULT '0',
