@@ -13,7 +13,7 @@
         .head h1 { font-size: 22px; margin: 0; }
         .desc { color: #777; font-size: 13px; line-height: 1.7; margin: 0 0 20px; }
         .card { background: #fff; border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,.05); padding: 18px; }
-        .rule-head, .rule-row { display: grid; grid-template-columns: 1fr 1fr 190px; gap: 12px; align-items: center; }
+        .rule-head, .rule-row { display: grid; grid-template-columns: 1fr 1fr 180px; gap: 12px; align-items: center; }
         .rule-head { color: #888; font-size: 13px; padding: 0 4px 10px; border-bottom: 1px solid #f0f0f0; }
         .rule-row { padding: 12px 4px; border-bottom: 1px solid #f5f5f5; }
         .rule-row:last-child { border-bottom: none; }
@@ -22,13 +22,13 @@
         select { width: 100%; padding: 8px 10px; border: 1px solid #d9d9d9; border-radius: 6px; background: #fff; font-size: 14px; outline: none; }
         select:focus { border-color: var(--primary); }
         select:disabled { background: #fafafa; color: #999; }
-        .actions { display: flex; gap: 8px; justify-content: flex-end; }
+        .actions { display: flex; gap: 8px; justify-content: center; }
         button { border: 1px solid #d9d9d9; background: #fff; color: #333; padding: 7px 12px; border-radius: 6px; font-size: 13px; cursor: pointer; }
         button.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
         button.primary:hover { filter: brightness(1.08); }
         button.danger { color: #ff4d4f; border-color: #ffccc7; }
         button:disabled { opacity: .55; cursor: not-allowed; }
-        .add-wrap { flex: 1 0 auto; display: grid; grid-template-columns: 1fr 1fr 190px; align-content: center; align-items: center; padding: 0 18px; }
+        .add-wrap { flex: 0 0 auto; display: grid; grid-template-columns: 1fr 1fr 180px; align-content: start; align-items: center; padding: 0 18px; margin-top: 14px; }
         .add-wrap button { grid-column: 1 / 3; justify-self: center; }
         .empty { color: #999; text-align: center; padding: 26px 0; font-size: 14px; }
         .modal-mask { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.45); z-index: 2000; align-items: center; justify-content: center; }
@@ -52,7 +52,7 @@
             select { height: 42px; font-size: 14px; }
             .actions { gap: 8px; }
             .actions button { flex: 1; min-height: 38px; padding: 8px 6px; font-size: 14px; }
-            .add-wrap { grid-template-columns: 1fr; padding: 0 12px; }
+            .add-wrap { flex: 1 0 auto; grid-template-columns: 1fr; padding: 0 12px; align-content: center; margin-top: 0; }
             .add-wrap button { grid-column: 1 / -1; justify-self: center; width: 100%; min-height: 42px; font-size: 14px; }
             .modal-card { width: calc(100vw - 32px); padding: 20px 18px; }
             .modal-actions button { width: 100%; }
@@ -71,7 +71,7 @@
         <div class="rule-head">
             <div>入口</div>
             <div>出口</div>
-            <div style="text-align:right">操作</div>
+            <div style="text-align:center">操作</div>
         </div>
         <div id="ruleList"><div class="loading">加载中...</div></div>
     </div>

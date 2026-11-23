@@ -16,8 +16,10 @@
     var dialerProxyCss = "#main-container>.dialer-proxy-content{flex:1 0 auto;display:flex;flex-direction:column}" +
         ".dialer-proxy-page{display:flex;flex-direction:column;flex:1 0 auto;min-height:0}" +
         ".dialer-proxy-page>.row{flex:0 0 auto}" +
-        ".dialer-proxy-page .dialer-proxy-actions{display:flex;justify-content:flex-end;gap:6px}" +
-        ".dialer-proxy-page .dialer-proxy-add-wrap{flex:1 0 auto;display:grid;grid-template-columns:1fr 1fr 220px;align-content:center;align-items:center;padding:0 20px}" +
+        ".dialer-proxy-page .block{margin-bottom:0}" +
+        ".dialer-proxy-page table{table-layout:fixed}" +
+        ".dialer-proxy-page .dialer-proxy-actions{display:flex;justify-content:center;gap:6px}" +
+        ".dialer-proxy-page .dialer-proxy-add-wrap{flex:0 0 auto;display:grid;grid-template-columns:1fr 1fr 180px;align-content:start;align-items:center;padding:0 20px;margin-top:14px}" +
         ".dialer-proxy-page .dialer-proxy-add{grid-column:1/3;display:flex;justify-content:center}" +
         "@media (max-width:767.98px){" +
         ".dialer-proxy-page .block-content{padding:16px}" +
@@ -34,7 +36,7 @@
         ".dialer-proxy-page .form-control{height:42px;font-size:14px}" +
         ".dialer-proxy-page .dialer-proxy-actions{gap:8px}" +
         ".dialer-proxy-page .dialer-proxy-actions .btn{flex:1;min-height:38px;font-size:14px}" +
-        ".dialer-proxy-page .dialer-proxy-add-wrap{grid-template-columns:1fr;padding:0 16px}" +
+        ".dialer-proxy-page .dialer-proxy-add-wrap{flex:1 0 auto;grid-template-columns:1fr;padding:0 16px;align-content:center;margin-top:0}" +
         ".dialer-proxy-page .dialer-proxy-add{grid-column:1/-1;width:100%}" +
         ".dialer-proxy-page .dialer-proxy-add .btn{width:100%;min-height:42px;font-size:14px}" +
         "}" +
@@ -236,7 +238,7 @@
                 content = r("div", { className: "block block-rounded" }, r("div", { className: "block-content" },
                     r("p", { style: { color: "#777", fontSize: 13, marginBottom: 16 } }, "该功能仅Mihomo内核可用，建议使用教程内客户端，添加规则后出入口节点会同时计算流量"),
                     r("div", { className: "table-responsive" }, r("table", { className: "table table-bordered" },
-                        r("thead", null, r("tr", null, r("th", null, "入口"), r("th", null, "出口"), r("th", { style: { width: 220 } }, "操作"))),
+                        r("thead", null, r("tr", null, r("th", null, "入口"), r("th", null, "出口"), r("th", { style: { width: 180, textAlign: "center" } }, "操作"))),
                         r("tbody", null, s.rules.length ? s.rules.map(function(rule, index) { return self.renderRow(rule, index) }) : r("tr", null, r("td", { colSpan: 3, style: { textAlign: "center", color: "#999" } }, "暂无规则")))
                     ))
                 ))
