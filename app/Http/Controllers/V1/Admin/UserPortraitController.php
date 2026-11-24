@@ -882,14 +882,6 @@ class UserPortraitController extends Controller
             $data['replace_port'] = null;
         }
 
-        if (($data['ip_country'] ?? '') !== '中国') {
-            $data['ip_region'] = null;
-            $data['ip_city'] = null;
-        }
-        if (empty($data['ip_region'])) {
-            $data['ip_city'] = null;
-        }
-
         foreach (['original_host', 'replace_host'] as $field) {
             if (!empty($data[$field]) && !$this->isValidRuleHost((string) $data[$field])) {
                 throw ValidationException::withMessages([

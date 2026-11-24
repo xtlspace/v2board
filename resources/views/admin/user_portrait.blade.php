@@ -773,18 +773,21 @@
             </div>
             <div class="form-inline">
                 <div class="form-row">
-                    <label>匹配 国家</label>
-                    <select id="ruleCountry"><option value="">不限</option></select>
+                    <label>匹配 国家 <span class="hint">可输入，支持下拉建议</span></label>
+                    <input type="text" id="ruleCountry" list="ruleCountryOptions" placeholder="例如：中国">
+                    <datalist id="ruleCountryOptions"></datalist>
                 </div>
                 <div class="form-row">
-                    <label>匹配 省份 <span class="hint">仅中国可选</span></label>
-                    <select id="ruleRegion" disabled><option value="">不限</option></select>
+                    <label>匹配 省份 <span class="hint">可输入，中国有下拉建议</span></label>
+                    <input type="text" id="ruleRegion" list="ruleRegionOptions" placeholder="例如：广东">
+                    <datalist id="ruleRegionOptions"></datalist>
                 </div>
             </div>
             <div class="form-inline">
                 <div class="form-row">
-                    <label>匹配 城市 <span class="hint">选择省份后可选</span></label>
-                    <select id="ruleCity" disabled><option value="">不限</option></select>
+                    <label>匹配 城市 <span class="hint">可输入，支持下拉建议</span></label>
+                    <input type="text" id="ruleCity" list="ruleCityOptions" placeholder="例如：深圳">
+                    <datalist id="ruleCityOptions"></datalist>
                 </div>
                 <div class="form-row">
                     <label>匹配 运营商 <span class="hint">可输入，支持下拉建议</span></label>
@@ -2432,39 +2435,7 @@ function loadRules() {
         });
 }
 
-function fillRuleSelect(select, values, selected) {
-    select.innerHTML = '';
-    var empty = document.createElement('option');
-    empty.value = '';
-    empty.textContent = '不限';
-    select.appendChild(empty);
-
-    var found = false;
-    (values || []).forEach(function(value) {
-        var option = document.createElement('option');
-        option.value = String(value);
-        option.textContent = String(value);
-        if (selected && String(value) === String(selected)) {
-            option.selected = true;
-            found = true;
-        }
-        select.appendChild(option);
-    });
-
-    if (selected && !found) {
-        var option = document.createElement('option');
-        option.value = String(selected);
-        option.textContent = String(selected);
-        option.selected = true;
-        select.appendChild(option);
-    }
-    if (!selected) {
-        select.value = '';
-    }
-}
-
-function fillRuleDatalist(input, datalist, values, selected) {
-    input.value = selected || '';
+function setRuleDatalist(datalist, values) {
     datalist.innerHTML = '';
     (values || []).forEach(function(value) {
         var option = document.createElement('option');
@@ -2473,29 +2444,28 @@ function fillRuleDatalist(input, datalist, values, selected) {
     });
 }
 
-function applyRuleRegionOptions(country, region, city) {
-    var regionSelect = document.getElementById('ruleRegion');
-    var citySelect = document.getElementById('ruleCity');
+function fillRuleDatalist(input, datalist, values, selected) {
+    input.value = selected || '';
+    setRuleDatalist(datalist, values);
+}
+
+function updateRuleRegionDatalist() {
     if (!ruleOptions) return;
+    var country = document.getElementById('ruleCountry').value.trim();
+    setRuleDatalist(
+        document.getElementById('ruleRegionOptions'),
+        country === '中国' ? (ruleOptions.regions || []) : []
+    );
+}
 
-    if (country !== '中国') {
-        fillRuleSelect(regionSelect, [], '');
-        fillRuleSelect(citySelect, [], '');
-        regionSelect.disabled = true;
-        citySelect.disabled = true;
-        return;
-    }
-
-    regionSelect.disabled = false;
-    fillRuleSelect(regionSelect, ruleOptions.regions || [], region);
-    var selectedRegion = regionSelect.value;
-    if (!selectedRegion) {
-        fillRuleSelect(citySelect, [], '');
-        citySelect.disabled = true;
-        return;
-    }
-    citySelect.disabled = false;
-    fillRuleSelect(citySelect, (ruleOptions.cities || {})[selectedRegion] || [], city);
+function updateRuleCityDatalist() {
+    if (!ruleOptions) return;
+    var country = document.getElementById('ruleCountry').value.trim();
+    var region = document.getElementById('ruleRegion').value.trim();
+    setRuleDatalist(
+        document.getElementById('ruleCityOptions'),
+        country === '中国' && region ? ((ruleOptions.cities || {})[region] || []) : []
+    );
 }
 
 function showRuleError(message) {
@@ -2554,18 +2524,32 @@ function openRuleModal(rule) {
 
     document.getElementById('ruleModal').classList.add('show');
     loadRuleOptions().then(function(options) {
-        fillRuleSelect(document.getElementById('ruleCountry'), options.countries || [], rule ? (rule.ip_country || '') : '');
+        fillRuleDatalist(
+            document.getElementById('ruleCountry'),
+            document.getElementById('ruleCountryOptions'),
+            options.countries || [],
+            rule ? (rule.ip_country || '') : ''
+        );
+        fillRuleDatalist(
+            document.getElementById('ruleRegion'),
+            document.getElementById('ruleRegionOptions'),
+            options.regions || [],
+            rule ? (rule.ip_region || '') : ''
+        );
+        fillRuleDatalist(
+            document.getElementById('ruleCity'),
+            document.getElementById('ruleCityOptions'),
+            [],
+            rule ? (rule.ip_city || '') : ''
+        );
         fillRuleDatalist(
             document.getElementById('ruleIsp'),
             document.getElementById('ruleIspOptions'),
             options.isps || [],
             rule ? (rule.ip_isp || '') : ''
         );
-        applyRuleRegionOptions(
-            document.getElementById('ruleCountry').value,
-            rule ? (rule.ip_region || '') : '',
-            rule ? (rule.ip_city || '') : ''
-        );
+        updateRuleRegionDatalist();
+        updateRuleCityDatalist();
     }).catch(function(err) {
         showRuleError(err && err.message ? err.message : '加载规则选项失败');
     });
@@ -2597,11 +2581,12 @@ function deleteRule(id) {
 }
 
 document.getElementById('addRuleBtn').addEventListener('click', function() { openRuleModal(null); });
-document.getElementById('ruleCountry').addEventListener('change', function() {
-    applyRuleRegionOptions(this.value, '', '');
+document.getElementById('ruleCountry').addEventListener('input', function() {
+    updateRuleRegionDatalist();
+    updateRuleCityDatalist();
 });
-document.getElementById('ruleRegion').addEventListener('change', function() {
-    applyRuleRegionOptions(document.getElementById('ruleCountry').value, this.value, '');
+document.getElementById('ruleRegion').addEventListener('input', function() {
+    updateRuleCityDatalist();
 });
 document.getElementById('ruleType').addEventListener('change', function() {
     updateRuleTypeFields(true);
@@ -2616,9 +2601,9 @@ document.getElementById('saveRuleBtn').addEventListener('click', function() {
         sort: parseInt(document.getElementById('ruleSort').value, 10) || 0,
         user_agent: document.getElementById('ruleUserAgent').value.trim() || null,
         user_id: document.getElementById('ruleUserId').value.trim() || null,
-        ip_country: document.getElementById('ruleCountry').value || null,
-        ip_region: document.getElementById('ruleRegion').value || null,
-        ip_city: document.getElementById('ruleCity').value || null,
+        ip_country: document.getElementById('ruleCountry').value.trim() || null,
+        ip_region: document.getElementById('ruleRegion').value.trim() || null,
+        ip_city: document.getElementById('ruleCity').value.trim() || null,
         ip_isp: document.getElementById('ruleIsp').value || null,
         original_host: document.getElementById('ruleOriginalHost').value.trim() || null,
         replace_host: type === 1 ? null : (document.getElementById('ruleReplaceHost').value.trim() || null),
