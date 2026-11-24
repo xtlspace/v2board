@@ -8,6 +8,7 @@ use App\Models\SubLog;
 use App\Models\SubRule;
 use App\Services\NodeIpRegistry;
 use App\Services\RiskService;
+use App\Services\SubRuleMatcher;
 use App\Services\UserDistributionService;
 use App\Utils\ConfigCache;
 use App\Utils\IPLocation;
@@ -18,6 +19,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 
 class UserPortraitController extends Controller
 {
@@ -741,6 +743,105 @@ class UserPortraitController extends Controller
         ]);
     }
 
+    public function getRuleOptions(Request $request)
+    {
+        $options = Cache::remember('user_portrait_rule_options', 300, function () {
+            $countries = SubLog::whereNotNull('ip_country')
+                ->where('ip_country', '!=', '')
+                ->distinct()
+                ->orderBy('ip_country')
+                ->pluck('ip_country')
+                ->all();
+            $countries = array_values(array_unique(array_merge(['中国'], $countries)));
+
+            $fixedRegions = [
+                '北京', '天津', '河北', '山西', '内蒙古', '辽宁', '吉林', '黑龙江',
+                '上海', '江苏', '浙江', '安徽', '福建', '江西', '山东', '河南',
+                '湖北', '湖南', '广东', '广西', '海南', '重庆', '四川', '贵州',
+                '云南', '西藏', '陕西', '甘肃', '青海', '宁夏', '新疆',
+                '香港', '澳门', '台湾',
+            ];
+            $regions = SubLog::where('ip_country', '中国')
+                ->whereNotNull('ip_region')
+                ->where('ip_region', '!=', '')
+                ->distinct()
+                ->pluck('ip_region')
+                ->all();
+            $regions = array_values(array_unique(array_merge($fixedRegions, $regions)));
+
+            $cities = [];
+            $cityRows = SubLog::where('ip_country', '中国')
+                ->whereNotNull('ip_region')
+                ->where('ip_region', '!=', '')
+                ->whereNotNull('ip_city')
+                ->where('ip_city', '!=', '')
+                ->get(['ip_region', 'ip_city']);
+            foreach ($cityRows as $row) {
+                $cities[$row->ip_region][] = $row->ip_city;
+            }
+            foreach ($cities as $region => $list) {
+                $list = array_values(array_unique($list));
+                sort($list);
+                $cities[$region] = $list;
+            }
+
+            $isps = SubLog::whereNotNull('ip_isp')
+                ->where('ip_isp', '!=', '')
+                ->distinct()
+                ->orderBy('ip_isp')
+                ->pluck('ip_isp')
+                ->all();
+            $commonIsps = [
+                '电信', '联通', '移动', '广电', '教育网',
+                '中国电信', '中国联通', '中国移动', '其他',
+            ];
+            $isps = array_values(array_unique(array_merge($commonIsps, $isps)));
+
+            return [
+                'countries' => $countries,
+                'regions' => $regions,
+                'cities' => $cities,
+                'isps' => $isps,
+            ];
+        });
+
+        return response(['data' => $options]);
+    }
+
+    public function testRule(Request $request)
+    {
+        $data = $request->validate([
+            'user_id' => 'nullable|string|max:128',
+            'user_agent' => 'nullable|string|max:255',
+            'ip_country' => 'nullable|string|max:128',
+            'ip_region' => 'nullable|string|max:128',
+            'ip_city' => 'nullable|string|max:128',
+            'ip_isp' => 'nullable|string|max:128',
+            'original_host' => 'required|string|max:255',
+            'port' => 'nullable|integer|between:1,65535',
+        ]);
+
+        if (!$this->isValidRuleHost($data['original_host'])) {
+            throw ValidationException::withMessages([
+                'original_host' => '请输入合法的域名或 IP',
+            ]);
+        }
+
+        $context = [
+            'user_id' => (string) ($data['user_id'] ?? ''),
+            'user_agent' => strtolower((string) ($data['user_agent'] ?? '')),
+            'country' => (string) ($data['ip_country'] ?? ''),
+            'region' => (string) ($data['ip_region'] ?? ''),
+            'city' => (string) ($data['ip_city'] ?? ''),
+            'isp' => (string) ($data['ip_isp'] ?? ''),
+            'host' => (string) $data['original_host'],
+            'port' => $data['port'] ?? null,
+        ];
+
+        $result = (new SubRuleMatcher())->test($context);
+        return response(['data' => $result]);
+    }
+
     public function getRules(Request $request)
     {
         $rules = SubRule::orderBy('sort')->orderBy('id')->get();
@@ -753,6 +854,7 @@ class UserPortraitController extends Controller
         $this->applyFilters($request, $builder);
         $count = $builder->delete();
         \Illuminate\Support\Facades\Cache::forget('sub_rules');
+        \Illuminate\Support\Facades\Cache::forget('user_portrait_rule_options');
         return response(['data' => true, 'count' => $count]);
     }
 
@@ -769,11 +871,32 @@ class UserPortraitController extends Controller
             'ip_city' => 'nullable|string|max:128',
             'ip_isp' => 'nullable|string|max:128',
             'original_host' => 'nullable|string|max:255',
-            'replace_host' => 'required|string|max:255',
-            'replace_port' => 'nullable|integer',
+            'replace_host' => 'nullable|string|max:255|required_unless:type,1',
+            'replace_port' => 'nullable|integer|between:1,65535',
             'type' => 'required|in:0,1',
             'enable' => 'required|in:0,1',
         ]);
+
+        if ((int) $data['type'] === 1) {
+            $data['replace_host'] = null;
+            $data['replace_port'] = null;
+        }
+
+        if (($data['ip_country'] ?? '') !== '中国') {
+            $data['ip_region'] = null;
+            $data['ip_city'] = null;
+        }
+        if (empty($data['ip_region'])) {
+            $data['ip_city'] = null;
+        }
+
+        foreach (['original_host', 'replace_host'] as $field) {
+            if (!empty($data[$field]) && !$this->isValidRuleHost((string) $data[$field])) {
+                throw ValidationException::withMessages([
+                    $field => '请输入合法的域名或 IP',
+                ]);
+            }
+        }
 
         if ($ruleId) {
             $rule = SubRule::find($ruleId);
@@ -796,6 +919,18 @@ class UserPortraitController extends Controller
         $rule->delete();
         \Illuminate\Support\Facades\Cache::forget('sub_rules');
         return response(['data' => true]);
+    }
+
+    private function isValidRuleHost(string $host): bool
+    {
+        $host = trim($host);
+        if ($host === '') {
+            return false;
+        }
+        if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
+            return true;
+        }
+        return filter_var($host, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) !== false;
     }
 
     public function riskCheck(Request $request)

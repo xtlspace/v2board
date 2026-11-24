@@ -132,6 +132,8 @@ class AdminRoute
             $router->post('/user_portrait/clearUserRecords', 'V1\\Admin\\UserPortraitController@clearUserRecords');
             $router->get ('/user_portrait/getFilterOptions', 'V1\\Admin\\UserPortraitController@getFilterOptions');
             $router->get ('/user_portrait/getRules', 'V1\\Admin\\UserPortraitController@getRules');
+            $router->get ('/user_portrait/getRuleOptions', 'V1\\Admin\\UserPortraitController@getRuleOptions');
+            $router->post('/user_portrait/testRule', 'V1\\Admin\\UserPortraitController@testRule');
             $router->post('/user_portrait/saveRule', 'V1\\Admin\\UserPortraitController@saveRule');
             $router->post('/user_portrait/dropRule', 'V1\\Admin\\UserPortraitController@dropRule');
             $router->post('/user_portrait/clearLogs', 'V1\\Admin\\UserPortraitController@clearLogs');

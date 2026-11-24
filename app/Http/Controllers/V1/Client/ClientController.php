@@ -8,11 +8,11 @@ use App\Protocols\Singbox\Singbox;
 use App\Protocols\ClashMeta;
 use App\Services\ServerService;
 use App\Services\RiskQueue;
+use App\Services\SubRuleMatcher;
 use App\Services\UserService;
 use App\Utils\Helper;
 use Illuminate\Http\Request;
 use App\Models\SubLog;
-use App\Models\SubRule;
 use App\Utils\IPLocation;
 
 class ClientController extends Controller
@@ -184,64 +184,16 @@ class ClientController extends Controller
 
     private function applySubRules($servers, $subLog, $location)
     {
-        $rules = \Illuminate\Support\Facades\Cache::remember('sub_rules', 60, function () {
-            return SubRule::where('enable', 1)->orderBy('sort')->orderBy('id')->get();
-        });
-        if ($rules->isEmpty()) return $servers;
+        $context = [
+            'user_id' => (string) $subLog->user_id,
+            'user_agent' => strtolower((string) ($subLog->user_agent ?? '')),
+            'country' => (string) ($location['country'] ?? ''),
+            'region' => (string) ($location['region'] ?? ''),
+            'city' => (string) ($location['city'] ?? ''),
+            'isp' => (string) ($location['isp'] ?? ''),
+        ];
 
-        $ua = strtolower($subLog->user_agent ?? '');
-        $country = $location['country'] ?? '';
-        $region = $location['region'] ?? '';
-        $city = $location['city'] ?? '';
-        $isp = $location['isp'] ?? '';
-
-        foreach ($servers as $key => $server) {
-            foreach ($rules as $rule) {
-                if (!$this->matchField($rule->user_agent, $ua, false)) continue;
-                if (!$this->matchField($rule->ip_country, $country)) continue;
-                if (!$this->matchField($rule->ip_region, $region)) continue;
-                if (!$this->matchField($rule->ip_city, $city)) continue;
-                if (!$this->matchField($rule->ip_isp, $isp)) continue;
-                if (!$this->matchField($rule->user_id, (string)$subLog->user_id)) continue;
-                if ($rule->original_host && $rule->original_host !== $server['host']) continue;
-                if ((int)$rule->type === 1) break;
-                $servers[$key]['host'] = $rule->replace_host;
-                if ($rule->replace_port) $servers[$key]['port'] = $rule->replace_port;
-                break;
-            }
-        }
-        return $servers;
+        return (new SubRuleMatcher())->apply($servers, $context);
     }
 
-    private function matchField($ruleValue, $actualValue, $exact = true)
-    {
-        if (empty($ruleValue)) return true;
-        $not = str_starts_with($ruleValue, 'NOT:');
-        if ($not) $ruleValue = substr($ruleValue, strlen('NOT:'));
-        $full = str_starts_with($ruleValue, 'FULL:');
-        if ($full) $ruleValue = substr($ruleValue, strlen('FULL:'));
-
-        $values = explode(',', $ruleValue);
-        foreach ($values as $val) {
-            $val = trim($val);
-            if (preg_match('/^(>=|<=|>|<)(\d+)$/', $val, $m)) {
-                $op = $m[1];
-                $num = (int)$m[2];
-                $actualNum = (int)$actualValue;
-                $matched = false;
-                switch ($op) {
-                    case '>': $matched = $actualNum > $num; break;
-                    case '<': $matched = $actualNum < $num; break;
-                    case '>=': $matched = $actualNum >= $num; break;
-                    case '<=': $matched = $actualNum <= $num; break;
-                }
-                if ($matched) return !$not;
-            } elseif ($exact || $full) {
-                if ($actualValue === $val) return !$not;
-            } else {
-                if (strpos($actualValue, strtolower($val)) !== false) return !$not;
-            }
-        }
-        return $not;
-    }
 }

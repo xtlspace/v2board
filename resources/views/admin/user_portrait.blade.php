@@ -151,6 +151,12 @@
 
         .server-host { font-family: monospace; font-size: 12px; color: #1890ff; }
         .arrow { color: #999; margin: 0 6px; }
+        .rule-condition-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+        .rule-condition-tag { display: inline-block; padding: 1px 6px; border: 1px solid #e8ecf2; border-radius: 4px; background: #f5f7fa; color: #555; font-size: 12px; line-height: 1.6; }
+        .rule-replace-arrow { color: #999; margin: 0 6px; }
+        .rule-form-error { display: none; margin-bottom: 12px; padding: 8px 10px; border-radius: 4px; background: #fff2f0; color: #ff4d4f; font-size: 13px; }
+        .rule-test-result { margin-top: 12px; padding: 12px; border-radius: 6px; background: #f7f9fc; border: 1px solid #e8ecf2; font-size: 13px; line-height: 1.8; color: #333; min-height: 44px; }
+        .rule-test-result .text-muted { color: #999; }
         .risk-sortable { cursor: pointer; user-select: none; }
         .risk-sortable:hover { color: #1890ff; }
         .alive-sortable { cursor: pointer; user-select: none; }
@@ -584,30 +590,25 @@
             <div id="tabRules" class="tab-content">
                 <div class="toolbar">
                     <span class="toolbar-title">替换规则 <span class="text-muted" style="font-weight:400;font-size:12px">按 sort 优先级，取第一条匹配；白名单规则匹配后跳过该服务器</span></span>
-                    <button class="btn btn-primary btn-sm" id="addRuleBtn"><i class="fas fa-plus"></i>添加规则</button>
+                    <div style="display:flex;gap:8px">
+                        <button class="btn btn-default btn-sm" id="testRuleBtn"><i class="fas fa-vial"></i>模拟匹配</button>
+                        <button class="btn btn-primary btn-sm" id="addRuleBtn"><i class="fas fa-plus"></i>添加规则</button>
+                    </div>
                 </div>
                 <div class="table-wrapper">
                     <table>
                         <thead>
                             <tr>
-                                <th style="width:50px">排序</th>
+                                <th style="width:70px">排序</th>
                                 <th>备注</th>
-                                <th>匹配 UA</th>
-                                <th>匹配 国家</th>
-                                <th>省份</th>
-                                <th>城市</th>
-                                <th>运营商</th>
-                                <th>匹配 User ID</th>
-                                <th>原 Host</th>
-                                <th>替换为</th>
-                                <th>替换端口</th>
-                                <th>类型</th>
-                                <th>状态</th>
+                                <th>匹配条件</th>
+                                <th>替换结果</th>
+                                <th style="width:80px">状态</th>
                                 <th class="col-actions">操作</th>
                             </tr>
                         </thead>
                         <tbody id="rulesBody">
-                            <tr><td colspan="14"><div class="loading"><i class="fas fa-spinner"></i><p>加载中...</p></div></td></tr>
+                            <tr><td colspan="6"><div class="loading"><i class="fas fa-spinner"></i><p>加载中...</p></div></td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -753,6 +754,7 @@
         </div>
         <div class="modal-body">
             <input type="hidden" id="ruleId">
+            <div class="rule-form-error" id="ruleFormError"></div>
             <div class="form-row">
                 <label>备注 <span class="text-muted">*</span></label>
                 <input type="text" id="ruleRemark" placeholder="例如：国内用户走国内入口">
@@ -762,7 +764,7 @@
                 <input type="number" id="ruleSort" value="0" min="0">
             </div>
             <div class="form-row">
-                <label>匹配 User ID <span class="hint">精确匹配，留空=不限制</span></label>
+                <label>匹配 User ID <span class="hint">精确匹配，留空=不限制；支持 NOT:5</span></label>
                 <input type="text" id="ruleUserId" placeholder="例如：123 或 NOT:5">
             </div>
             <div class="form-row">
@@ -772,40 +774,43 @@
             <div class="form-inline">
                 <div class="form-row">
                     <label>匹配 国家</label>
-                    <input type="text" id="ruleCountry" placeholder="留空=不限制">
+                    <select id="ruleCountry"><option value="">不限</option></select>
                 </div>
                 <div class="form-row">
-                    <label>匹配 省份</label>
-                    <input type="text" id="ruleRegion" placeholder="留空=不限制">
+                    <label>匹配 省份 <span class="hint">仅中国可选</span></label>
+                    <select id="ruleRegion" disabled><option value="">不限</option></select>
                 </div>
             </div>
             <div class="form-inline">
                 <div class="form-row">
-                    <label>匹配 城市</label>
-                    <input type="text" id="ruleCity" placeholder="留空=不限制">
+                    <label>匹配 城市 <span class="hint">选择省份后可选</span></label>
+                    <select id="ruleCity" disabled><option value="">不限</option></select>
                 </div>
                 <div class="form-row">
-                    <label>匹配 运营商</label>
-                    <input type="text" id="ruleIsp" placeholder="留空=不限制">
+                    <label>匹配 运营商 <span class="hint">可输入，支持下拉建议</span></label>
+                    <input type="text" id="ruleIsp" list="ruleIspOptions" placeholder="例如：电信 / 中国联通">
+                    <datalist id="ruleIspOptions"></datalist>
                 </div>
             </div>
             <div class="form-row">
                 <label>原 Host <span class="hint">留空=替换所有节点</span></label>
                 <input type="text" id="ruleOriginalHost" placeholder="例如：sg.example.com">
             </div>
-            <div class="form-row">
-                <label>替换 Host <span class="text-muted">*</span></label>
-                <input type="text" id="ruleReplaceHost" placeholder="例如：hk.example.com">
-            </div>
-            <div class="form-row">
-                <label>替换端口 <span class="hint">留空=不替换端口</span></label>
-                <input type="number" id="ruleReplacePort" placeholder="例如：443" min="1" max="65535">
+            <div id="ruleReplaceFields">
+                <div class="form-row">
+                    <label>替换 Host <span class="text-muted">*</span></label>
+                    <input type="text" id="ruleReplaceHost" placeholder="例如：hk.example.com">
+                </div>
+                <div class="form-row">
+                    <label>替换端口 <span class="hint">留空=不替换端口</span></label>
+                    <input type="number" id="ruleReplacePort" placeholder="例如：443" min="1" max="65535">
+                </div>
             </div>
             <div class="form-row">
                 <label>类型</label>
                 <select id="ruleType">
-                    <option value="0">替换</option>
-                    <option value="1">白名单</option>
+                    <option value="0">替换 Host</option>
+                    <option value="1">白名单（跳过替换）</option>
                 </select>
             </div>
             <div class="form-row">
@@ -819,6 +824,63 @@
         <div class="modal-footer">
             <button class="btn btn-default" onclick="closeRuleModal()">取消</button>
             <button class="btn btn-primary" id="saveRuleBtn">保存</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="ruleTestModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>模拟匹配</h3>
+            <span class="modal-close" onclick="closeRuleTestModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="rule-form-error" id="ruleTestError"></div>
+            <div class="form-inline">
+                <div class="form-row">
+                    <label>User ID</label>
+                    <input type="text" id="testUserId" placeholder="例如：123">
+                </div>
+                <div class="form-row">
+                    <label>User-Agent</label>
+                    <input type="text" id="testUserAgent" placeholder="例如：ClashMeta">
+                </div>
+            </div>
+            <div class="form-inline">
+                <div class="form-row">
+                    <label>国家</label>
+                    <input type="text" id="testCountry" placeholder="例如：中国">
+                </div>
+                <div class="form-row">
+                    <label>省份</label>
+                    <input type="text" id="testRegion" placeholder="例如：广东">
+                </div>
+            </div>
+            <div class="form-inline">
+                <div class="form-row">
+                    <label>城市</label>
+                    <input type="text" id="testCity" placeholder="例如：深圳">
+                </div>
+                <div class="form-row">
+                    <label>运营商</label>
+                    <input type="text" id="testIsp" placeholder="例如：电信">
+                </div>
+            </div>
+            <div class="form-inline">
+                <div class="form-row">
+                    <label>原 Host <span class="text-muted">*</span></label>
+                    <input type="text" id="testHost" placeholder="例如：sg.example.com">
+                </div>
+                <div class="form-row">
+                    <label>原端口</label>
+                    <input type="number" id="testPort" placeholder="例如：443" min="1" max="65535">
+                </div>
+            </div>
+            <div class="rule-test-result" id="ruleTestResult">填写条件后点击「开始模拟」</div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-default" onclick="closeRuleTestModal()">关闭</button>
+            <button class="btn btn-primary" id="runRuleTestBtn">开始模拟</button>
         </div>
     </div>
 </div>
@@ -934,8 +996,20 @@ if (!authToken) {
 
 function displayRuleValue(val) {
     if (!val) return '<span class="text-muted">-</span>';
-    if (val.startsWith('NOT:')) return '<span class="text-danger">NOT:</span> ' + val.substring(4);
-    return val;
+    if (val.startsWith('NOT:')) return '<span class="text-danger">NOT:</span> ' + escapeHtml(val.substring(4));
+    return escapeHtml(val);
+}
+
+function firstApiError(body, fallback) {
+    if (body && body.errors) {
+        for (var key in body.errors) {
+            if (body.errors[key] && body.errors[key].length) {
+                return body.errors[key][0];
+            }
+        }
+    }
+    if (body && body.message) return body.message;
+    return fallback || '请求失败';
 }
 
 function apiFetch(url, options) {
@@ -2300,32 +2374,51 @@ function resetFilters() {
 
 // =========== Rules ===========
 var editingRuleId = null;
+var ruleOptions = null;
+
+function ruleConditionTags(r) {
+    var parts = [];
+    if (r.user_agent) parts.push('UA: ' + displayRuleValue(r.user_agent));
+    if (r.user_id) parts.push('UID: ' + displayRuleValue(r.user_id));
+    if (r.ip_country) parts.push('国家: ' + displayRuleValue(r.ip_country));
+    if (r.ip_region) parts.push('省份: ' + displayRuleValue(r.ip_region));
+    if (r.ip_city) parts.push('城市: ' + displayRuleValue(r.ip_city));
+    if (r.ip_isp) parts.push('运营商: ' + displayRuleValue(r.ip_isp));
+    if (!parts.length) return '<span class="text-muted">不限制</span>';
+    return '<div class="rule-condition-tags">' + parts.map(function(part) {
+        return '<span class="rule-condition-tag">' + part + '</span>';
+    }).join('') + '</div>';
+}
+
+function ruleResultHtml(r) {
+    var original = r.original_host
+        ? '<span class="server-host">' + escapeHtml(r.original_host) + '</span>'
+        : '<span class="text-muted">全部节点</span>';
+    if (parseInt(r.type) === 1) {
+        return original + '<span class="rule-replace-arrow">→</span><span class="badge badge-success">白名单</span> <span class="text-muted">跳过替换</span>';
+    }
+    var target = '<span class="server-host">' + escapeHtml(r.replace_host || '') + '</span>'
+        + (r.replace_port ? ':' + parseInt(r.replace_port, 10) : '');
+    return original + '<span class="rule-replace-arrow">→</span>' + target;
+}
 
 function loadRules() {
-    document.getElementById('rulesBody').innerHTML = '<tr><td colspan="13"><div class="loading"><i class="fas fa-spinner"></i><p>加载中...</p></div></td></tr>';
+    document.getElementById('rulesBody').innerHTML = '<tr><td colspan="6"><div class="loading"><i class="fas fa-spinner"></i><p>加载中...</p></div></td></tr>';
     apiFetch(apiBase + '/user_portrait/getRules')
         .then(function(r) { return r.json(); })
         .then(function(res) {
             var data = res.data || [];
             if (data.length === 0) {
-                document.getElementById('rulesBody').innerHTML = '<tr><td colspan="14"><div class="empty-state"><i class="fas fa-inbox"></i><p>暂无规则</p></div></td></tr>';
+                document.getElementById('rulesBody').innerHTML = '<tr><td colspan="6"><div class="empty-state"><i class="fas fa-inbox"></i><p>暂无规则</p></div></td></tr>';
                 return;
             }
             var html = '';
             data.forEach(function(r) {
                 html += '<tr>'
-                    + '<td>' + r.sort + '</td>'
-                    + '<td>' + (r.remark || '') + '</td>'
-                    + '<td>' + displayRuleValue(r.user_agent) + '</td>'
-                    + '<td>' + displayRuleValue(r.ip_country) + '</td>'
-                    + '<td>' + displayRuleValue(r.ip_region) + '</td>'
-                    + '<td>' + displayRuleValue(r.ip_city) + '</td>'
-                    + '<td>' + displayRuleValue(r.ip_isp) + '</td>'
-                    + '<td>' + displayRuleValue(r.user_id) + '</td>'
-                    + '<td>' + (r.original_host || '<span class="text-muted">全部</span>') + '</td>'
-                    + '<td><span class="server-host">' + r.replace_host + '</span></td>'
-                    + '<td>' + (r.replace_port || '<span class="text-muted">-</span>') + '</td>'
-                    + '<td>' + (parseInt(r.type) === 1 ? '<span class="badge badge-success">白名单</span>' : '<span class="badge badge-type">替换</span>') + '</td>'
+                    + '<td>' + parseInt(r.sort, 10) + '</td>'
+                    + '<td>' + escapeHtml(r.remark || '') + '</td>'
+                    + '<td>' + ruleConditionTags(r) + '</td>'
+                    + '<td>' + ruleResultHtml(r) + '</td>'
                     + '<td>' + (r.enable ? '<span class="badge badge-enable">启用</span>' : '<span class="badge badge-disable">禁用</span>') + '</td>'
                     + '<td class="col-actions">'
                     + '<button class="btn btn-default btn-sm" onclick="editRule(' + r.id + ')"><i class="fas fa-edit"></i></button> '
@@ -2335,7 +2428,111 @@ function loadRules() {
             document.getElementById('rulesBody').innerHTML = html;
         })
         .catch(function() {
-            document.getElementById('rulesBody').innerHTML = '<tr><td colspan="13"><div class="error-state"><i class="fas fa-exclamation-triangle"></i><p>加载失败</p></div></td></tr>';
+            document.getElementById('rulesBody').innerHTML = '<tr><td colspan="6"><div class="error-state"><i class="fas fa-exclamation-triangle"></i><p>加载失败</p></div></td></tr>';
+        });
+}
+
+function fillRuleSelect(select, values, selected) {
+    select.innerHTML = '';
+    var empty = document.createElement('option');
+    empty.value = '';
+    empty.textContent = '不限';
+    select.appendChild(empty);
+
+    var found = false;
+    (values || []).forEach(function(value) {
+        var option = document.createElement('option');
+        option.value = String(value);
+        option.textContent = String(value);
+        if (selected && String(value) === String(selected)) {
+            option.selected = true;
+            found = true;
+        }
+        select.appendChild(option);
+    });
+
+    if (selected && !found) {
+        var option = document.createElement('option');
+        option.value = String(selected);
+        option.textContent = String(selected);
+        option.selected = true;
+        select.appendChild(option);
+    }
+    if (!selected) {
+        select.value = '';
+    }
+}
+
+function fillRuleDatalist(input, datalist, values, selected) {
+    input.value = selected || '';
+    datalist.innerHTML = '';
+    (values || []).forEach(function(value) {
+        var option = document.createElement('option');
+        option.value = String(value);
+        datalist.appendChild(option);
+    });
+}
+
+function applyRuleRegionOptions(country, region, city) {
+    var regionSelect = document.getElementById('ruleRegion');
+    var citySelect = document.getElementById('ruleCity');
+    if (!ruleOptions) return;
+
+    if (country !== '中国') {
+        fillRuleSelect(regionSelect, [], '');
+        fillRuleSelect(citySelect, [], '');
+        regionSelect.disabled = true;
+        citySelect.disabled = true;
+        return;
+    }
+
+    regionSelect.disabled = false;
+    fillRuleSelect(regionSelect, ruleOptions.regions || [], region);
+    var selectedRegion = regionSelect.value;
+    if (!selectedRegion) {
+        fillRuleSelect(citySelect, [], '');
+        citySelect.disabled = true;
+        return;
+    }
+    citySelect.disabled = false;
+    fillRuleSelect(citySelect, (ruleOptions.cities || {})[selectedRegion] || [], city);
+}
+
+function showRuleError(message) {
+    var box = document.getElementById('ruleFormError');
+    box.textContent = message || '';
+    box.style.display = message ? 'block' : 'none';
+}
+
+function clearRuleError() {
+    showRuleError('');
+}
+
+function updateRuleTypeFields(clearValues) {
+    var type = document.getElementById('ruleType').value;
+    var fields = document.getElementById('ruleReplaceFields');
+    var whitelist = type === '1';
+    fields.style.display = whitelist ? 'none' : 'block';
+    if (whitelist && clearValues) {
+        document.getElementById('ruleReplaceHost').value = '';
+        document.getElementById('ruleReplacePort').value = '';
+    }
+}
+
+function loadRuleOptions() {
+    if (ruleOptions) {
+        return Promise.resolve(ruleOptions);
+    }
+    return apiFetch(apiBase + '/user_portrait/getRuleOptions')
+        .then(function(r) {
+            return r.json().then(function(body) {
+                if (!r.ok) throw new Error(body.message || '加载规则选项失败');
+                return body;
+            });
+        })
+        .then(function(res) {
+            ruleOptions = res.data || { countries: [], regions: [], cities: {}, isps: [] };
+            return ruleOptions;
         });
 }
 
@@ -2347,16 +2544,31 @@ function openRuleModal(rule) {
     document.getElementById('ruleSort').value = rule ? (rule.sort || 0) : 0;
     document.getElementById('ruleUserAgent').value = rule ? (rule.user_agent || '') : '';
     document.getElementById('ruleUserId').value = rule ? (rule.user_id || '') : '';
-    document.getElementById('ruleCountry').value = rule ? (rule.ip_country || '') : '';
-    document.getElementById('ruleRegion').value = rule ? (rule.ip_region || '') : '';
-    document.getElementById('ruleCity').value = rule ? (rule.ip_city || '') : '';
-    document.getElementById('ruleIsp').value = rule ? (rule.ip_isp || '') : '';
     document.getElementById('ruleOriginalHost').value = rule ? (rule.original_host || '') : '';
     document.getElementById('ruleReplaceHost').value = rule ? (rule.replace_host || '') : '';
     document.getElementById('ruleReplacePort').value = rule ? (rule.replace_port || '') : '';
     document.getElementById('ruleType').value = rule ? (rule.type || 0) : 0;
     document.getElementById('ruleEnable').value = rule ? (rule.enable ? '1' : '0') : '1';
+    clearRuleError();
+    updateRuleTypeFields(false);
+
     document.getElementById('ruleModal').classList.add('show');
+    loadRuleOptions().then(function(options) {
+        fillRuleSelect(document.getElementById('ruleCountry'), options.countries || [], rule ? (rule.ip_country || '') : '');
+        fillRuleDatalist(
+            document.getElementById('ruleIsp'),
+            document.getElementById('ruleIspOptions'),
+            options.isps || [],
+            rule ? (rule.ip_isp || '') : ''
+        );
+        applyRuleRegionOptions(
+            document.getElementById('ruleCountry').value,
+            rule ? (rule.ip_region || '') : '',
+            rule ? (rule.ip_city || '') : ''
+        );
+    }).catch(function(err) {
+        showRuleError(err && err.message ? err.message : '加载规则选项失败');
+    });
 }
 
 function closeRuleModal() {
@@ -2385,33 +2597,153 @@ function deleteRule(id) {
 }
 
 document.getElementById('addRuleBtn').addEventListener('click', function() { openRuleModal(null); });
+document.getElementById('ruleCountry').addEventListener('change', function() {
+    applyRuleRegionOptions(this.value, '', '');
+});
+document.getElementById('ruleRegion').addEventListener('change', function() {
+    applyRuleRegionOptions(document.getElementById('ruleCountry').value, this.value, '');
+});
+document.getElementById('ruleType').addEventListener('change', function() {
+    updateRuleTypeFields(true);
+});
+
 document.getElementById('saveRuleBtn').addEventListener('click', function() {
+    clearRuleError();
+    var type = parseInt(document.getElementById('ruleType').value, 10);
     var data = {
         id: editingRuleId || null,
         remark: document.getElementById('ruleRemark').value.trim(),
-        sort: parseInt(document.getElementById('ruleSort').value) || 0,
+        sort: parseInt(document.getElementById('ruleSort').value, 10) || 0,
         user_agent: document.getElementById('ruleUserAgent').value.trim() || null,
         user_id: document.getElementById('ruleUserId').value.trim() || null,
-        ip_country: document.getElementById('ruleCountry').value.trim() || null,
-        ip_region: document.getElementById('ruleRegion').value.trim() || null,
-        ip_city: document.getElementById('ruleCity').value.trim() || null,
-        ip_isp: document.getElementById('ruleIsp').value.trim() || null,
+        ip_country: document.getElementById('ruleCountry').value || null,
+        ip_region: document.getElementById('ruleRegion').value || null,
+        ip_city: document.getElementById('ruleCity').value || null,
+        ip_isp: document.getElementById('ruleIsp').value || null,
         original_host: document.getElementById('ruleOriginalHost').value.trim() || null,
-        replace_host: document.getElementById('ruleReplaceHost').value.trim(),
-        replace_port: parseInt(document.getElementById('ruleReplacePort').value) || null,
-        type: parseInt(document.getElementById('ruleType').value),
-        enable: parseInt(document.getElementById('ruleEnable').value)
+        replace_host: type === 1 ? null : (document.getElementById('ruleReplaceHost').value.trim() || null),
+        replace_port: type === 1 ? null : (parseInt(document.getElementById('ruleReplacePort').value, 10) || null),
+        type: type,
+        enable: parseInt(document.getElementById('ruleEnable').value, 10)
     };
-    if (!data.replace_host) { alert('替换 Host 不能为空'); return; }
-    if (!data.remark) { alert('备注不能为空'); return; }
+
+    if (!data.remark) {
+        showRuleError('备注不能为空');
+        return;
+    }
+    if (type === 0 && !data.replace_host) {
+        showRuleError('替换 Host 不能为空');
+        return;
+    }
+    if (data.replace_port !== null && (data.replace_port < 1 || data.replace_port > 65535)) {
+        showRuleError('替换端口必须在 1-65535 之间');
+        return;
+    }
+
+    var btn = document.getElementById('saveRuleBtn');
+    var originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '保存中...';
 
     apiFetch(apiBase + '/user_portrait/saveRule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
-    }).then(function(r) { return r.json(); })
-    .then(function() { closeRuleModal(); loadRules(); })
-    .catch(function() { alert('保存失败'); });
+    }).then(function(r) {
+        return r.json().then(function(body) {
+            if (!r.ok) throw new Error(firstApiError(body, '保存失败'));
+            return body;
+        });
+    }).then(function() {
+        closeRuleModal();
+        loadRules();
+    }).catch(function(err) {
+        showRuleError(err && err.message ? err.message : '保存失败');
+    }).finally(function() {
+        btn.disabled = false;
+        btn.textContent = originalText;
+    });
+});
+
+function openRuleTestModal() {
+    document.getElementById('ruleTestError').style.display = 'none';
+    document.getElementById('ruleTestResult').textContent = '填写条件后点击「开始模拟」';
+    document.getElementById('ruleTestModal').classList.add('show');
+}
+
+function closeRuleTestModal() {
+    document.getElementById('ruleTestModal').classList.remove('show');
+}
+
+document.getElementById('testRuleBtn').addEventListener('click', openRuleTestModal);
+document.getElementById('runRuleTestBtn').addEventListener('click', function() {
+    var errorBox = document.getElementById('ruleTestError');
+    var resultBox = document.getElementById('ruleTestResult');
+    errorBox.style.display = 'none';
+    resultBox.textContent = '正在模拟...';
+
+    var host = document.getElementById('testHost').value.trim();
+    if (!host) {
+        errorBox.textContent = '请输入原 Host';
+        errorBox.style.display = 'block';
+        resultBox.textContent = '填写条件后点击「开始模拟」';
+        return;
+    }
+
+    var data = {
+        user_id: document.getElementById('testUserId').value.trim() || null,
+        user_agent: document.getElementById('testUserAgent').value.trim() || null,
+        ip_country: document.getElementById('testCountry').value.trim() || null,
+        ip_region: document.getElementById('testRegion').value.trim() || null,
+        ip_city: document.getElementById('testCity').value.trim() || null,
+        ip_isp: document.getElementById('testIsp').value.trim() || null,
+        original_host: host,
+        port: parseInt(document.getElementById('testPort').value, 10) || null
+    };
+
+    var btn = document.getElementById('runRuleTestBtn');
+    var originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '模拟中...';
+
+    apiFetch(apiBase + '/user_portrait/testRule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    }).then(function(r) {
+        return r.json().then(function(body) {
+            if (!r.ok) throw new Error(firstApiError(body, '模拟失败'));
+            return body;
+        });
+    }).then(function(res) {
+        var result = res.data || {};
+        if (!result.matched) {
+            resultBox.innerHTML = '<span class="text-muted">未命中任何规则</span>';
+            return;
+        }
+        var rule = result.rule || {};
+        var original = result.original || {};
+        var target = result.result || {};
+        var originalTextValue = escapeHtml(original.host || '') + (original.port ? ':' + parseInt(original.port, 10) : '');
+        var targetTextValue = escapeHtml(target.host || '') + (target.port ? ':' + parseInt(target.port, 10) : '');
+        var lines = [];
+        lines.push('命中规则：' + escapeHtml(rule.remark || ('规则#' + rule.id)));
+        lines.push('排序：' + escapeHtml(rule.sort == null ? '-' : rule.sort));
+        lines.push('原节点：' + originalTextValue);
+        if (result.skipped) {
+            lines.push('结果：<span class="badge badge-success">白名单</span> 跳过替换');
+        } else {
+            lines.push('替换后：' + targetTextValue);
+        }
+        resultBox.innerHTML = lines.join('<br>');
+    }).catch(function(err) {
+        errorBox.textContent = err && err.message ? err.message : '模拟失败';
+        errorBox.style.display = 'block';
+        resultBox.textContent = '填写条件后点击「开始模拟」';
+    }).finally(function() {
+        btn.disabled = false;
+        btn.textContent = originalText;
+    });
 });
 
 // =========== Tab switch data loading ===========
