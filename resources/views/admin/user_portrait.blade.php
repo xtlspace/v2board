@@ -790,9 +790,10 @@
                     <datalist id="ruleCityOptions"></datalist>
                 </div>
                 <div class="form-row">
-                    <label>匹配 运营商 <span class="hint">可输入，支持下拉建议</span></label>
-                    <input type="text" id="ruleIsp" list="ruleIspOptions" placeholder="例如：电信 / 中国联通">
+                    <label>匹配 运营商 <span class="hint">默认模糊，支持 AND / OR</span></label>
+                    <input type="text" id="ruleIsp" list="ruleIspOptions" placeholder="例如：阿里 OR 腾讯 OR 亚马逊">
                     <datalist id="ruleIspOptions"></datalist>
+                    <div class="hint" style="margin-top:4px">NOT: 取反匹配，FULL: 精确匹配</div>
                 </div>
             </div>
             <div class="form-row">

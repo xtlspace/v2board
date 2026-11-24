@@ -96,7 +96,7 @@ class SubRuleMatcher
         if (!$this->matchField($rule->ip_city, (string) ($context['city'] ?? ''))) {
             return false;
         }
-        if (!$this->matchField($rule->ip_isp, (string) ($context['isp'] ?? ''))) {
+        if (!$this->matchIspExpression((string) ($rule->ip_isp ?? ''), (string) ($context['isp'] ?? ''))) {
             return false;
         }
         if (!$this->matchField($rule->user_id, (string) ($context['user_id'] ?? ''))) {
@@ -106,6 +106,195 @@ class SubRuleMatcher
             return false;
         }
         return true;
+    }
+
+    public function validateIspExpression(string $expression): bool
+    {
+        $expression = trim($expression);
+        if ($expression === '') {
+            return true;
+        }
+        try {
+            $this->parseIspAst($expression);
+            return true;
+        } catch (\InvalidArgumentException $e) {
+            return false;
+        }
+    }
+
+    public function matchIspExpression(string $expression, string $actual): bool
+    {
+        $expression = trim($expression);
+        if ($expression === '') {
+            return true;
+        }
+        try {
+            $ast = $this->parseIspAst($expression);
+        } catch (\InvalidArgumentException $e) {
+            return false;
+        }
+        return $this->evaluateIspAst($ast, $actual);
+    }
+
+    private function parseIspAst(string $expression): array
+    {
+        $tokens = $this->tokenizeIsp($expression);
+        if (empty($tokens)) {
+            throw new \InvalidArgumentException('empty expression');
+        }
+        $index = 0;
+        $ast = $this->parseIspOr($tokens, $index);
+        if ($index !== count($tokens)) {
+            throw new \InvalidArgumentException('unexpected token');
+        }
+        return $ast;
+    }
+
+    private function tokenizeIsp(string $expression): array
+    {
+        $tokens = [];
+        $length = strlen($expression);
+        $index = 0;
+        while ($index < $length) {
+            $char = $expression[$index];
+            if (ctype_space($char)) {
+                $index++;
+                continue;
+            }
+            if ($char === '(' || $char === ')') {
+                $tokens[] = $char;
+                $index++;
+                continue;
+            }
+            $start = $index;
+            while ($index < $length) {
+                $current = $expression[$index];
+                if (ctype_space($current) || $current === '(' || $current === ')') {
+                    break;
+                }
+                $index++;
+            }
+            $token = substr($expression, $start, $index - $start);
+            if ($token !== '') {
+                $tokens[] = $token;
+            }
+        }
+        return $tokens;
+    }
+
+    private function parseIspOr(array $tokens, int &$index): array
+    {
+        $items = [$this->parseIspAnd($tokens, $index)];
+        while ($index < count($tokens) && strtoupper($tokens[$index]) === 'OR') {
+            $index++;
+            $items[] = $this->parseIspAnd($tokens, $index);
+        }
+        return count($items) === 1 ? $items[0] : ['type' => 'or', 'items' => $items];
+    }
+
+    private function parseIspAnd(array $tokens, int &$index): array
+    {
+        $items = [$this->parseIspUnary($tokens, $index)];
+        while ($index < count($tokens) && strtoupper($tokens[$index]) === 'AND') {
+            $index++;
+            $items[] = $this->parseIspUnary($tokens, $index);
+        }
+        return count($items) === 1 ? $items[0] : ['type' => 'and', 'items' => $items];
+    }
+
+    private function parseIspUnary(array $tokens, int &$index): array
+    {
+        if ($index >= count($tokens)) {
+            throw new \InvalidArgumentException('expected value');
+        }
+
+        $token = $tokens[$index];
+        if ($token === '(') {
+            $index++;
+            $node = $this->parseIspOr($tokens, $index);
+            if ($index >= count($tokens) || $tokens[$index] !== ')') {
+                throw new \InvalidArgumentException('missing closing parenthesis');
+            }
+            $index++;
+            return $node;
+        }
+        if ($token === ')' || strtoupper($token) === 'AND' || strtoupper($token) === 'OR') {
+            throw new \InvalidArgumentException('unexpected operator');
+        }
+        if (strcasecmp($token, 'NOT:') === 0) {
+            $index++;
+            return ['type' => 'not', 'item' => $this->parseIspUnary($tokens, $index)];
+        }
+        if (strcasecmp($token, 'FULL:') === 0) {
+            $index++;
+            $node = $this->parseIspUnary($tokens, $index);
+            if (($node['type'] ?? '') !== 'term') {
+                throw new \InvalidArgumentException('FULL: requires a value');
+            }
+            $node['full'] = true;
+            return $node;
+        }
+
+        $index++;
+        return $this->parseIspTermToken($token);
+    }
+
+    private function parseIspTermToken(string $token): array
+    {
+        $not = false;
+        $full = false;
+        while (true) {
+            if (strncasecmp($token, 'NOT:', 4) === 0) {
+                $not = !$not;
+                $token = substr($token, 4);
+                continue;
+            }
+            if (strncasecmp($token, 'FULL:', 5) === 0) {
+                $full = true;
+                $token = substr($token, 5);
+                continue;
+            }
+            break;
+        }
+        if ($token === '' || strtoupper($token) === 'AND' || strtoupper($token) === 'OR') {
+            throw new \InvalidArgumentException('invalid value');
+        }
+
+        $node = ['type' => 'term', 'value' => $token, 'full' => $full];
+        return $not ? ['type' => 'not', 'item' => $node] : $node;
+    }
+
+    private function evaluateIspAst(array $node, string $actual): bool
+    {
+        switch ($node['type'] ?? '') {
+            case 'or':
+                foreach ($node['items'] as $item) {
+                    if ($this->evaluateIspAst($item, $actual)) {
+                        return true;
+                    }
+                }
+                return false;
+            case 'and':
+                foreach ($node['items'] as $item) {
+                    if (!$this->evaluateIspAst($item, $actual)) {
+                        return false;
+                    }
+                }
+                return true;
+            case 'not':
+                return !$this->evaluateIspAst($node['item'], $actual);
+            case 'term':
+                $value = (string) $node['value'];
+                if (!empty($node['full'])) {
+                    return $actual === $value;
+                }
+                if (function_exists('mb_stripos')) {
+                    return mb_stripos($actual, $value) !== false;
+                }
+                return stripos($actual, $value) !== false;
+            default:
+                return false;
+        }
     }
 
     private function matchField($ruleValue, string $actualValue, bool $exact = true): bool

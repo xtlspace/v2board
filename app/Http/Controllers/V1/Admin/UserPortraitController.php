@@ -827,13 +827,18 @@ class UserPortraitController extends Controller
             ]);
         }
 
+        $isp = trim((string) ($data['ip_isp'] ?? ''));
+        if ($isp !== '') {
+            $this->assertValidIspExpression($isp);
+        }
+
         $context = [
             'user_id' => (string) ($data['user_id'] ?? ''),
             'user_agent' => strtolower((string) ($data['user_agent'] ?? '')),
             'country' => (string) ($data['ip_country'] ?? ''),
             'region' => (string) ($data['ip_region'] ?? ''),
             'city' => (string) ($data['ip_city'] ?? ''),
-            'isp' => (string) ($data['ip_isp'] ?? ''),
+            'isp' => $isp,
             'host' => (string) $data['original_host'],
             'port' => $data['port'] ?? null,
         ];
@@ -882,6 +887,11 @@ class UserPortraitController extends Controller
             $data['replace_port'] = null;
         }
 
+        if (!empty($data['ip_isp'])) {
+            $data['ip_isp'] = trim((string) $data['ip_isp']);
+            $this->assertValidIspExpression($data['ip_isp']);
+        }
+
         foreach (['original_host', 'replace_host'] as $field) {
             if (!empty($data[$field]) && !$this->isValidRuleHost((string) $data[$field])) {
                 throw ValidationException::withMessages([
@@ -923,6 +933,24 @@ class UserPortraitController extends Controller
             return true;
         }
         return filter_var($host, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) !== false;
+    }
+
+    private function assertValidIspExpression(string $expression): void
+    {
+        $expression = trim($expression);
+        if ($expression === '') {
+            return;
+        }
+        if (str_contains($expression, ',')) {
+            throw ValidationException::withMessages([
+                'ip_isp' => '请使用 OR 代替逗号',
+            ]);
+        }
+        if (!(new SubRuleMatcher())->validateIspExpression($expression)) {
+            throw ValidationException::withMessages([
+                'ip_isp' => '运营商规则格式错误，请检查 AND / OR / NOT: / FULL: 和括号',
+            ]);
+        }
     }
 
     public function riskCheck(Request $request)

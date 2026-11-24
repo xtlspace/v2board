@@ -72,7 +72,7 @@ select:disabled{background:#fafafa;color:#aaa}
         <tr>
           <td class="sort">10</td>
           <td class="remark">国内用户走香港入口</td>
-          <td><div class="condition-tags"><span class="condition-tag">国家: 中国</span><span class="condition-tag">省份: 广东</span><span class="condition-tag">运营商: 电信</span></div></td>
+          <td><div class="condition-tags"><span class="condition-tag">国家: 中国</span><span class="condition-tag">省份: 广东</span><span class="condition-tag">运营商: 阿里 OR 腾讯 OR 亚马逊</span></div></td>
           <td><span class="server-host">sg.example.com</span><span class="arrow">→</span><span class="server-host">hk.example.com:443</span></td>
           <td><span class="badge badge-enable">启用</span></td>
           <td><div class="actions"><button class="icon-btn">✎</button><button class="icon-btn" style="color:#ff4d4f">🗑</button></div></td>
@@ -136,14 +136,15 @@ select:disabled{background:#fafafa;color:#aaa}
           </datalist>
         </div>
         <div class="form-row">
-          <label>匹配 运营商 <span class="hint">可输入，支持下拉建议</span></label>
-          <input id="ispInput" list="ispOptions" value="电信" placeholder="例如：电信 / 中国联通">
+          <label>匹配 运营商 <span class="hint">默认模糊，支持 AND / OR</span></label>
+          <input id="ispInput" list="ispOptions" value="阿里 OR 腾讯 OR 亚马逊" placeholder="例如：阿里 OR 腾讯 OR 亚马逊">
           <datalist id="ispOptions">
             <option value="电信"></option><option value="联通"></option><option value="移动"></option>
             <option value="广电"></option><option value="教育网"></option>
             <option value="中国电信"></option><option value="中国联通"></option><option value="中国移动"></option>
             <option value="其他"></option>
           </datalist>
+          <div class="hint" style="margin-top:4px">NOT: 取反匹配，FULL: 精确匹配</div>
         </div>
       </div>
       <div class="form-row"><label>原 Host <span class="hint">留空=替换所有节点</span></label><input value="sg.example.com"></div>
