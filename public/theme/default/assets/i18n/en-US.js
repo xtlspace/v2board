@@ -127,6 +127,7 @@ window.settings.i18n['en-US'] = {
   '重置订阅信息': 'Reset Subscription',
   '重置订阅提示信息': 'When your subscription or account is leaked and abused by unknown parties, you can reset your subscription information here to avoid unnecessary losses.',
   '重置': 'Reset',
+  '重置订阅': 'Reset Subscription',
   '确定要重置订阅信息？': 'Do you want to reset subscription?',
   '如果你的订阅地址或信息泄露可以进行此操作。重置后你的UUID及订阅将会变更，需要重新进行订阅。': 'In case of your account information or subscription leak, this option is for reset. After resetting your UUID and subscription will change, you need to re-subscribe.',
   '重置成功': 'Reset successfully',

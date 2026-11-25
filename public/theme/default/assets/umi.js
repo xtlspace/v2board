@@ -30770,7 +30770,9 @@
           , y = n("/MKj")
           , g = n("/Ira")
           , b = n("Y2fQ")
-          , w = n("v32e");
+          , w = n("v32e")
+          , _api = n("t3Un")
+          , _message = n("tsqr");
         class x extends l.a.Component {
             constructor(e) {
                 super(e),
@@ -30832,6 +30834,36 @@
                 })))), l.a.createElement("p", {
                     className: "font-size-lg text-white mb-1"
                 }, e.title)))
+            }
+            resetSecurity() {
+                var e = this;
+                c["a"].confirm({
+                    title: Object(b["formatMessage"])({
+                        id: "\u786e\u5b9a\u8981\u91cd\u7f6e\u8ba2\u9605\u4fe1\u606f\uff1f"
+                    }),
+                    content: Object(b["formatMessage"])({
+                        id: "\u5982\u679c\u4f60\u7684\u8ba2\u9605\u5730\u5740\u6216\u4fe1\u606f\u6cc4\u9732\u53ef\u4ee5\u8fdb\u884c\u6b64\u64cd\u4f5c\u3002\u91cd\u7f6e\u540e\u4f60\u7684UUID\u53ca\u8ba2\u9605\u5c06\u4f1a\u53d8\u66f4\uff0c\u9700\u8981\u91cd\u65b0\u8fdb\u884c\u8ba2\u9605\u3002"
+                    }),
+                    onOk() {
+                        Object(_api["a"])("/user/resetSecurity").then(function(t) {
+                            if (200 === t.code) {
+                                _message["a"].success(Object(b["formatMessage"])({
+                                    id: "\u91cd\u7f6e\u6210\u529f"
+                                }));
+                                e.props.dispatch({
+                                    type: "user/getSubscribe"
+                                });
+                            }
+                        });
+                    },
+                    onCancel() {},
+                    okText: Object(b["formatMessage"])({
+                        id: "\u786e\u8ba4"
+                    }),
+                    cancelText: Object(b["formatMessage"])({
+                        id: "\u53d6\u6d88"
+                    })
+                })
             }
             resetPackage() {
                 var e = this.props.user.subscribe
@@ -30969,7 +31001,23 @@
                     className: "block-title"
                 }, Object(b["formatMessage"])({
                     id: "\u6211\u7684\u8ba2\u9605"
-                }))), l.a.createElement("div", {
+                }), l.a.createElement("a", {
+                    href: "javascript:void(0)",
+                    style: {
+                        color: "#495057",
+                        textDecoration: "none",
+                        marginLeft: "1em",
+                        fontSize: "0.875rem",
+                        fontWeight: 400
+                    },
+                    onClick: ()=>this.resetSecurity()
+                }, "\uff08", l.a.createElement("span", {
+                    style: {
+                        color: "#0665d0"
+                    }
+                }, Object(b["formatMessage"])({
+                    id: "\u91cd\u7f6e\u8ba2\u9605"
+                })), "\uff09"))), l.a.createElement("div", {
                     className: "block-content"
                 }, d.email ? d.plan_id ? l.a.createElement("div", null, l.a.createElement("div", null, l.a.createElement("div", {
                     className: "justify-content-md-between align-items-md-center"

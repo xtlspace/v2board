@@ -127,6 +127,7 @@ window.settings.i18n['vi-VN'] = {
   '重置订阅信息': 'Reset thông tin gói',
   '重置订阅提示信息': 'Khi đăng ký hoặc tài khoản của bạn bị rò rỉ và bị lợi dụng bởi các bên không xác định, bạn có thể đặt lại thông tin đăng ký tại đây để tránh những mất mát không đáng có.',
   '重置': 'Cài lại',
+  '重置订阅': 'Đặt lại đăng ký',
   '确定要重置订阅信息？': 'Xác nhận reset thông tin gói?',
   '如果你的订阅地址或信息泄露可以进行此操作。重置后你的UUID及订阅将会变更，需要重新进行订阅。': 'Nếu địa chỉ hoặc thông tin gói dịch vụ của bạn bị tiết lộ có thể tiến hành thao tác này. Sau khi reset UUID sẽ thay đổi.',
   '重置成功': 'Reset thành công',
