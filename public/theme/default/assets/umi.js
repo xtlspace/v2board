@@ -31006,8 +31006,8 @@
                     style: {
                         color: "#495057",
                         textDecoration: "none",
-                        marginLeft: "1em",
-                        fontSize: "0.875rem",
+                        marginLeft: "4px",
+                        fontSize: "0.6875rem",
                         fontWeight: 400
                     },
                     onClick: ()=>this.resetSecurity()
