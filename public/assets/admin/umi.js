@@ -70084,7 +70084,7 @@
                     }, {
                         key: "plan_id",
                         title: "\u8ba2\u9605",
-                        condition: ["="],
+                        condition: ["=", "!="],
                         type: "select",
                         options:[{
                             key: "\u65e0\u8ba2\u9605",
@@ -70136,7 +70136,7 @@
                     }, {
                         key: "remarks",
                         title: "\u5907\u6ce8",
-                        condition: ["\u6a21\u7cca"]
+                        condition: ["\u6a21\u7cca", "\u4e0d\u5305\u542b"]
                     }, {
                         key: "is_admin",
                         title: "\u7ba1\u7406\u5458",

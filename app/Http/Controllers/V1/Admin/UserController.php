@@ -42,6 +42,14 @@ class UserController extends Controller
                     $filter['condition'] = 'like';
                     $filter['value'] = "%{$filter['value']}%";
                 }
+                if ($filter['condition'] === '不包含') {
+                    $key = $filter['key'];
+                    $value = "%{$filter['value']}%";
+                    $builder->where(function ($query) use ($key, $value) {
+                        $query->whereNull($key)->orWhere($key, 'not like', $value);
+                    });
+                    continue;
+                }
                 if ($filter['key'] === 'd' || $filter['key'] === 'transfer_enable') {
                     $filter['value'] = $filter['value'] * 1073741824;
                 }
@@ -52,9 +60,23 @@ class UserController extends Controller
                     unset($filters[$k]);
                     continue;
                 }
-                if ($filter['key'] === 'plan_id' && $filter['value'] == 'null') {
-                    $builder->whereNull('plan_id');
-                    continue;
+                if ($filter['key'] === 'plan_id') {
+                    $value = $filter['value'];
+                    $condition = $filter['condition'];
+                    if ($value === 'null') {
+                        if ($condition === '!=') {
+                            $builder->whereNotNull('plan_id');
+                        } else {
+                            $builder->whereNull('plan_id');
+                        }
+                        continue;
+                    }
+                    if ($condition === '!=') {
+                        $builder->where(function ($query) use ($value) {
+                            $query->whereNull('plan_id')->orWhere('plan_id', '!=', $value);
+                        });
+                        continue;
+                    }
                 }
                 $builder->where($filter['key'], $filter['condition'], $filter['value']);
             }
