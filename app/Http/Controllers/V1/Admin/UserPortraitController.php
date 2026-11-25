@@ -883,7 +883,8 @@ class UserPortraitController extends Controller
         ]);
 
         if ((int) $data['type'] === 1) {
-            // 白名单不需要替换 Host/端口，数据库 replace_host 为 NOT NULL，使用空字符串避免写入失败
+            // 白名单不需要原 Host/替换 Host/端口，数据库 replace_host 为 NOT NULL，使用空字符串避免写入失败
+            $data['original_host'] = null;
             $data['replace_host'] = '';
             $data['replace_port'] = null;
         }

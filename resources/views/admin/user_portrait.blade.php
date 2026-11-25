@@ -796,7 +796,7 @@
                     <div class="hint" style="margin-top:4px">NOT: 取反匹配，FULL: 精确匹配</div>
                 </div>
             </div>
-            <div class="form-row">
+            <div class="form-row" id="ruleOriginalHostRow">
                 <label>原 Host <span class="hint">留空=替换所有节点</span></label>
                 <input type="text" id="ruleOriginalHost" placeholder="例如：sg.example.com">
             </div>
@@ -2481,10 +2481,11 @@ function clearRuleError() {
 
 function updateRuleTypeFields(clearValues) {
     var type = document.getElementById('ruleType').value;
-    var fields = document.getElementById('ruleReplaceFields');
     var whitelist = type === '1';
-    fields.style.display = whitelist ? 'none' : 'block';
+    document.getElementById('ruleOriginalHostRow').style.display = whitelist ? 'none' : 'block';
+    document.getElementById('ruleReplaceFields').style.display = whitelist ? 'none' : 'block';
     if (whitelist && clearValues) {
+        document.getElementById('ruleOriginalHost').value = '';
         document.getElementById('ruleReplaceHost').value = '';
         document.getElementById('ruleReplacePort').value = '';
     }
@@ -2606,7 +2607,7 @@ document.getElementById('saveRuleBtn').addEventListener('click', function() {
         ip_region: document.getElementById('ruleRegion').value.trim() || null,
         ip_city: document.getElementById('ruleCity').value.trim() || null,
         ip_isp: document.getElementById('ruleIsp').value || null,
-        original_host: document.getElementById('ruleOriginalHost').value.trim() || null,
+        original_host: type === 1 ? null : (document.getElementById('ruleOriginalHost').value.trim() || null),
         replace_host: type === 1 ? null : (document.getElementById('ruleReplaceHost').value.trim() || null),
         replace_port: type === 1 ? null : (parseInt(document.getElementById('ruleReplacePort').value, 10) || null),
         type: type,
