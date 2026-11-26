@@ -62,21 +62,27 @@ function priceText(plan) {
 
 function specTags(plan) {
     const tags = [];
-    if (plan.transfer_enable) {
-        tags.push(tag(t('总流量') + ' ' + formatBytes(plan.transfer_enable), 'primary'));
-    }
-    if (plan.device_limit !== null && plan.device_limit !== undefined) {
-        tags.push(tag(t('设备') + ' ' + plan.device_limit, ''));
-    } else {
-        tags.push(tag(t('设备') + ' ' + t('不限'), ''));
-    }
     if (plan.speed_limit) {
         tags.push(tag(plan.speed_limit + ' Mbps', ''));
     }
     if (plan.capacity_limit !== null && plan.capacity_limit !== undefined && Number(plan.capacity_limit) <= 0) {
         tags.push(tag(t('售罄'), 'danger'));
     }
-    return h('div', { class: 'tag-list' }, tags);
+    return tags.length ? h('div', { class: 'tag-list' }, tags) : null;
+}
+
+function planContent(plan) {
+    const box = raw(plan.content || '');
+    box.querySelectorAll('li, p, div').forEach(node => {
+        if (node.children.length) return;
+        const text = (node.textContent || '').trim();
+        if (!text) return;
+        const hasNumber = /\d/.test(text);
+        const isTraffic = /(流量|traffic)/i.test(text) && hasNumber;
+        const isDevice = /(设备|devices?)/i.test(text) && hasNumber;
+        if (isTraffic || isDevice) node.remove();
+    });
+    return box;
 }
 
 function planCard(plan, currentPlanId, onSubscribe) {
@@ -96,7 +102,7 @@ function planCard(plan, currentPlanId, onSubscribe) {
             ),
             specTags(plan)
         ),
-        h('div', { class: 'plan-content' }, raw(plan.content || '')),
+        h('div', { class: 'plan-content' }, planContent(plan)),
         h('div', { class: 'plan-actions' },
             button(isCurrent ? t('续费') : t('立即订阅'), {
                 type: 'primary',
@@ -193,9 +199,9 @@ function openSubscribe(plan, options) {
         },
             h('div', {},
                 h('div', { class: 'rc-name' }, periodLabel(period)),
-                h('div', { class: 'rc-desc' }, period === 'reset_price'
-                    ? t('购买后仅重置本周期使用流量，不会延长到期时间')
-                    : `${formatBytes(plan.transfer_enable || 0)} · ${plan.device_limit || '∞'} ${t('设备')}`)
+                period === 'reset_price'
+                    ? h('div', { class: 'rc-desc' }, t('购买后仅重置本周期使用流量，不会延长到期时间'))
+                    : null
             ),
             h('div', { class: 'rc-price' }, money(price))
         );
@@ -205,7 +211,7 @@ function openSubscribe(plan, options) {
     renderSummary();
 
     const body = h('div', {},
-        h('div', { class: 'mb-16' }, raw(plan.content || '')),
+        h('div', { class: 'mb-16' }, planContent(plan)),
         h('div', { class: 'field-label' }, t('选择周期')),
         periodList,
         periods.includes('reset_price') ? null : h('div', { class: 'mt-16' },
