@@ -1061,10 +1061,9 @@ html[data-header="dark"] .icon-btn:hover { background: rgba(255, 255, 255, .1); 
     white-space: pre-wrap;
     word-break: break-word;
 }
-.ticket-msg.mine .msg-bubble { background: var(--primary-soft); border-color: transparent; }
+.ticket-msg.mine .msg-bubble { background: var(--primary-soft); border-color: transparent; text-align: left; }
 .ticket-msg.mine { flex-direction: row-reverse; }
 .ticket-msg.mine .msg-meta { justify-content: flex-end; }
-.ticket-msg.mine .msg-bubble { text-align: left; }
 .ticket-reply { margin-top: 16px; }
 
 /* ---------- knowledge ---------- */

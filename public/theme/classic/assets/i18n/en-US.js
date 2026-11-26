@@ -26,7 +26,6 @@ window.settings.i18n['en-US'] = {
   '我的工单': 'My Tickets',
   '流量明细': 'Transfer Data Details',
   '使用文档': 'Knowledge Base',
-  '绑定Telegram获取更多服务': 'Not link to Telegram yet',
   '公告': 'Announcements',
   '该订阅长期有效': 'The subscription is valid for an unlimited time',
   '已过期': 'Expired',

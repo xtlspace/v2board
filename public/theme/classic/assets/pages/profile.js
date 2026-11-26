@@ -4,6 +4,7 @@ import {
     api, fetchUser, fetchSubscribe, fetchCommConfig, subscribeUrlFrom, clearCaches, getAuthData, logout
 } from '../lib/api.js';
 import { navigate } from '../lib/router.js';
+import { transferModal } from '../lib/transfer.js';
 import {
     button, card, confirmDialog, emptyBlock, errorBlock, field, input,
     loadingBlock, modal, tag, toast, switchRow
@@ -369,47 +370,6 @@ function telegramCard(user, botInfo, subscribe, onChanged) {
             onClick: openBind
         }),
         flush: true
-    });
-}
-
-function transferModal(available, onDone) {
-    const amountInput = input({ type: 'number', min: '1', step: '0.01', placeholder: t('请输入金额') });
-    const submit = button(t('确认'), {
-        type: 'primary',
-        onClick: async () => {
-            const value = Number(amountInput.value);
-            if (!value || value <= 0) {
-                toast(t('请输入金额'), 'error');
-                return;
-            }
-            const cents = Math.round(value * 100);
-            if (cents > available) {
-                toast(t('可用佣金不足'), 'error');
-                return;
-            }
-            submit.disabled = true;
-            try {
-                await api.post('/user/transfer', { transfer_amount: cents });
-                toast(t('操作成功'));
-                controller.close();
-                onDone();
-            } catch (error) {
-                toast(error.message || t('请求失败'), 'error');
-                submit.disabled = false;
-            }
-        }
-    });
-    const controller = modal({
-        title: t('推广佣金划转至余额'),
-        body: h('div', {},
-            h('p', { class: 'muted' }, t('划转后的余额仅用于{title}消费使用', { title: window.settings.title || 'V2Board' })),
-            field({ label: t('当前推广佣金余额'), control: h('div', { class: 'plan-name', style: { fontSize: '22px', margin: 0 } }, money(available)) }),
-            field({ label: t('划转金额'), control: amountInput })
-        ),
-        footer: [
-            h('button', { class: 'btn', type: 'button', onClick: () => controller.close() }, t('取消')),
-            submit
-        ]
     });
 }
 
