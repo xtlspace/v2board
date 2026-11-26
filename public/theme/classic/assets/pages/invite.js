@@ -2,7 +2,7 @@ import { h, money, formatDate, copyText } from '../lib/dom.js';
 import { t } from '../lib/i18n.js';
 import { api, fetchCommConfig } from '../lib/api.js';
 import {
-    alert, button, card, emptyBlock, errorBlock, field, input, loadingBlock,
+    alert, button, card, confirmDialog, emptyBlock, errorBlock, field, input, loadingBlock,
     modal, pagination, select, table, toast
 } from '../lib/ui.js';
 
@@ -49,6 +49,52 @@ function transferModal(available, onDone) {
             h('p', { class: 'muted' }, t('划转后的余额仅用于{title}消费使用', { title: window.settings.title || 'V2Board' })),
             field({ label: t('当前推广佣金余额'), control: h('div', { class: 'plan-name', style: { fontSize: '22px', margin: 0 } }, money(available)) }),
             field({ label: t('划转金额'), control: amountInput, hint: `${t('可用佣金')}: ${money(available)}` })
+        ),
+        footer: [
+            h('button', { class: 'btn', type: 'button', onClick: () => controller.close() }, t('取消')),
+            submit
+        ]
+    });
+}
+
+function generateModal(onDone) {
+    const codeInput = input({
+        type: 'text',
+        maxlength: '32',
+        autocomplete: 'off',
+        placeholder: t('请输入邀请码')
+    });
+
+    const submit = button(t('生成'), {
+        type: 'primary',
+        onClick: async () => {
+            const code = codeInput.value.trim();
+            if (code && !/^[A-Za-z0-9]{4,32}$/.test(code)) {
+                toast(t('请输入4位以上的字母或数字，留空将随机生成'), 'error');
+                codeInput.focus();
+                return;
+            }
+            submit.disabled = true;
+            try {
+                await api.post('/user/invite/save', code ? { code } : {});
+                toast(t('操作成功'));
+                controller.close();
+                onDone();
+            } catch (error) {
+                toast(error.message || t('请求失败'), 'error');
+                submit.disabled = false;
+            }
+        }
+    });
+
+    const controller = modal({
+        title: t('生成邀请码'),
+        body: h('div', {},
+            field({
+                label: t('邀请码'),
+                control: codeInput,
+                hint: t('请输入4位以上的字母或数字，留空将随机生成')
+            })
         ),
         footer: [
             h('button', { class: 'btn', type: 'button', onClick: () => controller.close() }, t('取消')),
@@ -135,7 +181,7 @@ export async function mount(el) {
 
         const stats = h('div', { class: 'stat-grid' },
             h('div', { class: 'stat-card' },
-                h('div', { class: 'sc-label' }, t('已注册用户数')),
+                h('div', { class: 'sc-label' }, t('已邀请用户数')),
                 h('div', { class: 'sc-value' }, String(stat[0] || 0))
             ),
             h('div', { class: 'stat-card' },
@@ -143,27 +189,59 @@ export async function mount(el) {
                 h('div', { class: 'sc-value' }, money(stat[1] || 0))
             ),
             h('div', { class: 'stat-card' },
-                h('div', { class: 'sc-label' }, t('确认中的佣金')),
-                h('div', { class: 'sc-value' }, money(stat[2] || 0))
-            ),
-            h('div', { class: 'stat-card' },
                 h('div', { class: 'sc-label' }, t('佣金比例')),
                 h('div', { class: 'sc-value' }, `${stat[3] || 0}%`)
             ),
             h('div', { class: 'stat-card' },
                 h('div', { class: 'sc-label' }, t('可用佣金')),
-                h('div', { class: 'sc-value' }, money(stat[4] || 0))
+                h('div', { class: 'sc-value' }, money(stat[4] || 0)),
+                h('div', { class: 'sc-actions' },
+                    button(t('划转'), {
+                        size: 'sm',
+                        onClick: () => transferModal(Number(stat[4] || 0), reload)
+                    }),
+                    Number(config.withdraw_close) === 1 ? null : button(t('提现'), {
+                        size: 'sm',
+                        onClick: () => withdrawModal(config, reload)
+                    })
+                )
             )
         );
 
         const codeItems = codes.length
             ? h('div', { class: 'code-list' }, codes.map(code => h('div', { class: 'code-chip' },
-                h('span', {}, code.code),
-                h('span', { class: 'copy', title: t('复制链接'), onClick: async () => {
-                    const ok = await copyText(inviteLink(code.code));
-                    toast(ok ? t('已复制到剪贴板') : t('复制失败，请手动复制'), ok ? 'success' : 'error');
-                } }, t('复制链接')),
-                h('span', { class: 'faint' }, `PV ${code.pv || 0}`)
+                h('span', { class: 'code-text' }, code.code),
+                h('div', { class: 'code-actions' },
+                    button(t('复制链接'), {
+                        size: 'sm',
+                        type: 'primary',
+                        title: t('复制链接'),
+                        onClick: async () => {
+                            const ok = await copyText(inviteLink(code.code));
+                            toast(ok ? t('已复制到剪贴板') : t('复制失败，请手动复制'), ok ? 'success' : 'error');
+                        }
+                    }),
+                    button(t('删除'), {
+                        size: 'sm',
+                        type: 'danger',
+                        onClick: async () => {
+                            const ok = await confirmDialog({
+                                title: t('删除邀请码'),
+                                content: t('确认删除该邀请码？删除后该邀请码将无法使用。'),
+                                okText: t('删除'),
+                                danger: true
+                            });
+                            if (!ok) return;
+                            try {
+                                await api.post('/user/invite/delete', { id: code.id });
+                                toast(t('操作成功'));
+                                reload();
+                            } catch (error) {
+                                toast(error.message || t('请求失败'), 'error');
+                            }
+                        }
+                    })
+                )
             )))
             : h('div', { class: 'muted' }, t('还没有邀请码，点击右侧生成'));
 
@@ -181,15 +259,9 @@ export async function mount(el) {
 
         const detailCard = card({
             title: t('佣金发放记录'),
-            extra: h('div', { class: 'btn-group' },
-                button(t('划转'), {
-                    size: 'sm',
-                    onClick: () => transferModal(Number(stat[4] || 0), reload)
-                }),
-                Number(config.withdraw_close) === 1 ? null : button(t('提现'), {
-                    size: 'sm',
-                    onClick: () => withdrawModal(config, reload)
-                })
+            extra: h('div', { class: 'small muted' },
+                t('确认中的佣金'),
+                h('span', { class: 'strong', style: { marginLeft: '6px' } }, money(stat[2] || 0))
             ),
             flush: true,
             body: h('div', {}, detailsTable, total > state.pageSize ? pagination({
@@ -204,32 +276,21 @@ export async function mount(el) {
         });
 
         const nodes = [
-            h('div', { class: 'flex-between flex-wrap' },
-                h('div', {},
-                    h('h1', { class: 'page-title' }, t('我的邀请')),
-                    h('div', { class: 'page-desc' }, t('邀请码管理'))
-                ),
-                h('div', { class: 'btn-group' },
-                    button(t('生成邀请码'), {
-                        type: 'primary',
-                        iconName: 'plus',
-                        onClick: async () => {
-                            try {
-                                await api.get('/user/invite/save');
-                                toast(t('操作成功'));
-                                render();
-                            } catch (error) {
-                                toast(error.message || t('请求失败'), 'error');
-                            }
-                        }
-                    })
-                )
+            h('div', {},
+                h('h1', { class: 'page-title' }, t('我的邀请')),
+                h('div', { class: 'page-desc' }, t('邀请码管理'))
             ),
             stats,
             card({
                 title: t('邀请码管理'),
-                extra: h('span', { class: 'small faint' }, t('佣金将会在确认后会到达你的佣金账户。')),
+                extra: button(t('生成邀请码'), {
+                    size: 'sm',
+                    type: 'primary',
+                    iconName: 'plus',
+                    onClick: () => generateModal(reload)
+                }),
                 body: h('div', {},
+                    h('div', { class: 'field-hint mb-12' }, t('佣金将会在确认后会到达你的佣金账户。')),
                     codeItems,
                     h('div', { class: 'field-hint mt-12' }, t('将邀请链接分享给朋友，注册后即可获得佣金。'))
                 )

@@ -328,25 +328,6 @@ export function progress(percent, tone = '') {
     );
 }
 
-export function tabs(items, active, onChange) {
-    const el = h('div', { class: 'tabs', role: 'tablist' });
-    items.forEach(item => {
-        const value = typeof item === 'string' ? item : item.value;
-        const label = typeof item === 'string' ? item : item.label;
-        el.appendChild(h('button', {
-            class: `tab ${String(value) === String(active) ? 'active' : ''}`.trim(),
-            type: 'button',
-            role: 'tab',
-            onClick: () => {
-                if (String(value) === String(active)) return;
-                Array.from(el.children).forEach(child => child.classList.remove('active'));
-                if (typeof onChange === 'function') onChange(value);
-            }
-        }, label));
-    });
-    return el;
-}
-
 export function table(options = {}) {
     const { columns = [], rows = [], rowKey = 'id', empty = null } = options;
     const wrap = h('div', { class: 'table-wrap' });

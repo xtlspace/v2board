@@ -262,8 +262,8 @@ const state = {
     ],
     invite: {
         codes: [
-            { code: 'DEMO2026', pv: 18, status: 0 },
-            { code: 'WELCOME8', pv: 6, status: 0 }
+            { id: 1, code: 'DEMO2026', pv: 18, status: 0 },
+            { id: 2, code: 'WELCOME8', pv: 6, status: 0 }
         ],
         stat: [12, 3680, 920, 15, 4850],
         details: [
@@ -576,8 +576,22 @@ export async function mockRequest(method, path, data = {}) {
         return response({ data: { codes: state.invite.codes, stat: state.invite.stat } });
     }
     if (path === '/user/invite/save') {
-        const code = Math.random().toString(36).slice(2, 10).toUpperCase();
-        state.invite.codes.push({ code, pv: 0, status: 0 });
+        const custom = String(query.code || '').trim();
+        if (custom && !/^[A-Za-z0-9]{4,32}$/.test(custom)) {
+            fail('Invite code must be 4-32 letters or numbers');
+        }
+        if (custom && state.invite.codes.some(item => item.code.toLowerCase() === custom.toLowerCase())) {
+            fail('This invitation code already exists');
+        }
+        const code = custom || Math.random().toString(36).slice(2, 10).toUpperCase();
+        state.invite.codes.push({ id: Date.now(), code, pv: 0, status: 0 });
+        return response({ data: true });
+    }
+    if (path === '/user/invite/delete') {
+        const id = Number(query.id || 0);
+        const index = state.invite.codes.findIndex(item => Number(item.id) === id);
+        if (index < 0) fail('The invitation code does not exist');
+        state.invite.codes.splice(index, 1);
         return response({ data: true });
     }
     if (path === '/user/invite/details') {
@@ -630,7 +644,7 @@ export async function mockRequest(method, path, data = {}) {
         }
         fail('Invalid coupon');
     }
-    if (path === '/user/dialerProxy/fetch') {
+    if (path === '/user/dialerProxy') {
         return response({ data: state.dialer });
     }
     if (path === '/user/dialerProxy/saveOne') {

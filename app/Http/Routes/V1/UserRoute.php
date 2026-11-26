@@ -42,6 +42,8 @@ class UserRoute
             $router->get ('/plan/fetch', 'V1\\User\\PlanController@fetch');
             // Invite
             $router->get ('/invite/save', 'V1\\User\\InviteController@save');
+            $router->post('/invite/save', 'V1\\User\\InviteController@save');
+            $router->post('/invite/delete', 'V1\\User\\InviteController@delete');
             $router->get ('/invite/fetch', 'V1\\User\\InviteController@fetch');
             $router->get ('/invite/details', 'V1\\User\\InviteController@details');
             // Notice

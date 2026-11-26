@@ -43,6 +43,7 @@
         };
     </script>
     <script src="/theme/{{ $theme }}/assets/i18n/{{ $language }}.js?v={{ $version }}"></script>
+    <script src="/theme/{{ $theme }}/assets/lib/markdown-it.min.js?v={{ $version }}"></script>
 </head>
 
 <body>

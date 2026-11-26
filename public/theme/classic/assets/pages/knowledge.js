@@ -1,4 +1,5 @@
-import { h, raw, formatDate, debounce, icon } from '../lib/dom.js';
+import { h, formatDate, debounce, icon } from '../lib/dom.js';
+import { markdown } from '../lib/markdown.js';
 import { t, getLanguage } from '../lib/i18n.js';
 import { api } from '../lib/api.js';
 import { navigate } from '../lib/router.js';
@@ -123,7 +124,7 @@ export async function mountDetail(el, ctx) {
             ),
             card({
                 title: t('使用文档'),
-                body: h('article', { class: 'article-body' }, raw(article.body || ''))
+                body: h('article', { class: 'article-body' }, markdown(article.body || ''))
             })
         ));
     } catch (error) {

@@ -114,7 +114,7 @@ function dialerCard(dialer, onChanged) {
 }
 
 async function loadDialer() {
-    const response = await api.get('/user/dialerProxy/fetch');
+    const response = await api.get('/user/dialerProxy');
     return response ? response.data : null;
 }
 

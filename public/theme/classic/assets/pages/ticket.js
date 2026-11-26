@@ -4,7 +4,7 @@ import { api } from '../lib/api.js';
 import { navigate } from '../lib/router.js';
 import {
     alert, button, card, confirmDialog, emptyBlock, errorBlock, field, input, levelTag,
-    loadingBlock, modal, select, table, tabs, textarea, ticketStatus, toast
+    loadingBlock, modal, select, table, textarea, ticketStatus, toast
 } from '../lib/ui.js';
 
 function newTicketModal(onCreated) {
@@ -64,7 +64,6 @@ function newTicketModal(onCreated) {
 
 export async function mount(el) {
     el.replaceChildren(loadingBlock());
-    const state = { filter: 'all' };
 
     const render = async () => {
         let tickets = [];
@@ -76,38 +75,49 @@ export async function mount(el) {
             return;
         }
 
-        const filtered = tickets.filter(ticket => {
-            if (state.filter === 'open') return Number(ticket.status) === 0;
-            if (state.filter === 'closed') return Number(ticket.status) === 1;
-            return true;
-        });
-
-        const tabsEl = tabs([
-            { value: 'all', label: t('全部') },
-            { value: 'open', label: t('待回复') },
-            { value: 'closed', label: t('已关闭') }
-        ], state.filter, value => {
-            state.filter = value;
-            render();
-        });
-
         const rows = table({
             columns: [
-                { title: t('主题'), render: ticket => h('a', { href: `#/ticket/${ticket.id}` }, ticket.subject) },
+                { title: '#', width: '60px', render: ticket => h('span', { class: 'faint' }, String(ticket.id)) },
+                { title: t('主题'), className: 'nowrap', cellClass: 'nowrap', render: ticket => h('a', { href: `#/ticket/${ticket.id}` }, ticket.subject) },
                 { title: t('工单级别'), width: '100px', render: ticket => levelTag(ticket.level) },
                 { title: t('工单状态'), width: '100px', render: ticket => ticketStatus(ticket) },
-                { title: t('最后回复'), width: '160px', className: 'nowrap', render: ticket => formatDate(ticket.updated_at, true) },
-                { title: t('创建时间'), width: '160px', className: 'nowrap', render: ticket => formatDate(ticket.created_at, true) },
+                { title: t('创建时间'), width: '170px', className: 'nowrap', render: ticket => formatDate(ticket.created_at, true) },
+                { title: t('最后回复'), width: '170px', className: 'nowrap', render: ticket => formatDate(ticket.updated_at, true) },
                 {
                     title: t('操作'),
-                    width: '90px',
-                    render: ticket => button(t('查看'), {
-                        size: 'sm',
-                        onClick: () => navigate(`/ticket/${ticket.id}`)
-                    })
+                    width: '150px',
+                    className: 'align-right',
+                    cellClass: 'align-right',
+                    render: ticket => h('div', { class: 'cell-actions end' },
+                        button(t('查看'), {
+                            size: 'sm',
+                            onClick: () => navigate(`/ticket/${ticket.id}`)
+                        }),
+                        button(t('关闭'), {
+                            size: 'sm',
+                            type: 'danger',
+                            disabled: Number(ticket.status) === 1,
+                            onClick: async () => {
+                                const ok = await confirmDialog({
+                                    title: t('关闭工单'),
+                                    content: t('确定关闭该工单？'),
+                                    okText: t('确认'),
+                                    danger: true
+                                });
+                                if (!ok) return;
+                                try {
+                                    await api.post('/user/ticket/close', { id: ticket.id });
+                                    toast(t('工单已关闭'));
+                                    render();
+                                } catch (error) {
+                                    toast(error.message || t('请求失败'), 'error');
+                                }
+                            }
+                        })
+                    )
                 }
             ],
-            rows: filtered,
+            rows: tickets,
             rowKey: 'id',
             empty: emptyBlock({
                 iconName: 'ticket',
@@ -134,7 +144,7 @@ export async function mount(el) {
                     })
                 )
             ),
-            card({ title: t('工单历史'), flush: true, extra: tabsEl, body: rows })
+            card({ title: t('工单历史'), flush: true, body: rows })
         ));
     };
 

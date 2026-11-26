@@ -17,11 +17,46 @@ class InviteController extends Controller
         if (InviteCode::where('user_id', $request->user['id'])->where('status', 0)->count() >= config('v2board.invite_gen_limit', 5)) {
             abort(500, __('The maximum number of creations has been reached'));
         }
+
+        $code = trim((string) $request->input('code', ''));
+        if ($code === '') {
+            do {
+                $code = Helper::randomChar(8);
+            } while (InviteCode::where('code', $code)->exists());
+        } else {
+            if (!preg_match('/^[A-Za-z0-9]{4,32}$/', $code)) {
+                abort(500, __('Invalid invitation code format'));
+            }
+            if (InviteCode::where('code', $code)->exists()) {
+                abort(500, __('This invitation code already exists'));
+            }
+        }
+
         $inviteCode = new InviteCode();
         $inviteCode->user_id = $request->user['id'];
-        $inviteCode->code = Helper::randomChar(8);
+        $inviteCode->code = $code;
         return response([
             'data' => $inviteCode->save()
+        ]);
+    }
+
+    public function delete(Request $request)
+    {
+        $id = (int) $request->input('id');
+        if (!$id) {
+            abort(500, __('The invitation code does not exist'));
+        }
+
+        $deleted = InviteCode::where('id', $id)
+            ->where('user_id', $request->user['id'])
+            ->delete();
+
+        if (!$deleted) {
+            abort(500, __('The invitation code does not exist'));
+        }
+
+        return response([
+            'data' => true
         ]);
     }
 

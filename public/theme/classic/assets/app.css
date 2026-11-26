@@ -332,6 +332,7 @@ html[data-header="dark"] .icon-btn:hover { background: rgba(255, 255, 255, .1); 
     overflow: hidden;
 }
 .card + .card, .stack > * + * { margin-top: 16px; }
+.stack > .notice-carousel + * { margin-top: 1px; }
 .grid > .card + .card,
 .plan-grid > .card + .card { margin-top: 0; }
 .card-head {
@@ -503,6 +504,8 @@ html[data-header="dark"] .icon-btn:hover { background: rgba(255, 255, 255, .1); 
 .table tbody tr:hover td { background: #fafbfe; }
 .table tbody tr:last-child td { border-bottom: 0; }
 .table .cell-actions { display: flex; gap: 4px; flex-wrap: nowrap; }
+.table .cell-actions.end { justify-content: flex-end; }
+.table .align-right { text-align: right; }
 .table .cell-actions .btn-sm { padding: 0 8px; }
 .table .nowrap { white-space: nowrap; }
 
@@ -843,7 +846,7 @@ html[data-header="dark"] .icon-btn:hover { background: rgba(255, 255, 255, .1); 
 .notice-slide {
     position: relative;
     flex: 0 0 100%;
-    height: 56px;
+    height: 36px;
     padding: 0;
     border: 0;
     background: transparent;
@@ -1089,10 +1092,12 @@ html[data-header="dark"] .icon-btn:hover { background: rgba(255, 255, 255, .1); 
 .stat-card .sc-label { font-size: 12px; color: var(--muted); }
 .stat-card .sc-value { margin-top: 6px; font-size: 22px; font-weight: 500; color: var(--heading); line-height: 1.2; }
 .stat-card .sc-value small { font-size: 12px; font-weight: 400; color: var(--faint); margin-left: 2px; }
-.code-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.stat-card .sc-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.code-list { display: flex; flex-direction: column; gap: 8px; }
 .code-chip {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 6px 10px;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    width: 100%;
+    padding: 4px 4px 4px 12px;
     border: 1px solid var(--border);
     border-radius: var(--radius);
     background: var(--head-bg);
@@ -1100,7 +1105,9 @@ html[data-header="dark"] .icon-btn:hover { background: rgba(255, 255, 255, .1); 
     font-size: 12px;
     color: var(--heading);
 }
-.code-chip .copy { color: var(--primary); cursor: pointer; }
+.code-chip .code-text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.code-chip .code-actions { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.code-chip .btn { flex: 0 0 auto; }
 .profile-pair { align-items: stretch; }
 .profile-pair > .card { height: 100%; }
 .rule-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
@@ -1132,7 +1139,7 @@ html[data-header="dark"] .icon-btn:hover { background: rgba(255, 255, 255, .1); 
 .modal .input-group .btn { flex: 0 0 auto; }
 
 @media (max-width: 767px) {
-    .notice-slide { height: 48px; }
+    .notice-slide { height: 36px; }
     .notice-slide-inner { padding: 0 14px; padding-right: 62px; gap: 8px; }
     .notice-banner-title { font-size: 13px; max-width: none; }
     .notice-badge { font-size: 10px; padding: 1px 7px; }
