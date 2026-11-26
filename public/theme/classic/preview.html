@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-color="black" data-sidebar="dark" data-header="dark">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Classic Theme Preview</title>
+    <link rel="stylesheet" href="./assets/app.css">
+    <script>
+        (function () {
+            var params = new URLSearchParams(window.location.search);
+            var lang = params.get('lang') === 'en-US' ? 'en-US' : 'zh-CN';
+            if (params.get('guest') === '1') {
+                try { localStorage.removeItem('authorization'); } catch (e) {}
+            } else {
+                try { localStorage.setItem('authorization', 'mock-auth-data'); } catch (e) {}
+            }
+            document.documentElement.lang = lang;
+            window.settings = {
+                title: 'V2Board Demo',
+                site_name: 'V2Board Demo',
+                assets_path: './assets',
+                theme: {
+                    sidebar: params.get('sidebar') || 'dark',
+                    header: params.get('header') || 'dark',
+                    color: params.get('color') || 'black'
+                },
+                version: 'preview',
+                background_url: '',
+                description: '稳定、快速的网络加速服务',
+                language: lang,
+                i18n: {},
+                logo: '',
+                dialer_proxy_enable: 1,
+                mock: true
+            };
+            document.documentElement.dataset.color = window.settings.theme.color;
+            document.documentElement.dataset.sidebar = window.settings.theme.sidebar;
+            document.documentElement.dataset.header = window.settings.theme.header;
+        })();
+    </script>
+    <script src="./assets/i18n/zh-CN.js"></script>
+    <script src="./assets/i18n/en-US.js"></script>
+</head>
+<body>
+<div id="root">
+    <div class="boot"><span class="spinner"></span></div>
+</div>
+<script type="module" src="./assets/app.js"></script>
+</body>
+</html>

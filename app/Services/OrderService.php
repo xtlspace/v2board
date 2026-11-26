@@ -169,6 +169,13 @@ class OrderService
             ->first();
     }
 
+    public function getSurplusAmount(User $user): int
+    {
+        $order = new Order();
+        $this->getSurplusValue($user, $order);
+        return (int) round((float) ($order->surplus_amount ?? 0));
+    }
+
     private function getSurplusValue(User $user, Order $order)
     {
         if ($user->expired_at === NULL) {

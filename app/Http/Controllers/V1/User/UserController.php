@@ -315,6 +315,7 @@ class UserController extends Controller
     {
         $user = User::where('id', $request->user['id'])
             ->select([
+                'id',
                 'plan_id',
                 'token',
                 'expired_at',
@@ -359,6 +360,12 @@ class UserController extends Controller
                 : strtotime("+{$resetDay} days", strtotime('today')));
         $user['allow_new_period'] = (int)config('v2board.allow_new_period', 0);
         $user['renew_reset_traffic'] = (int)config('v2board.renew_order_event_id', 0) === 1;
+        $user['surplus_enable'] = (int)config('v2board.surplus_enable', 1);
+        $user['surplus_amount'] = 0;
+        if ($user['surplus_enable'] === 1) {
+            $orderService = new OrderService(new Order());
+            $user['surplus_amount'] = $orderService->getSurplusAmount($user);
+        }
         return response([
             'data' => $user
         ]);
