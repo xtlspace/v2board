@@ -72,7 +72,7 @@ export async function mount(el, ctx) {
         h('a', { href: tosUrl, target: '_blank', rel: 'noopener noreferrer' }, t('服务条款'))
     ) : null;
 
-    const submit = button(t('注册'), { type: 'primary', size: 'lg', block: true });
+    const submit = button(t('注册'), { type: 'primary', size: 'lg', block: true, submit: true });
 
     const form = h('form', {
         onSubmit: async event => {

@@ -33,7 +33,7 @@ export async function mount(el) {
         placeholder: t('请再次输入密码')
     });
 
-    const submit = button(t('重置密码'), { type: 'primary', size: 'lg', block: true });
+    const submit = button(t('重置密码'), { type: 'primary', size: 'lg', block: true, submit: true });
 
     const form = h('form', {
         onSubmit: async event => {

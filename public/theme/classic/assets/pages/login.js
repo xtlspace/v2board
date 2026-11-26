@@ -2,7 +2,7 @@ import { h } from '../lib/dom.js';
 import { t } from '../lib/i18n.js';
 import { api, setAuthData, isLoggedIn, clearCaches, fetchUser } from '../lib/api.js';
 import { navigate } from '../lib/router.js';
-import { field, input, toast, button, loadingBlock } from '../lib/ui.js';
+import { input, toast, button, loadingBlock } from '../lib/ui.js';
 import { authPage, authLink, normalizeRedirect, applyAuthPayload } from './auth.js';
 
 function verifyToken(el, query) {
@@ -38,19 +38,28 @@ export async function mount(el, ctx) {
     const emailInput = input({
         type: 'email',
         name: 'email',
+        class: 'auth-input',
         autocomplete: 'email',
-        placeholder: t('请输入邮箱'),
+        placeholder: t('邮箱'),
         value: query.email || ''
     });
     const passwordInput = input({
         type: 'password',
         name: 'password',
+        class: 'auth-input',
         autocomplete: 'current-password',
-        placeholder: t('请输入密码')
+        placeholder: t('密码')
     });
-    const submit = button(t('登入'), { type: 'primary', size: 'lg', block: true });
+    const submit = button(t('登入'), {
+        type: 'primary',
+        size: 'lg',
+        block: true,
+        iconName: 'login',
+        submit: true
+    });
 
     const form = h('form', {
+        class: 'auth-form',
         onSubmit: async event => {
             event.preventDefault();
             const email = emailInput.value.trim();
@@ -83,14 +92,16 @@ export async function mount(el, ctx) {
             }
         }
     },
-        field({ label: t('邮箱'), control: emailInput, required: true }),
-        field({ label: t('密码'), control: passwordInput, required: true }),
-        h('div', { class: 'auth-links' },
-            authLink(t('忘记密码？'), '/forgetpassword'),
-            authLink(t('还没有账号？注册'), redirect ? `/register?redirect=${encodeURIComponent(redirect)}` : '/register')
-        ),
+        emailInput,
+        passwordInput,
         submit
     );
 
-    el.replaceChildren(authPage(h('div', {}, form)));
+    const footer = h('div', { class: 'auth-foot-links' },
+        authLink(t('注册'), redirect ? `/register?redirect=${encodeURIComponent(redirect)}` : '/register'),
+        h('span', { class: 'auth-divider' }),
+        authLink(t('忘记密码'), '/forgetpassword')
+    );
+
+    el.replaceChildren(authPage(h('div', {}, form), window.settings || {}, footer));
 }

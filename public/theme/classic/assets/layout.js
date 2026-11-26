@@ -165,12 +165,8 @@ export function renderShell(options = {}) {
 }
 
 export function authBrand(settings) {
-    const logo = settings.logo
-        ? h('img', { src: settings.logo, alt: settings.title || 'logo' })
-        : h('span', { class: 'logo-mark' }, String(settings.title || 'V').slice(0, 1).toUpperCase());
     return h('div', { class: 'auth-brand' },
-        logo,
-        h('h1', {}, settings.title || 'V2Board'),
-        settings.description ? h('p', {}, settings.description) : null
+        settings.logo ? h('img', { src: settings.logo, alt: settings.title || 'logo' }) : null,
+        h('h1', {}, settings.title || 'V2Board')
     );
 }

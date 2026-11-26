@@ -4,15 +4,19 @@ import { api } from '../lib/api.js';
 import { authBrand } from '../layout.js';
 import { toast } from '../lib/ui.js';
 
-export function authPage(content, settings = window.settings || {}) {
-    const background = settings.background_url
-        ? h('div', { class: 'auth-bg', style: { backgroundImage: `url("${settings.background_url}")` } })
-        : h('div', { class: 'auth-bg' });
+export function authPage(content, settings = window.settings || {}, footer = null) {
+    const background = h('div', {
+        class: `auth-bg ${settings.background_url ? 'has-image' : ''}`.trim(),
+        style: settings.background_url ? { backgroundImage: `url("${settings.background_url}")` } : {}
+    });
     return h('div', { class: 'auth' },
         background,
         h('div', { class: 'auth-card' },
-            authBrand(settings),
-            content
+            h('div', { class: 'auth-card-body' },
+                authBrand(settings),
+                content
+            ),
+            footer ? h('div', { class: 'auth-card-foot' }, footer) : null
         )
     );
 }

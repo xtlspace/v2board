@@ -245,6 +245,7 @@ export function button(label, options = {}) {
         disabled = false,
         block = false,
         title = '',
+        submit = false,
         attrs = {}
     } = options;
     const cls = ['btn'];
@@ -256,7 +257,7 @@ export function button(label, options = {}) {
     if (block) cls.push('btn-block');
     return h('button', {
         class: cls.join(' '),
-        type: 'button',
+        type: submit ? 'submit' : 'button',
         title,
         disabled,
         onClick,
