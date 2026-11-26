@@ -71,23 +71,21 @@ function userMenu(user) {
             dropdown.classList.toggle('open');
         }
     },
-        icon('user', 15),
+        icon('user-circle', 16),
         h('span', { class: 'user-email' }, email),
         icon('chevron-down', 14)
     );
 
     const menu = h('div', { class: 'dropdown-menu' },
         h('a', { class: 'dropdown-item', href: '#/profile' }, icon('user', 15), h('span', {}, t('个人中心'))),
-        h('div', { class: 'dropdown-divider' }),
         h('button', {
             class: 'dropdown-item',
             type: 'button',
-            style: { width: '100%', border: 0, background: 'none', textAlign: 'left' },
             onClick: async () => {
                 logout();
                 navigate('/login');
             }
-        }, icon('logout', 15), h('span', {}, t('退出登录')))
+        }, icon('logout', 15), h('span', {}, t('登出')))
     );
 
     dropdown.appendChild(trigger);

@@ -241,16 +241,30 @@ html[data-header="dark"] .header-title { color: #fff; }
 
 .icon-btn.user-trigger {
     width: auto;
-    max-width: 240px;
-    height: 36px;
-    padding: 0 10px;
+    max-width: 260px;
+    height: 38px;
+    padding: 0 12px;
+    border: 1px solid transparent;
     border-radius: 4px;
     gap: 6px;
-    font-size: 13px;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.5;
+    background: transparent;
+    color: var(--text);
 }
-html[data-header="dark"] .icon-btn.user-trigger:hover { background: rgba(255, 255, 255, .1); }
+html[data-header="dark"] .icon-btn.user-trigger {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+html[data-header="dark"] .icon-btn.user-trigger:hover {
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+    color: #fff;
+}
 .user-email {
-    max-width: 190px;
+    max-width: 240px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -303,27 +317,33 @@ html[data-header="dark"] .icon-btn:hover { background: rgba(255, 255, 255, .1); 
 .dropdown { position: relative; }
 .dropdown-menu {
     position: absolute;
-    top: calc(100% + 6px);
+    top: calc(100% + 2px);
     right: 0;
-    min-width: 160px;
-    padding: 6px 0;
+    min-width: 192px;
+    padding: 8px 0;
     background: #fff;
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     z-index: 80;
     display: none;
+    font-size: 16px;
 }
 .dropdown.open .dropdown-menu { display: block; }
 .dropdown-item {
     display: flex; align-items: center; gap: 8px;
-    padding: 8px 16px;
-    font-size: 14px;
+    width: 100%;
+    padding: 6px 12px;
+    border: 0;
+    background: none;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 400;
     color: var(--text);
+    text-align: left;
     cursor: pointer;
     white-space: nowrap;
 }
-.dropdown-item:hover { background: var(--primary-soft); color: var(--primary); }
-.dropdown-divider { height: 1px; margin: 4px 0; background: var(--border); }
+.dropdown-item:hover { background: #f0f3f8; color: var(--text); }
 
 /* ---------- card ---------- */
 .card {
@@ -1170,8 +1190,6 @@ html[data-header="dark"] .icon-btn:hover { background: rgba(255, 255, 255, .1); 
 .table a { color: var(--primary); }
 .table a:hover { color: var(--primary-hover); }
 
-.dropdown-menu .dropdown-item { font-family: inherit; font-size: 14px; }
-
 .modal .input-group .btn { flex: 0 0 auto; }
 
 @media (max-width: 767px) {
@@ -1199,6 +1217,8 @@ html[data-header="dark"] .icon-btn:hover { background: rgba(255, 255, 255, .1); 
     .main { margin-left: 0; }
     .menu-trigger { display: inline-flex; }
     .header-inner { padding: 0 16px; }
+    .user-email { display: none; }
+    .icon-btn.user-trigger { max-width: none; }
     .content { padding: 16px; }
 }
 
@@ -1211,8 +1231,6 @@ html[data-header="dark"] .icon-btn:hover { background: rgba(255, 255, 255, .1); 
     .grid-2 { grid-template-columns: minmax(0, 1fr); }
     .quick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .header-title { font-size: 16px; }
-    .icon-btn.user-trigger { max-width: 150px; padding: 0 4px; }
-    .user-email { max-width: 108px; }
     .page-title { font-size: 18px; }
     .plan-name { font-size: 20px; }
     .table th, .table td { padding: 10px 12px; }
