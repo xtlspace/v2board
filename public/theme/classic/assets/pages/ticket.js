@@ -81,8 +81,8 @@ export async function mount(el) {
                 { title: t('主题'), className: 'nowrap', cellClass: 'nowrap', render: ticket => h('a', { href: `#/ticket/${ticket.id}` }, ticket.subject) },
                 { title: t('工单级别'), width: '100px', render: ticket => levelTag(ticket.level) },
                 { title: t('工单状态'), width: '100px', render: ticket => ticketStatus(ticket) },
-                { title: t('创建时间'), width: '170px', className: 'nowrap', render: ticket => formatDate(ticket.created_at, true) },
-                { title: t('最后回复'), width: '170px', className: 'nowrap', render: ticket => formatDate(ticket.updated_at, true) },
+                { title: t('创建时间'), width: '170px', className: 'nowrap', cellClass: 'nowrap', render: ticket => formatDate(ticket.created_at, true) },
+                { title: t('最后回复'), width: '170px', className: 'nowrap', cellClass: 'nowrap', render: ticket => formatDate(ticket.updated_at, true) },
                 {
                     title: t('操作'),
                     width: '150px',

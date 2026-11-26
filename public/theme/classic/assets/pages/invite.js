@@ -248,9 +248,9 @@ export async function mount(el) {
         const detailsTable = table({
             columns: [
                 { title: t('订单号'), render: row => h('span', { class: 'mono' }, row.trade_no) },
-                { title: t('订单金额'), width: '120px', render: row => money(row.order_amount) },
-                { title: t('佣金'), width: '120px', render: row => h('span', { class: 'tag tag-success' }, money(row.get_amount)) },
-                { title: t('完成时间'), width: '170px', className: 'nowrap', render: row => formatDate(row.created_at, true) }
+                { title: t('订单金额'), width: '120px', className: 'nowrap', cellClass: 'nowrap', render: row => money(row.order_amount) },
+                { title: t('佣金'), width: '120px', className: 'nowrap', cellClass: 'nowrap', render: row => h('span', { class: 'tag tag-success' }, money(row.get_amount)) },
+                { title: t('完成时间'), width: '170px', className: 'nowrap', cellClass: 'nowrap', render: row => formatDate(row.created_at, true) }
             ],
             rows: details,
             rowKey: 'id',

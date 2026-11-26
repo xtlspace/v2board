@@ -42,9 +42,9 @@ function ordersTable(orders, reload) {
         columns: [
             { title: t('# 订单号'), width: '180px', render: order => h('span', { class: 'mono' }, order.trade_no) },
             { title: t('周期'), width: '120px', render: order => periodLabel(order.period) },
-            { title: t('订单金额'), width: '120px', className: 'nowrap', render: order => money(order.total_amount) },
+            { title: t('订单金额'), width: '120px', className: 'nowrap', cellClass: 'nowrap', render: order => money(order.total_amount) },
             { title: t('订单状态'), width: '110px', render: order => statusTag(order.status) },
-            { title: t('创建时间'), width: '160px', className: 'nowrap', render: order => formatDate(order.created_at, true) },
+            { title: t('创建时间'), width: '160px', className: 'nowrap', cellClass: 'nowrap', render: order => formatDate(order.created_at, true) },
             { title: t('操作'), width: '190px', render: order => orderActions(order, reload) }
         ],
         rows: orders,

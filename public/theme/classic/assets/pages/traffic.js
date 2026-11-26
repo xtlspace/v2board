@@ -59,7 +59,7 @@ export async function mount(el) {
 
     const detail = table({
         columns: [
-            { title: t('记录时间'), width: '170px', className: 'nowrap', render: row => formatDate(row.record_at, true) },
+            { title: t('记录时间'), width: '170px', className: 'nowrap', cellClass: 'nowrap', render: row => formatDate(row.record_at, true) },
             { title: t('实际上行'), width: '130px', render: row => formatBytes(row.u) },
             { title: t('实际下行'), width: '130px', render: row => formatBytes(row.d) },
             { title: t('扣费倍率'), width: '110px', render: row => `${row.server_rate || '1'}x` },
