@@ -44,7 +44,7 @@ const state = {
         plan: {
             id: 1,
             name: '标准套餐',
-            transfer_enable: 100 * GB,
+            transfer_enable: 100,
             device_limit: 3,
             speed_limit: null,
             content: '<p>适合日常办公与流媒体使用，支持全部节点。</p>',
@@ -93,7 +93,7 @@ const state = {
         {
             id: 1,
             group_id: 1,
-            transfer_enable: 100 * GB,
+            transfer_enable: 100,
             device_limit: 3,
             name: '标准套餐',
             speed_limit: null,
@@ -114,7 +114,7 @@ const state = {
         {
             id: 2,
             group_id: 1,
-            transfer_enable: 500 * GB,
+            transfer_enable: 500,
             device_limit: 5,
             name: '高级套餐',
             speed_limit: 500,
@@ -135,7 +135,7 @@ const state = {
         {
             id: 3,
             group_id: 1,
-            transfer_enable: 200 * GB,
+            transfer_enable: 200,
             device_limit: 1,
             name: '流量包',
             speed_limit: null,

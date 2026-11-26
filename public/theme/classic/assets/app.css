@@ -296,12 +296,6 @@ html[data-header="dark"] .icon-btn:hover { background: rgba(255, 255, 255, .1); 
     padding: 24px;
 }
 
-.footer {
-    padding: 16px 24px 24px;
-    text-align: center;
-    font-size: 12px;
-    color: var(--faint);
-}
 
 .menu-trigger { display: none; }
 

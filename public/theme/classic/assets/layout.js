@@ -113,9 +113,6 @@ export function renderShell(options = {}) {
                 section.group ? h('div', { class: 'menu-group' }, t(section.group)) : null,
                 section.items.filter(item => !item.condition || item.condition(settings)).map(item => menuItem(item, active, () => closeDrawer()))
             ))
-        ),
-        h('div', { class: 'footer', style: { padding: '12px 18px', textAlign: 'left' } },
-            h('div', { class: 'small faint' }, `v${settings.version || ''}`)
         )
     );
 

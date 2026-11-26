@@ -1,4 +1,4 @@
-import { h, money, formatDate, formatBytes } from '../lib/dom.js';
+import { h, money, formatDate } from '../lib/dom.js';
 import { t } from '../lib/i18n.js';
 import { api, fetchCommConfig } from '../lib/api.js';
 import { navigate } from '../lib/router.js';
@@ -314,7 +314,7 @@ export async function mountDetail(el, ctx) {
         summary.appendChild(item(t('订单状态'), statusTag(status)));
         summary.appendChild(item(t('创建时间'), formatDate(order.created_at, true)));
         summary.appendChild(item(t('订单号'), h('span', { class: 'mono' }, order.trade_no)));
-        if (plan.transfer_enable) summary.appendChild(item(t('总流量'), formatBytes(plan.transfer_enable)));
+        if (plan.transfer_enable) summary.appendChild(item(t('总流量'), `${Number(plan.transfer_enable)} GB`));
 
         const nodes = [
             h('div', { class: 'flex-between' },
