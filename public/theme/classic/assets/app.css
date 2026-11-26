@@ -1134,6 +1134,14 @@ html[data-header="dark"] .icon-btn:hover { background: rgba(255, 255, 255, .1); 
 .code-chip .code-text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .code-chip .code-actions { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
 .code-chip .btn { flex: 0 0 auto; }
+.btn-link-danger { height: auto; padding: 0; border: 0; background: none; color: var(--danger); font-size: 13px; cursor: pointer; }
+.btn-link-danger:hover { color: #ff7875; }
+.tg-step { display: flex; align-items: center; gap: 4px; margin: 0 0 8px; font-size: 15px; font-weight: 600; color: var(--heading); }
+.tg-step:not(:first-child) { margin-top: 18px; }
+.tg-bind-body p { margin: 0 0 8px; line-height: 1.7; color: var(--text); }
+.tg-bind-code { display: block; padding: 10px 12px; background: #f5f5f5; border-radius: 4px; font-family: "SFMono-Regular", Consolas, Menlo, monospace; font-size: 13px; color: var(--heading); cursor: pointer; word-break: break-all; }
+.tg-bind-code:hover { background: #e9ecef; }
+.tg-id { font-size: 13px; color: var(--muted); }
 .profile-pair { align-items: stretch; }
 .profile-pair > .card { height: 100%; }
 .rule-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }

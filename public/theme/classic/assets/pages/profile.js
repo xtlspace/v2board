@@ -1,11 +1,11 @@
-import { h, money, formatDate } from '../lib/dom.js';
+import { h, money, formatDate, icon, copyText } from '../lib/dom.js';
 import { t } from '../lib/i18n.js';
 import {
     api, fetchUser, fetchSubscribe, fetchCommConfig, subscribeUrlFrom, clearCaches, getAuthData, logout
 } from '../lib/api.js';
 import { navigate } from '../lib/router.js';
 import {
-    alert, button, card, confirmDialog, copyButton, emptyBlock, errorBlock, field, input,
+    button, card, confirmDialog, emptyBlock, errorBlock, field, input,
     loadingBlock, modal, tag, toast, switchRow
 } from '../lib/ui.js';
 
@@ -275,53 +275,100 @@ function sessionsCard(sessions, onChanged) {
     });
 }
 
-function telegramCard(user, botInfo, onChanged) {
-    const bound = Boolean(user && user.telegram_id);
+function bindTelegramModal(botInfo, subscribeUrl) {
     const username = botInfo && botInfo.username ? botInfo.username : '';
-    const link = username ? `https://t.me/${username}` : 'https://t.me/';
+    if (!username) {
+        const controller = modal({
+            title: t('绑定Telegram'),
+            body: loadingBlock(t('加载中...')),
+            footer: [
+                h('button', { class: 'btn', type: 'button', onClick: () => controller.close() }, t('我知道了'))
+            ]
+        });
+        return;
+    }
+
+    const stepTitle = label => h('h2', { class: 'tg-step' }, icon('chevron-right', 14), label);
+    const bindCommand = `/bind ${subscribeUrl}`;
+    const command = h('code', {
+        class: 'tg-bind-code',
+        title: t('复制'),
+        onClick: async () => {
+            const ok = await copyText(bindCommand);
+            toast(ok ? t('已复制到剪贴板') : t('复制失败，请手动复制'), ok ? 'success' : 'error');
+        }
+    }, bindCommand);
+
+    const controller = modal({
+        title: t('绑定Telegram'),
+        body: h('div', { class: 'tg-bind-body' },
+            stepTitle(t('第一步')),
+            h('p', {}, t('打开Telegram搜索'), ' ',
+                h('a', {
+                    href: `https://t.me/${username}`,
+                    target: '_blank',
+                    rel: 'noopener noreferrer'
+                }, `@${username}`)),
+            stepTitle(t('第二步')),
+            h('p', {}, t('向机器人发送你的')),
+            command
+        ),
+        footer: [
+            h('button', { class: 'btn btn-primary', type: 'button', onClick: () => controller.close() }, t('我知道了'))
+        ]
+    });
+}
+
+function telegramCard(user, botInfo, subscribe, onChanged) {
+    const bound = Boolean(user && user.telegram_id);
 
     if (bound) {
         return card({
-            title: 'Telegram',
-            body: h('div', {},
-                alert('success', t('已绑定'), username ? `@${username}` : ''),
-                h('div', { class: 'btn-group mt-16' },
-                    button(t('解除绑定'), {
-                        type: 'danger',
-                        onClick: async () => {
-                            const ok = await confirmDialog({
-                                title: t('解除绑定'),
-                                content: t('确认'),
-                                okText: t('解除绑定'),
-                                danger: true
-                            });
-                            if (!ok) return;
-                            try {
-                                await api.get('/user/unbindTelegram');
-                                toast(t('操作成功'));
-                                onChanged();
-                            } catch (error) {
-                                toast(error.message || t('请求失败'), 'error');
-                            }
-                        }
-                    })
-                )
-            )
+            title: t('绑定Telegram'),
+            extra: h('button', {
+                class: 'btn-link-danger',
+                type: 'button',
+                onClick: async () => {
+                    const ok = await confirmDialog({
+                        title: t('确定要解除绑定Telegram？'),
+                        content: t('如果你的Telegram ID已失效可以进行此操作。重置后你需要重新进行绑定。'),
+                        okText: t('确认'),
+                        danger: true
+                    });
+                    if (!ok) return;
+                    try {
+                        await api.get('/user/unbindTelegram');
+                        toast(t('重置成功'));
+                        onChanged();
+                    } catch (error) {
+                        toast(error.message || t('请求失败'), 'error');
+                    }
+                }
+            }, t('解除绑定')),
+            body: h('div', { class: 'tg-id' }, `Telegram ID: ${user.telegram_id}`)
         });
     }
 
+    const subscribeUrl = subscribeUrlFrom(subscribe) || subscribeUrlFrom(window.__subscribe) || '';
+    const openBind = async () => {
+        let info = botInfo;
+        try {
+            const response = await api.get('/user/telegram/getBotInfo');
+            if (response && response.data) info = response.data;
+        } catch {
+            /* fall back to the prefetched bot info */
+        }
+        bindTelegramModal(info, subscribeUrl);
+    };
+
     return card({
-        title: 'Telegram',
-        body: h('div', {},
-            h('p', { class: 'muted' }, t('绑定Telegram获取更多服务')),
-            h('div', { class: 'muted', style: { lineHeight: '2' } },
-                h('div', {}, `${t('第一步')}: ${t('打开Telegram搜索')} @${username || 'bot'}`),
-                h('div', {}, `${t('第二步')}: ${t('向机器人发送 /bind 订阅地址 完成绑定')}`)
-            ),            h('div', { class: 'btn-group mt-12' },
-                h('a', { class: 'btn btn-primary', href: link, target: '_blank', rel: 'noopener noreferrer' }, t('打开 Telegram')),
-                copyButton(subscribeUrlFrom(window.__subscribe) || '', t('复制订阅地址'), { size: '' })
-            )
-        )
+        title: t('绑定Telegram'),
+        extra: button(t('立即开始'), {
+            size: 'sm',
+            type: 'primary',
+            onClick: openBind
+        }),
+        flush: true
     });
 }
 
@@ -454,7 +501,20 @@ export async function mount(el) {
     ];
 
     if (Number(comm.is_telegram) === 1) {
-        nodes.push(telegramCard(user, botInfo, refreshAll));
+        nodes.push(telegramCard(user, botInfo, subscribe, refreshAll));
+    }
+
+    if (comm.telegram_discuss_link) {
+        nodes.push(card({
+            title: t('Telegram 讨论组'),
+            extra: h('a', {
+                class: 'btn btn-primary btn-sm',
+                href: comm.telegram_discuss_link,
+                target: '_blank',
+                rel: 'noopener noreferrer'
+            }, t('立即加入')),
+            flush: true
+        }));
     }
 
     el.replaceChildren(h('div', { class: 'stack' }, nodes));
