@@ -86,6 +86,7 @@ export default function ConfigPayment() {
   }
 
   const columns = [
+    { title: 'ID', dataIndex: 'id', key: 'id', width: 80 },
     { title: '启用', dataIndex: 'enable', key: 'enable', render: (v, row) => <Switch size="small" checked={!!v} onChange={() => toggle(row.id)} /> },
     { title: '显示名称', dataIndex: 'name', key: 'name' },
     { title: '支付接口', dataIndex: 'payment', key: 'payment' },
