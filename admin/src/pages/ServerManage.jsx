@@ -14,7 +14,7 @@ import {
   Divider,
   Tag
 } from 'antd'
-import { CopyOutlined } from '@ant-design/icons'
+import { CopyOutlined, MenuOutlined } from '@ant-design/icons'
 import { api } from '../api/client'
 import { Block, DataTable, CopyButton, RefreshButton } from '../components/ui'
 import { copyText, time } from '../utils'
@@ -84,6 +84,10 @@ export default function ServerManage() {
   const [encryptionText, setEncryptionText] = useState('')
   const [paddingText, setPaddingText] = useState('')
   const [search, setSearch] = useState('')
+  const [sortMode, setSortMode] = useState(false)
+  const [sortRows, setSortRows] = useState([])
+  const [dragIndex, setDragIndex] = useState(null)
+  const [sortSaving, setSortSaving] = useState(false)
 
   const load = () => {
     setLoading(true)
@@ -186,33 +190,41 @@ export default function ServerManage() {
     })
   }
 
-  const saveSort = (list) => {
+  const enterSort = () => {
+    setSortRows(sorted.map((item) => ({ ...item })))
+    setSearch('')
+    setSortMode(true)
+  }
+
+  const saveSort = () => {
     const payload = {}
-    list.forEach((item, index) => {
-      payload[item.id] = index + 1
+    sortRows.forEach((item, index) => {
+      payload[item.id] = index
     })
-    return api.post('/server/manage/sort', { v2node: payload }).then((res) => {
-      if (res.code !== 200) return res
-      load()
-      return res
+    setSortSaving(true)
+    api.post('/server/manage/sort', { v2node: payload }).then((res) => {
+      setSortSaving(false)
+      if (res.code === 200) {
+        message.success('排序已保存')
+        setSortMode(false)
+        load()
+      }
     })
   }
 
-  const move = (row, offset) => {
-    if (search) {
-      message.warning('请先清空搜索再调整排序')
-      return
-    }
-    const list = sorted.slice()
-    const index = list.findIndex((item) => item.id === row.id)
-    const target = index + offset
-    if (index < 0 || target < 0 || target >= list.length) return
-    ;[list[index], list[target]] = [list[target], list[index]]
-    // 同步更新 sort，避免列表按旧 sort 重新排回去
-    const reordered = list.map((item, i) => ({ ...item, sort: i + 1 }))
-    setRows(reordered)
-    saveSort(reordered)
+  const onDragStart = (index) => setDragIndex(index)
+
+  const onDragOver = (event, index) => {
+    event.preventDefault()
+    if (dragIndex === null || dragIndex === index) return
+    const next = sortRows.slice()
+    const [moved] = next.splice(dragIndex, 1)
+    next.splice(index, 0, moved)
+    setSortRows(next)
+    setDragIndex(index)
   }
+
+  const onDragEnd = () => setDragIndex(null)
 
   const sorted = useMemo(() => {
     const list = rows.slice().sort((a, b) => Number(a.sort || 0) - Number(b.sort || 0))
@@ -283,8 +295,6 @@ export default function ServerManage() {
       width: 220,
       render: (_, row) => (
         <Space size={4}>
-          <a onClick={() => move(row, -1)}>↑</a>
-          <a onClick={() => move(row, 1)}>↓</a>
           <a onClick={() => openEdit(row)}>编辑</a>
           <a onClick={() => copyNode(row.id)}>复制</a>
           <Popconfirm title="确定要删除该节点吗？" onConfirm={() => drop(row.id)} okText="删除" cancelText="取消">
@@ -295,38 +305,90 @@ export default function ServerManage() {
     }
   ]
 
+  const sortColumns = [
+    {
+      title: '排序',
+      key: 'sort_handle',
+      width: 80,
+      render: () => <MenuOutlined style={{ cursor: 'move', fontSize: 16 }} />
+    },
+    {
+      title: '节点ID',
+      dataIndex: 'id',
+      key: 'id',
+      width: 120,
+      render: (v) => <Tag color="blue">{v}</Tag>
+    },
+    {
+      title: '节点',
+      dataIndex: 'name',
+      key: 'name',
+      render: (v, row) => (
+        <span style={{ paddingLeft: row.parent_id ? 20 : 0 }}>
+          {row.parent_id ? '↳ ' : ''}
+          {v}
+        </span>
+      )
+    },
+    {
+      title: '协议',
+      key: 'protocol',
+      render: (_, row) => `${row.protocol || '-'} / ${row.network || '-'}`
+    }
+  ]
+
   const showNetworkConfig = ['ws', 'grpc', 'http', 'httpupgrade', 'xhttp'].includes(record.network)
 
   return (
     <Block
       title="节点管理"
       options={
-        <Space>
-          <Input.Search allowClear placeholder="输入任意关键字搜索" style={{ width: 220 }} onChange={(e) => setSearch(e.target.value)} />
-          <RefreshButton onClick={load} loading={loading} />
-          <Button
-            type="primary"
-            onClick={() => {
-              setRecord(emptyNode())
-              setTlsText('')
-              setNetworkText('')
-              setEncryptionText('')
-              setPaddingText('')
-              setOpen(true)
-            }}
-          >
-            新建节点
-          </Button>
-        </Space>
+        sortMode ? (
+          <Space>
+            <span className="text-muted">拖动节点调整顺序</span>
+            <Button type="primary" loading={sortSaving} onClick={saveSort}>
+              保存排序
+            </Button>
+          </Space>
+        ) : (
+          <Space>
+            <Input.Search allowClear placeholder="输入任意关键字搜索" style={{ width: 220 }} onChange={(e) => setSearch(e.target.value)} />
+            <RefreshButton onClick={load} loading={loading} />
+            <Button onClick={enterSort}>编辑排序</Button>
+            <Button
+              type="primary"
+              onClick={() => {
+                setRecord(emptyNode())
+                setTlsText('')
+                setNetworkText('')
+                setEncryptionText('')
+                setPaddingText('')
+                setOpen(true)
+              }}
+            >
+              新建节点
+            </Button>
+          </Space>
+        )
       }
     >
       <DataTable
-        dataSource={displayRows}
-        columns={columns}
+        dataSource={sortMode ? sortRows : displayRows}
+        columns={sortMode ? sortColumns : columns}
         loading={loading}
         pagination={false}
         scroll={{ x: 1100 }}
-        rowClassName={(row) => (row.parent_id ? 'child_node' : '')}
+        rowClassName={(row) => (sortMode ? 'v2board-sort-row' : row.parent_id ? 'child_node' : '')}
+        onRow={
+          sortMode
+            ? (record, index) => ({
+                draggable: true,
+                onDragStart: () => onDragStart(index),
+                onDragOver: (event) => onDragOver(event, index),
+                onDragEnd
+              })
+            : undefined
+        }
       />
 
       <Drawer

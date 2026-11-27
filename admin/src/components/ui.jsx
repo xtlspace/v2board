@@ -40,7 +40,8 @@ export function DataTable({
   onChange,
   emptyText = '暂无数据',
   scroll = { x: 'max-content' },
-  rowClassName
+  rowClassName,
+  onRow
 }) {
   return (
     <Table
@@ -53,6 +54,7 @@ export function DataTable({
       onChange={onChange}
       scroll={scroll}
       rowClassName={rowClassName}
+      onRow={onRow}
       locale={{ emptyText: <Empty description={emptyText} /> }}
     />
   )

@@ -174,3 +174,12 @@ body.v2board-dark #page-container canvas {
     transform: translateX(0);
   }
 }
+
+/* 节点拖动排序 */
+.v2board-sort-row {
+  cursor: move;
+}
+
+.v2board-sort-row:hover > td {
+  background: #f8f9fc !important;
+}
