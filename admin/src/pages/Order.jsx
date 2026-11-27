@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Button, Input, Modal, Select, Drawer, Space, message, Descriptions, Popconfirm, Dropdown, Menu } from 'antd'
-import { PlusOutlined, FilterOutlined } from '@ant-design/icons'
+import { Badge, Button, Input, Modal, Select, Drawer, Space, Tooltip, message, Descriptions, Popconfirm, Dropdown, Menu } from 'antd'
+import { PlusOutlined, FilterOutlined, QuestionCircleOutlined, CaretDownOutlined } from '@ant-design/icons'
 import { api } from '../api/client'
 import { DataTable, TableBlock } from '../components/ui'
 import { commissionStatus, money, orderStatus, periodLabels, time } from '../utils'
@@ -159,12 +159,27 @@ export default function Order() {
     { title: '周期', dataIndex: 'period', key: 'period', render: (v) => <span className="badge badge-light">{periodLabels[v] || v}</span> },
     { title: '支付金额', dataIndex: 'total_amount', key: 'total_amount', align: 'right', render: (v) => (v / 100).toFixed(2) },
     {
-      title: '订单状态',
+      title: (
+        <span>
+          订单状态{' '}
+          <Tooltip placement="top" title="标记为[已支付]后将会由系统进行开通后并完成">
+            <QuestionCircleOutlined />
+          </Tooltip>
+        </span>
+      ),
       dataIndex: 'status',
       key: 'status',
       render: (v, row) => {
-        const status = orderStatus[v] || { text: v, color: 'default' }
-        if (v !== 0 && v !== 3) return <span className={`badge badge-${status.color}`}>{status.text}</span>
+        const status = orderStatus[v] || { text: v }
+        const badgeStatus = ['error', 'processing', 'default', 'success', 'default'][v] || 'default'
+        if (v !== 0 && v !== 3) {
+          return (
+            <span>
+              <Badge status={badgeStatus} />
+              <span>{status.text}</span>
+            </span>
+          )
+        }
         return (
           <Dropdown
             trigger={['click']}
@@ -177,10 +192,13 @@ export default function Order() {
               />
             }
           >
-            <a>
-              <span className={`badge badge-${status.color} mr-1`} />
-              {v === 0 ? '标记为' : '操作'} ▾
-            </a>
+            <div style={{ cursor: 'pointer' }}>
+              <Badge status={badgeStatus} />
+              <span>{status.text} </span>
+              <a onClick={(e) => e.preventDefault()}>
+                {v === 0 ? '标记为' : '操作'} <CaretDownOutlined />
+              </a>
+            </div>
           </Dropdown>
         )
       }
