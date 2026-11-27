@@ -242,3 +242,13 @@ body.v2board-dark #page-container canvas {
 .ant-table-tbody > tr > td {
   text-align: center !important;
 }
+
+/* 手机端订单号：超出时省略前段，保留尾部 */
+.v2board-order-no {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  direction: rtl;
+  text-align: left;
+}

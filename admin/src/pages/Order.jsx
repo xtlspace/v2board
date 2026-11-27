@@ -58,15 +58,21 @@ export default function Order() {
   const [detailOpen, setDetailOpen] = useState(false)
   const [detail, setDetail] = useState(null)
   const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 767.98px)').matches)
+  const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth)
 
   useEffect(() => {
     const query = window.matchMedia('(max-width: 767.98px)')
-    const handler = (event) => setIsMobile(event.matches)
+    const handler = () => {
+      setIsMobile(query.matches)
+      setViewportWidth(window.innerWidth)
+    }
     if (query.addEventListener) query.addEventListener('change', handler)
     else query.addListener(handler)
+    window.addEventListener('resize', handler)
     return () => {
       if (query.removeEventListener) query.removeEventListener('change', handler)
       else query.removeListener(handler)
+      window.removeEventListener('resize', handler)
     }
   }, [])
 
@@ -161,7 +167,12 @@ export default function Order() {
       key: 'trade_no',
       width: 230,
       render: (v, row) => (
-        <a onClick={() => openDetail(row.id)} style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+        <a
+          onClick={() => openDetail(row.id)}
+          className={isMobile ? 'v2board-order-no' : undefined}
+          title={v}
+          style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}
+        >
           {v}
         </a>
       )
@@ -172,7 +183,9 @@ export default function Order() {
     { title: '周期', dataIndex: 'period', key: 'period', width: 75, render: (v) => <span className="badge badge-light">{periodLabels[v] || v}</span> },
     { title: '支付金额', dataIndex: 'total_amount', key: 'total_amount', width: 85, align: 'right', render: (v) => (v / 100).toFixed(2) },
     {
-      title: (
+      title: isMobile ? (
+        '订单状态'
+      ) : (
         <span>
           订单状态{' '}
           <Tooltip placement="top" title="标记为[已支付]后将会由系统进行开通后并完成">
@@ -261,13 +274,18 @@ export default function Order() {
     }
   ]
 
+  const mobileActionWidth = 80
+  const mobileStatusWidth = 80
+  const mobileOrderWidth = Math.max(150, viewportWidth - mobileActionWidth - mobileStatusWidth)
+
   const mobileColumns = [
-    ...columns.filter((column) => column.key === 'trade_no').map((column) => ({ ...column, width: 190 })),
-    ...columns.filter((column) => column.key === 'status').map((column) => ({ ...column, width: 90 })),
+    ...columns.filter((column) => column.key === 'trade_no').map((column) => ({ ...column, width: mobileOrderWidth })),
+    ...columns.filter((column) => column.key === 'status').map((column) => ({ ...column, width: mobileStatusWidth })),
     ...columns
       .filter((column) => column.key !== 'trade_no' && column.key !== 'status')
-      .map((column) => (column.key === 'action' ? { ...column, width: 80 } : column))
+      .map((column) => (column.key === 'action' ? { ...column, width: mobileActionWidth } : column))
   ]
+  const mobileScrollX = mobileColumns.reduce((total, column) => total + (Number(column.width) || 0), 0)
 
   return (
     <TableBlock
@@ -286,7 +304,7 @@ export default function Order() {
         dataSource={rows}
         columns={isMobile ? mobileColumns : columns}
         loading={loading}
-        scroll={{ x: 1232 }}
+        scroll={{ x: isMobile ? mobileScrollX : 1232 }}
         pagination={{
           ...pagination,
           showSizeChanger: true,
