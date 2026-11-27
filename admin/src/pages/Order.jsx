@@ -166,11 +166,6 @@ export default function Order() {
         </a>
       )
     },
-    { title: '类型', dataIndex: 'type', key: 'type', width: 65, render: (v) => typeText[v] || v },
-    { title: '订阅计划', dataIndex: 'plan_name', key: 'plan_name', width: 110, render: (v) => v || '-' },
-    { title: '支付接口', dataIndex: 'payment_name', key: 'payment_name', width: 110, render: (v) => v || '-' },
-    { title: '周期', dataIndex: 'period', key: 'period', width: 75, render: (v) => <span className="badge badge-light">{periodLabels[v] || v}</span> },
-    { title: '支付金额', dataIndex: 'total_amount', key: 'total_amount', width: 85, align: 'right', render: (v) => (v / 100).toFixed(2) },
     {
       title: (
         <span>
@@ -217,6 +212,11 @@ export default function Order() {
         )
       }
     },
+    { title: '类型', dataIndex: 'type', key: 'type', width: 65, render: (v) => typeText[v] || v },
+    { title: '订阅计划', dataIndex: 'plan_name', key: 'plan_name', width: 110, render: (v) => v || '-' },
+    { title: '支付接口', dataIndex: 'payment_name', key: 'payment_name', width: 110, render: (v) => v || '-' },
+    { title: '周期', dataIndex: 'period', key: 'period', width: 75, render: (v) => <span className="badge badge-light">{periodLabels[v] || v}</span> },
+    { title: '支付金额', dataIndex: 'total_amount', key: 'total_amount', width: 85, align: 'right', render: (v) => (v / 100).toFixed(2) },
     {
       title: '佣金金额',
       dataIndex: 'commission_balance',
