@@ -386,14 +386,14 @@ export default function ServerManage() {
       title: '节点ID',
       dataIndex: 'id',
       key: 'id',
-      width: 150,
+      width: 90,
       render: (_, row) => idTag(row)
     },
     {
       title: '显隐',
       dataIndex: 'show',
       key: 'show',
-      width: 80,
+      width: 60,
       render: (v, row) => <Switch size="small" checked={!!Number(v)} onChange={(checked) => toggleShow(row, checked)} />
     },
     {
@@ -415,6 +415,7 @@ export default function ServerManage() {
       ),
       dataIndex: 'name',
       key: 'name',
+      width: 220,
       render: (v, row) => (
         <span style={{ paddingLeft: row.parent_id ? 20 : 0 }}>
           <span className="v2board-node-status">
@@ -445,6 +446,7 @@ export default function ServerManage() {
       title: '人数',
       dataIndex: 'online',
       key: 'online',
+      width: 70,
       render: (v) => (
         <span>
           <UserOutlined /> {v || 0}
@@ -455,12 +457,14 @@ export default function ServerManage() {
       title: '倍率',
       dataIndex: 'rate',
       key: 'rate',
+      width: 70,
       render: (v) => `${v || 1} x`
     },
     {
       title: '权限组',
       dataIndex: 'group_id',
       key: 'group_id',
+      width: 180,
       render: (v) => {
         const ids = Array.isArray(v) ? v : v ? [v] : []
         if (!ids.length) return '-'
@@ -857,9 +861,9 @@ export default function ServerManage() {
     .map((item) => ({ value: item.id, label: item.name }))
 
   const mobileColumns = [
-    ...columns.filter((column) => column.key === 'id').map((column) => ({ ...column, width: 65 })),
-    ...columns.filter((column) => column.key === 'name').map((column) => ({ ...column, width: 150 })),
-    ...columns.filter((column) => column.key === 'online').map((column) => ({ ...column, width: 70 })),
+    ...columns.filter((column) => column.key === 'id').map((column) => ({ ...column, width: 60 })),
+    ...columns.filter((column) => column.key === 'name').map((column) => ({ ...column, width: 170 })),
+    ...columns.filter((column) => column.key === 'online').map((column) => ({ ...column, width: 60 })),
     ...columns
       .filter((column) => column.key === 'action')
       .map(({ fixed, ...column }) => ({ ...column, width: 80, align: 'left' })),
