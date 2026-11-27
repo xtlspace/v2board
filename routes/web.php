@@ -40,7 +40,7 @@ Route::get('/', function (Request $request) {
 
 //TODO:: 兼容
 Route::get('/' . config('v2board.secure_path', config('v2board.frontend_admin_path', hash('crc32b', config('app.key')))), function () {
-    return view('admin', [
+    return view('admin_next', [
         'title' => config('v2board.app_name', 'V2Board'),
         'theme_sidebar' => config('v2board.frontend_theme_sidebar', 'light'),
         'theme_header' => config('v2board.frontend_theme_header', 'dark'),
@@ -67,8 +67,8 @@ Route::get('/' . config('v2board.secure_path', config('v2board.frontend_admin_pa
 });
 
 // 新版管理面板（源码位于 admin/，构建产物输出到 public/assets/admin-next）
-// 预览地址：/{secure_path}/next，验收后可切换为默认入口，旧面板保持不变。
-Route::get('/' . config('v2board.secure_path', config('v2board.frontend_admin_path', hash('crc32b', config('app.key')))) . '/next/{any?}', function () {
+// 默认后台入口与 SPA 路由都由该视图承载，旧面板资源仍保留在 public/assets/admin/ 便于回退。
+Route::get('/' . config('v2board.secure_path', config('v2board.frontend_admin_path', hash('crc32b', config('app.key')))) . '/{any?}', function () {
     return view('admin_next', [
         'title' => config('v2board.app_name', 'V2Board'),
         'theme_sidebar' => config('v2board.frontend_theme_sidebar', 'light'),

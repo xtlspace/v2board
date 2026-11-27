@@ -26,23 +26,21 @@ npm run build
 
 构建产物输出到 `public/assets/admin-next/`，不会覆盖旧的 `public/assets/admin/`。
 
-> 如果生产环境启用了路由缓存，部署后需要执行 `php artisan route:cache`（或清理缓存）使 `/next` 预览路由生效。
+> 如果生产环境启用了路由缓存，部署后需要执行 `php artisan route:cache`（或清理缓存）使新版后台路由生效。
 
-## 预览
+## 访问
 
-构建完成后访问：
+新版面板已作为默认后台，路径保持不变：
 
 ```
-https://你的站点/{secure_path}/next
+https://你的站点/{secure_path}
 ```
 
-例如 `secure_path=admin` 时为 `/admin/next`。预览入口由 `routes/web.php` 与 `resources/views/admin_next.blade.php` 提供。
+例如 `secure_path=admin` 时为 `/admin`。SPA 内部路由（如 `/admin/user`、`/admin/order`）由 `routes/web.php` 末尾的兜底路由承载。
 
-## 切换为默认后台
+## 回退
 
-验收通过后，把 `routes/web.php` 中默认后台路由（`view('admin')`）改为 `view('admin_next')`，并把
-`resources/views/admin_next.blade.php` 中的 `admin_base` 从 `/{secure_path}/next` 改为 `/{secure_path}`。
-旧面板文件保持不动，可随时回退。
+旧面板资源仍保留在 `public/assets/admin/`。需要回退时，把 `routes/web.php` 中默认后台视图改回 `view('admin')`，并移除 `/{secure_path}/{any?}` 兜底路由即可；或直接切回 `xtls` 分支。
 
 ## 目录
 

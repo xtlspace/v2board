@@ -10,8 +10,8 @@ export const settings = {
   theme: Object.assign({ sidebar: 'dark', header: 'dark', color: 'default' }, raw.theme || {})
 }
 
-// 面板部署基路径：预览时为 /{secure_path}/next，正式切换后为 /{secure_path}
-export const adminBase = String(raw.admin_base || (securePath ? `/${securePath}/next` : '')).replace(/\/+$/, '')
+// 面板部署基路径：默认后台入口 /{secure_path}
+export const adminBase = String(raw.admin_base || (securePath ? `/${securePath}` : '')).replace(/\/+$/, '')
 
 export const apiBase = `${window.location.origin}/api/v1`
 export const securePrefix = `/${securePath}`

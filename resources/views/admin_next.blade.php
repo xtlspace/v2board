@@ -28,9 +28,9 @@
             background_url: '{{ $background_url }}',
             logo: '{{ $logo }}',
             secure_path: '{{ $secure_path }}',
-            admin_base: '/{{ $secure_path }}/next'
+            admin_base: '/{{ $secure_path }}'
         }
-        window.routerBase = '/{{ $secure_path }}/next';
+        window.routerBase = '/{{ $secure_path }}';
     </script>
 </head>
 
