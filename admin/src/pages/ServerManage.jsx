@@ -464,7 +464,6 @@ export default function ServerManage() {
       title: '权限组',
       dataIndex: 'group_id',
       key: 'group_id',
-      width: 180,
       render: (v) => {
         const ids = Array.isArray(v) ? v : v ? [v] : []
         if (!ids.length) return '-'
