@@ -16,6 +16,10 @@
             <link rel="stylesheet" href="/assets/admin-next/{{ $file }}">
         @endforeach
     @endif
+    @foreach (['components.chunk.css', 'umi.css', 'override.css'] as $file)
+        @php($themeFile = public_path('assets/admin-theme/' . $file))
+        <link rel="stylesheet" href="/assets/admin-theme/{{ $file }}?v={{ file_exists($themeFile) ? filemtime($themeFile) : $version }}">
+    @endforeach
     <script>
         window.settings = {
             title: '{{ $title }}',

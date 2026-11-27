@@ -54,3 +54,24 @@ src/
   nav.js               菜单与页面标题
   settings.js          window.settings 与部署路径
 ```
+
+## 样式文件（免构建修改）
+
+后台样式已从 Vite 构建中移出，直接放在：
+
+```
+public/assets/admin-theme/
+  components.chunk.css
+  umi.css
+  override.css
+  static/                # 字体图标
+```
+
+`resources/views/admin_next.blade.php` 会在 `<head>` 中按顺序加载这三个 CSS。  
+修改其中任何文件后，刷新后台页面即可生效，不需要执行 `npm run build`。
+
+注意：
+
+- React/JSX 页面改动仍然需要 `npm run build`
+- `antd/dist/antd.css` 仍在构建产物中
+- 新增文章时 `package-lock.json` 已包含 Markdown 编辑器依赖
