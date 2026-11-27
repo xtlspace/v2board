@@ -166,6 +166,11 @@ export default function Order() {
         </a>
       )
     },
+    { title: '类型', dataIndex: 'type', key: 'type', width: 65, render: (v) => typeText[v] || v },
+    { title: '订阅计划', dataIndex: 'plan_name', key: 'plan_name', width: 110, render: (v) => v || '-' },
+    { title: '支付接口', dataIndex: 'payment_name', key: 'payment_name', width: 110, render: (v) => v || '-' },
+    { title: '周期', dataIndex: 'period', key: 'period', width: 75, render: (v) => <span className="badge badge-light">{periodLabels[v] || v}</span> },
+    { title: '支付金额', dataIndex: 'total_amount', key: 'total_amount', width: 85, align: 'right', render: (v) => (v / 100).toFixed(2) },
     {
       title: (
         <span>
@@ -212,11 +217,6 @@ export default function Order() {
         )
       }
     },
-    { title: '类型', dataIndex: 'type', key: 'type', width: 65, render: (v) => typeText[v] || v },
-    { title: '订阅计划', dataIndex: 'plan_name', key: 'plan_name', width: 110, render: (v) => v || '-' },
-    { title: '支付接口', dataIndex: 'payment_name', key: 'payment_name', width: 110, render: (v) => v || '-' },
-    { title: '周期', dataIndex: 'period', key: 'period', width: 75, render: (v) => <span className="badge badge-light">{periodLabels[v] || v}</span> },
-    { title: '支付金额', dataIndex: 'total_amount', key: 'total_amount', width: 85, align: 'right', render: (v) => (v / 100).toFixed(2) },
     {
       title: '佣金金额',
       dataIndex: 'commission_balance',
@@ -257,9 +257,11 @@ export default function Order() {
     { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 142, align: 'right', render: (v) => time(v, 'YYYY/MM/DD HH:mm') }
   ]
 
-  const mobileColumns = columns
-    .filter((column) => column.key === 'trade_no' || column.key === 'status')
-    .map((column) => ({ ...column, width: column.key === 'trade_no' ? 190 : 130 }))
+  const mobileColumns = [
+    ...columns.filter((column) => column.key === 'trade_no'),
+    ...columns.filter((column) => column.key === 'status'),
+    ...columns.filter((column) => column.key !== 'trade_no' && column.key !== 'status')
+  ]
 
   return (
     <TableBlock
@@ -278,7 +280,7 @@ export default function Order() {
         dataSource={rows}
         columns={isMobile ? mobileColumns : columns}
         loading={loading}
-        scroll={{ x: isMobile ? 320 : 1142 }}
+        scroll={{ x: 1142 }}
         pagination={{
           ...pagination,
           showSizeChanger: true,
