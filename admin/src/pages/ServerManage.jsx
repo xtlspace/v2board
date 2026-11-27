@@ -141,6 +141,7 @@ export default function ServerManage() {
   const [sortMode, setSortMode] = useState(false)
   const [sortRows, setSortRows] = useState([])
   const [dragIndex, setDragIndex] = useState(null)
+  const [dropTarget, setDropTarget] = useState(null)
   const [sortSaving, setSortSaving] = useState(false)
 
   const load = () => {
@@ -284,19 +285,53 @@ export default function ServerManage() {
     })
   }
 
-  const onDragStart = (index) => setDragIndex(index)
+  const onDragStart = (index, event) => {
+    setDragIndex(index)
+    setDropTarget(null)
+    const row = event.currentTarget.closest('tr')
+    if (row && event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move'
+      event.dataTransfer.setDragImage(row, 20, 20)
+    }
+  }
 
   const onDragOver = (event, index) => {
     event.preventDefault()
-    if (dragIndex === null || dragIndex === index) return
-    const next = sortRows.slice()
-    const [moved] = next.splice(dragIndex, 1)
-    next.splice(index, 0, moved)
-    setSortRows(next)
-    setDragIndex(index)
+    if (dragIndex === null) return
+    const rect = event.currentTarget.getBoundingClientRect()
+    const position = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
+    setDropTarget((prev) =>
+      prev && prev.index === index && prev.position === position ? prev : { index, position }
+    )
   }
 
-  const onDragEnd = () => setDragIndex(null)
+  const onDrop = (event, index) => {
+    event.preventDefault()
+    if (dragIndex === null) {
+      setDropTarget(null)
+      return
+    }
+    let position = dropTarget && dropTarget.index === index ? dropTarget.position : 'before'
+    const rect = event.currentTarget.getBoundingClientRect()
+    if (!dropTarget || dropTarget.index !== index) {
+      position = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
+    }
+    let target = index + (position === 'after' ? 1 : 0)
+    if (dragIndex < target) target -= 1
+    if (target !== dragIndex) {
+      const next = sortRows.slice()
+      const [moved] = next.splice(dragIndex, 1)
+      next.splice(target, 0, moved)
+      setSortRows(next)
+    }
+    setDragIndex(null)
+    setDropTarget(null)
+  }
+
+  const onDragEnd = () => {
+    setDragIndex(null)
+    setDropTarget(null)
+  }
 
   const openChild = (type, title) => setChild({ open: true, type, title })
   const closeChild = () => setChild({ open: false, type: '', title: '' })
@@ -361,7 +396,9 @@ export default function ServerManage() {
       key: 'name',
       render: (v, row) => (
         <span style={{ paddingLeft: row.parent_id ? 20 : 0 }}>
-          <Badge status={statusMap[row.available_status]} />
+          <span className="v2board-node-status">
+            <Badge status={statusMap[row.available_status]} />
+          </span>
           <span>{v}</span>
         </span>
       )
@@ -453,7 +490,19 @@ export default function ServerManage() {
       title: '排序',
       key: 'sort_handle',
       width: 100,
-      render: () => <MenuOutlined style={{ cursor: 'move', fontSize: 16 }} />
+      render: (_, row, index) => (
+        <span
+          className="v2board-drag-handle"
+          draggable
+          onDragStart={(event) => {
+            event.stopPropagation()
+            onDragStart(index, event)
+          }}
+          onDragEnd={onDragEnd}
+        >
+          <MenuOutlined style={{ fontSize: 16 }} />
+        </span>
+      )
     },
     {
       title: '节点ID',
@@ -793,14 +842,20 @@ export default function ServerManage() {
           loading={loading}
           pagination={false}
           scroll={{ x: 1200 }}
-          rowClassName={(row) => (sortMode ? 'v2board-sort-row' : row.parent_id ? 'child_node' : '')}
+          rowClassName={(row, index) => {
+            if (!sortMode) return row.parent_id ? 'child_node' : ''
+            let className = 'v2board-sort-row'
+            if (dragIndex === index) className += ' v2board-sort-dragging'
+            if (dropTarget && dropTarget.index === index) {
+              className += dropTarget.position === 'before' ? ' v2board-drop-before' : ' v2board-drop-after'
+            }
+            return className
+          }}
           onRow={
             sortMode
               ? (record, index) => ({
-                  draggable: true,
-                  onDragStart: () => onDragStart(index),
                   onDragOver: (event) => onDragOver(event, index),
-                  onDragEnd
+                  onDrop: (event) => onDrop(event, index)
                 })
               : undefined
           }

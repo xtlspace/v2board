@@ -183,3 +183,51 @@ body.v2board-dark #page-container canvas {
 .v2board-sort-row:hover > td {
   background: #f8f9fc !important;
 }
+
+/* 节点状态点：保留间距并为运行中状态增加脉冲动画 */
+.v2board-node-status {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.v2board-node-status .ant-badge-status-dot {
+  vertical-align: middle;
+}
+
+@keyframes v2boardStatusPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(22, 119, 255, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(22, 119, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(22, 119, 255, 0);
+  }
+}
+
+.v2board-node-status .ant-badge-status-processing {
+  animation: v2boardStatusPulse 1.2s infinite ease-in-out;
+}
+
+/* 拖动排序：拖动图标、拖动中的行和虚线落点 */
+.v2board-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  cursor: move;
+  padding: 2px 4px;
+}
+
+.v2board-sort-row.v2board-sort-dragging > td {
+  opacity: 0.45;
+}
+
+.v2board-sort-row.v2board-drop-before > td {
+  border-top: 2px dashed #4080ff !important;
+}
+
+.v2board-sort-row.v2board-drop-after > td {
+  border-bottom: 2px dashed #4080ff !important;
+}
