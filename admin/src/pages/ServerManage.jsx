@@ -442,11 +442,7 @@ export default function ServerManage() {
       )
     },
     {
-      title: (
-        <Tooltip title="当前节点在线人数">
-          人数 <QuestionCircleOutlined />
-        </Tooltip>
-      ),
+      title: '人数',
       dataIndex: 'online',
       key: 'online',
       render: (v) => (
