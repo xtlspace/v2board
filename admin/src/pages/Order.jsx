@@ -183,37 +183,14 @@ export default function Order() {
       dataIndex: 'status',
       key: 'status',
       width: 145,
-      render: (v, row) => {
+      render: (v) => {
         const status = orderStatus[v] || { text: v }
         const badgeStatus = ['error', 'processing', 'default', 'success', 'default'][v] || 'default'
-        if (v !== 0 && v !== 3) {
-          return (
-            <span>
-              <Badge status={badgeStatus} />
-              <span>{status.text}</span>
-            </span>
-          )
-        }
         return (
-          <Dropdown
-            trigger={['click']}
-            overlay={
-              <Menu
-                items={[
-                  ...(v === 0 ? [{ key: 'paid', label: '已支付', onClick: () => paid(row.trade_no) }] : []),
-                  { key: 'cancel', label: '取消', onClick: () => cancel(row.trade_no) }
-                ]}
-              />
-            }
-          >
-            <div style={{ cursor: 'pointer' }}>
-              <Badge status={badgeStatus} />
-              <span>{status.text} </span>
-              <a onClick={(e) => e.preventDefault()}>
-                {v === 0 ? '标记为' : '操作'} <CaretDownOutlined />
-              </a>
-            </div>
-          </Dropdown>
+          <span>
+            <Badge status={badgeStatus} />
+            <span>{status.text}</span>
+          </span>
         )
       }
     },
@@ -254,13 +231,42 @@ export default function Order() {
         )
       }
     },
-    { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 142, align: 'right', render: (v) => time(v, 'YYYY/MM/DD HH:mm') }
+    { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 142, align: 'right', render: (v) => time(v, 'YYYY/MM/DD HH:mm') },
+    {
+      title: '操作',
+      key: 'action',
+      width: 90,
+      align: 'right',
+      fixed: 'right',
+      render: (_, row) => (
+        <Dropdown
+          trigger={['click']}
+          overlay={
+            <Menu
+              items={[
+                { key: 'detail', label: '查看详情', onClick: () => openDetail(row.id) },
+                ...(row.status === 0 ? [{ key: 'paid', label: '已支付', onClick: () => paid(row.trade_no) }] : []),
+                ...(row.status === 0 || row.status === 3
+                  ? [{ key: 'cancel', label: '取消', onClick: () => cancel(row.trade_no) }]
+                  : [])
+              ]}
+            />
+          }
+        >
+          <a onClick={(e) => e.preventDefault()}>
+            操作 <CaretDownOutlined />
+          </a>
+        </Dropdown>
+      )
+    }
   ]
 
   const mobileColumns = [
-    ...columns.filter((column) => column.key === 'trade_no'),
-    ...columns.filter((column) => column.key === 'status'),
-    ...columns.filter((column) => column.key !== 'trade_no' && column.key !== 'status')
+    ...columns.filter((column) => column.key === 'trade_no').map((column) => ({ ...column, width: 190 })),
+    ...columns.filter((column) => column.key === 'status').map((column) => ({ ...column, width: 90 })),
+    ...columns
+      .filter((column) => column.key !== 'trade_no' && column.key !== 'status')
+      .map((column) => (column.key === 'action' ? { ...column, width: 80 } : column))
   ]
 
   return (
@@ -280,7 +286,7 @@ export default function Order() {
         dataSource={rows}
         columns={isMobile ? mobileColumns : columns}
         loading={loading}
-        scroll={{ x: 1142 }}
+        scroll={{ x: 1232 }}
         pagination={{
           ...pagination,
           showSizeChanger: true,
