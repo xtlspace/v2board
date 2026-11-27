@@ -236,3 +236,9 @@ body.v2board-dark #page-container canvas {
 .v2board-plan-sort-row {
   cursor: default;
 }
+
+/* 所有表格表头与单元格文字居中 */
+.ant-table-thead > tr > th,
+.ant-table-tbody > tr > td {
+  text-align: center !important;
+}
