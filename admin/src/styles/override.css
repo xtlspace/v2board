@@ -34,8 +34,81 @@
 }
 
 .v2board-config-row > div:last-child > * {
-  max-width: 360px;
+  max-width: none;
   width: 100%;
+}
+
+/* 系统配置：还原旧版面板的标签与表单尺寸 */
+.v2board-config-tabs-wrap {
+  border-radius: 0;
+  margin-bottom: 0;
+}
+
+.v2board-config-tabs .ant-tabs-nav {
+  margin-bottom: 0;
+}
+
+.v2board-config-tabs .ant-tabs-nav .ant-tabs-nav-operations {
+  display: none !important;
+}
+
+.v2board-config-tabs .ant-tabs-nav-wrap-ping-right::after {
+  box-shadow: none;
+}
+
+.v2board-config-tabs .ant-tabs-nav::before {
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.v2board-config-tabs .ant-tabs-nav .ant-tabs-tab {
+  padding: 16px !important;
+}
+
+.v2board-config-tabs .ant-tabs-nav .ant-tabs-tab + .ant-tabs-tab {
+  margin-right: 32px !important;
+  margin-left: 0 !important;
+}
+
+.v2board-config-tabs .ant-tabs-nav .ant-tabs-tab:last-child {
+  margin-right: 0 !important;
+}
+
+.v2board-config-row .ant-input,
+.v2board-config-row .ant-input-affix-wrapper {
+  height: 38px;
+  padding: 6px 12px;
+  font-size: 16px;
+  line-height: 24px;
+  border-color: #d4dcec;
+  border-radius: 4px;
+}
+
+.v2board-config-row textarea.ant-input {
+  height: auto;
+  min-height: 110px;
+  padding: 6px 12px;
+  font-size: 16px;
+  line-height: 24px;
+  border-color: #d4dcec;
+  border-radius: 4px;
+}
+
+.v2board-config-row .ant-select {
+  width: 100% !important;
+}
+
+.v2board-config-row .ant-select-single .ant-select-selector {
+  height: 38px;
+  padding: 0 12px;
+  align-items: center;
+  border-color: #d4dcec;
+  border-radius: 4px;
+}
+
+.v2board-config-row .ant-select-single .ant-select-selection-item,
+.v2board-config-row .ant-select-single .ant-select-selection-placeholder {
+  font-size: 16px;
+  line-height: 36px;
 }
 
 .v2board-config-row > div:last-child > .ant-space,

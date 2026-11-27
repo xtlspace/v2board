@@ -191,17 +191,27 @@ export default function ServerManage() {
     list.forEach((item, index) => {
       payload[item.id] = index + 1
     })
-    api.post('/server/manage/sort', { v2node: payload })
+    return api.post('/server/manage/sort', { v2node: payload }).then((res) => {
+      if (res.code !== 200) return res
+      load()
+      return res
+    })
   }
 
   const move = (row, offset) => {
+    if (search) {
+      message.warning('请先清空搜索再调整排序')
+      return
+    }
     const list = sorted.slice()
     const index = list.findIndex((item) => item.id === row.id)
     const target = index + offset
     if (index < 0 || target < 0 || target >= list.length) return
     ;[list[index], list[target]] = [list[target], list[index]]
-    setRows(list)
-    saveSort(list)
+    // 同步更新 sort，避免列表按旧 sort 重新排回去
+    const reordered = list.map((item, i) => ({ ...item, sort: i + 1 }))
+    setRows(reordered)
+    saveSort(reordered)
   }
 
   const sorted = useMemo(() => {

@@ -110,7 +110,7 @@ export default function ConfigSystem() {
   const bonus = Array.isArray(deposit.deposit_bounus) ? deposit.deposit_bounus : []
 
   return (
-    <div className="block block-rounded border-bottom">
+    <div className="mb-0 block border-bottom v2board-config-tabs-wrap">
       <Tabs
         activeKey={tab}
         onChange={setTab}
