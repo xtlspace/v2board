@@ -66,6 +66,18 @@ export default function User() {
   const [filters, setFilters] = useState([])
   const [sort, setSort] = useState({ sort: 'created_at', sort_type: 'DESC' })
   const [loading, setLoading] = useState(false)
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 767.98px)').matches)
+
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 767.98px)')
+    const handler = (event) => setIsMobile(event.matches)
+    if (query.addEventListener) query.addEventListener('change', handler)
+    else query.addListener(handler)
+    return () => {
+      if (query.removeEventListener) query.removeEventListener('change', handler)
+      else query.removeListener(handler)
+    }
+  }, [])
 
   const [filterOpen, setFilterOpen] = useState(false)
   const [draftFilters, setDraftFilters] = useState([])
@@ -405,6 +417,10 @@ export default function User() {
     }
   ]
 
+  const mobileColumns = columns.map(({ fixed, ...column }) =>
+    column.key === 'action' ? { ...column, align: 'left' } : column
+  )
+
   const renderFilterEditor = () => (
     <>
       {draftFilters.map((item, index) => {
@@ -519,7 +535,7 @@ export default function User() {
     >
       <DataTable
         dataSource={rows}
-        columns={columns}
+        columns={isMobile ? mobileColumns : columns}
         loading={loading}
         scroll={{ x: 1536 }}
         pagination={{
