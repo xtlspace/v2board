@@ -51,6 +51,9 @@ class V2nodeController extends Controller
             'realm_ip' => 'nullable|in:0,1',
             'sort' => 'nullable'
         ]);
+        if (empty($params['listen_ip'])) {
+            $params['listen_ip'] = '0.0.0.0';
+        }
         if ($params['protocol'] == 'anytls' && $params['tls'] === 0) {
             $params['tls'] = 1;
         }

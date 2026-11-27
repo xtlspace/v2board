@@ -42,6 +42,10 @@ class OrderController extends Controller
     {
         $order = Order::find($request->input('id'));
         if (!$order) abort(500, '订单不存在');
+        $order['plan_name'] = optional(Plan::find($order->plan_id))->name ?: (string)$order->plan_id;
+        $order['payment_name'] = $order->payment_id
+            ? (optional(Payment::find($order->payment_id))->name ?: '-') . '(' . $order->payment_id . ')'
+            : '-';
         $order['commission_log'] = CommissionLog::where('trade_no', $order->trade_no)->get();
         if ($order->surplus_order_ids) {
             $order['surplus_orders'] = Order::whereIn('id', $order->surplus_order_ids)->get();

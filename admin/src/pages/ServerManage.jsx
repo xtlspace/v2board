@@ -36,7 +36,7 @@ const emptyNode = () => ({
   tags: [],
   parent_id: null,
   host: '',
-  listen_ip: '',
+  listen_ip: '0.0.0.0',
   port: '',
   server_port: '',
   protocol: 'vless',
@@ -133,6 +133,7 @@ export default function ServerManage() {
     try {
       params = {
         ...record,
+        listen_ip: record.listen_ip || '0.0.0.0',
         sort: Number(record.sort || 0),
         rate: Number(record.rate || 1),
         group_id: record.group_id,

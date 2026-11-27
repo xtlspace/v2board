@@ -29,3 +29,6 @@ workerman.log
 
 # IP 归属地库
 *.xdb
+
+# 配置缓存重建锁
+/storage/framework/config-cache.lock
