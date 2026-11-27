@@ -900,7 +900,7 @@ export default function ServerManage() {
         title={record.id ? '编辑节点' : '新建节点'}
         open={open}
         onClose={() => setOpen(false)}
-        width="80%"
+        width={500}
         footer={
           <div className="text-right">
             <Space>
@@ -1298,7 +1298,7 @@ export default function ServerManage() {
         title={child.title}
         open={child.open}
         onClose={closeChild}
-        width="80%"
+        width={500}
         footer={
           <div className="text-right">
             <Button type="primary" onClick={closeChild}>

@@ -263,7 +263,7 @@ export default function Plan() {
     },
     { title: '流量', dataIndex: 'transfer_enable', key: 'transfer_enable', render: (v) => `${v} GB` },
     {
-      title: '设备数限制',
+      title: '设备',
       dataIndex: 'device_limit',
       key: 'device_limit',
       render: (v) => (v === null || v === '' ? '-' : v)
@@ -368,7 +368,7 @@ export default function Plan() {
         title={record.id ? '编辑订阅' : '新建订阅'}
         open={open}
         onClose={() => setOpen(false)}
-        width="80%"
+        width={500}
         footer={
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Checkbox checked={!!record.force_update} onChange={(e) => setRecord({ ...record, force_update: e.target.checked })}>
