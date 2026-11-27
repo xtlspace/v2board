@@ -123,7 +123,6 @@ export async function mountDetail(el, ctx) {
                 button(t('返回列表'), { iconName: 'arrow-left', onClick: () => navigate('/knowledge') })
             ),
             card({
-                title: t('使用文档'),
                 body: h('article', { class: 'article-body' }, markdown(article.body || ''))
             })
         ));
