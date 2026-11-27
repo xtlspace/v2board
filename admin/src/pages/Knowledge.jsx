@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Button, Input, Modal, Select, Switch, message, Popconfirm, Space } from 'antd'
 import { api } from '../api/client'
-import { Block, DataTable } from '../components/ui'
+import { DataTable, TableBlock } from '../components/ui'
 import { i18nText, time } from '../utils'
 
 const { TextArea } = Input
@@ -110,11 +110,9 @@ export default function Knowledge() {
   ]
 
   return (
-    <Block
-      title="知识库管理"
-      options={
+    <TableBlock
+      toolbar={
         <Button
-          type="primary"
           onClick={() => {
             setRecord({ title: '', category: '', language: 'zh-CN', body: '', categoryList: [] })
             setOpen(true)
@@ -166,6 +164,6 @@ export default function Knowledge() {
           <TextArea rows={12} value={record.body} onChange={(e) => setRecord({ ...record, body: e.target.value })} />
         </div>
       </Modal>
-    </Block>
+    </TableBlock>
   )
 }

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Button, Input, Modal, Select, DatePicker, message, Popconfirm } from 'antd'
 import dayjs from 'dayjs'
 import { api } from '../api/client'
-import { Block, DataTable } from '../components/ui'
+import { DataTable, TableBlock } from '../components/ui'
 import { copyText, download } from '../utils'
 
 const { RangePicker } = DatePicker
@@ -122,9 +122,8 @@ export default function Giftcard() {
   ]
 
   return (
-    <Block
-      title="礼品卡管理"
-      options={<Button type="primary" onClick={() => { setRecord(emptyRecord()); setOpen(true) }}>添加礼品卡</Button>}
+    <TableBlock
+      toolbar={<Button onClick={() => { setRecord(emptyRecord()); setOpen(true) }}>添加礼品卡</Button>}
     >
       <DataTable
         dataSource={rows}
@@ -233,6 +232,6 @@ export default function Giftcard() {
           </div>
         )}
       </Modal>
-    </Block>
+    </TableBlock>
   )
 }

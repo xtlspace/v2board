@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Button, Input, InputNumber, Modal, Select, Switch, DatePicker, message, Popconfirm } from 'antd'
 import dayjs from 'dayjs'
 import { api } from '../api/client'
-import { Block, DataTable } from '../components/ui'
+import { DataTable, TableBlock } from '../components/ui'
 import { copyText, download, periodLabels } from '../utils'
 
 const { RangePicker } = DatePicker
@@ -117,9 +117,8 @@ export default function Coupon() {
   ]
 
   return (
-    <Block
-      title="优惠券管理"
-      options={<Button type="primary" onClick={() => { setRecord(emptyRecord()); setOpen(true) }}>添加优惠券</Button>}
+    <TableBlock
+      toolbar={<Button onClick={() => { setRecord(emptyRecord()); setOpen(true) }}>添加优惠券</Button>}
     >
       <DataTable
         dataSource={rows}
@@ -240,6 +239,6 @@ export default function Coupon() {
           </div>
         )}
       </Modal>
-    </Block>
+    </TableBlock>
   )
 }

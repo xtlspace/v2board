@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Button, Input, Modal, Space, message, Popconfirm } from 'antd'
 import { api } from '../api/client'
-import { Block, DataTable } from '../components/ui'
+import { DataTable, TableBlock } from '../components/ui'
 import { Field } from '../components/ui'
 
 export default function ServerGroup() {
@@ -74,11 +74,9 @@ export default function ServerGroup() {
   ]
 
   return (
-    <Block
-      title="权限组管理"
-      options={
+    <TableBlock
+      toolbar={
         <Button
-          type="primary"
           onClick={() => {
             setRecord({ name: '' })
             setOpen(true)
@@ -94,6 +92,6 @@ export default function ServerGroup() {
           <Input value={record.name} placeholder="请输入组名称" onChange={(e) => setRecord({ ...record, name: e.target.value })} />
         </Field>
       </Modal>
-    </Block>
+    </TableBlock>
   )
 }

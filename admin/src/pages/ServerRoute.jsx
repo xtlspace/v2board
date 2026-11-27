@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Button, Input, Select, Space, message, Popconfirm } from 'antd'
 import { api } from '../api/client'
-import { Block, DataTable, DrawerForm } from '../components/ui'
+import { DataTable, DrawerForm, TableBlock } from '../components/ui'
 import { routeActionText } from '../utils'
 
 const { TextArea } = Input
@@ -94,11 +94,9 @@ export default function ServerRoute() {
   ]
 
   return (
-    <Block
-      title="路由管理"
-      options={
+    <TableBlock
+      toolbar={
         <Button
-          type="primary"
           onClick={() => {
             setRecord({ remarks: '', matchText: '', action: 'block' })
             setOpen(true)
@@ -166,6 +164,6 @@ export default function ServerRoute() {
           </div>
         )}
       </DrawerForm>
-    </Block>
+    </TableBlock>
   )
 }

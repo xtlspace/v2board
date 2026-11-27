@@ -16,11 +16,11 @@ import {
   DatePicker,
   Descriptions
 } from 'antd'
-import { FilterOutlined, DownOutlined, PlusOutlined } from '@ant-design/icons'
+import { FilterOutlined, DownOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 import { api } from '../api/client'
-import { Block, DataTable } from '../components/ui'
+import { DataTable, TableBlock } from '../components/ui'
 import { copyText, download, money, time } from '../utils'
 import { portraitUrl } from '../settings'
 
@@ -487,11 +487,9 @@ export default function User() {
   )
 
   return (
-    <Block
-      title="用户管理"
-      options={
+    <TableBlock
+      toolbar={
         <Space>
-          <span className="text-muted font-size-sm d-none d-lg-inline">Tips：过滤后再执行操作，可对过滤的用户批量处理</span>
           <Button type={filters.length ? 'primary' : 'default'} icon={<FilterOutlined />} onClick={() => { setDraftFilters(filters.length ? filters : []); setFilterOpen(true) }}>
             过滤器
           </Button>
@@ -499,6 +497,7 @@ export default function User() {
             overlay={
               <Menu
                 items={[
+                  { key: 'generate', label: '生成用户', onClick: () => setGenerateOpen(true) },
                   { key: 'csv', label: '导出CSV', onClick: exportCsv },
                   { key: 'mail', label: '发送邮件', onClick: () => setMailOpen(true) },
                   { key: 'ban', label: '批量封禁', disabled: !filters.length, onClick: banAll },
@@ -509,7 +508,6 @@ export default function User() {
           >
             <Button>操作 <DownOutlined /></Button>
           </Dropdown>
-          <Button icon={<PlusOutlined />} onClick={() => setGenerateOpen(true)}>生成用户</Button>
         </Space>
       }
     >
@@ -807,6 +805,6 @@ export default function User() {
           <DatePicker showTime style={{ width: '100%' }} onChange={(value) => setGenerate({ ...generate, expired_at: value })} />
         </div>
       </Modal>
-    </Block>
+    </TableBlock>
   )
 }

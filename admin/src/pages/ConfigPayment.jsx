@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Button, Input, Modal, Select, Switch, Space, message, Popconfirm } from 'antd'
 import { api } from '../api/client'
-import { Block, DataTable } from '../components/ui'
+import { DataTable, TableBlock } from '../components/ui'
 
 const emptyRecord = () => ({
   name: '',
@@ -107,10 +107,7 @@ export default function ConfigPayment() {
   ]
 
   return (
-    <Block
-      title="支付配置"
-      options={<Button type="primary" onClick={() => openEdit(emptyRecord())}>添加支付方式</Button>}
-    >
+    <TableBlock toolbar={<Button onClick={() => openEdit(emptyRecord())}>添加支付方式</Button>}>
       <DataTable dataSource={rows} columns={columns} loading={loading} pagination={false} />
       <Modal
         title={record.id ? '编辑支付方式' : '添加支付方式'}
@@ -195,6 +192,6 @@ export default function ConfigPayment() {
           </div>
         ) : null}
       </Modal>
-    </Block>
+    </TableBlock>
   )
 }

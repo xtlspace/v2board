@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { Button, Input, Radio, Space, message, Popconfirm } from 'antd'
-import { ReloadOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
-import { Block, DataTable } from '../components/ui'
+import { DataTable, TableBlock } from '../components/ui'
 import { time, ticketLevelText } from '../utils'
 import { adminBase } from '../settings'
 
@@ -101,16 +100,8 @@ export default function Ticket() {
   ]
 
   return (
-    <Block
-      title="工单管理"
-      options={
-        <Button icon={<ReloadOutlined />} onClick={() => load(pagination)}>
-          刷新
-        </Button>
-      }
-      bodyClassName="p-0"
-    >
-      <div className="p-3 border-bottom">
+    <TableBlock
+      toolbar={
         <div className="d-flex flex-wrap align-items-center justify-content-between">
           <Radio.Group
             value={status}
@@ -134,7 +125,8 @@ export default function Ticket() {
             }}
           />
         </div>
-      </div>
+      }
+    >
       <DataTable
         dataSource={rows}
         columns={columns}
@@ -146,6 +138,6 @@ export default function Ticket() {
           onChange: (current, pageSize) => load({ current, pageSize })
         }}
       />
-    </Block>
+    </TableBlock>
   )
 }

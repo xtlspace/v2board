@@ -17,6 +17,17 @@ export function Block({ title, options, children, className = '', bodyClassName 
   )
 }
 
+export function TableBlock({ toolbar, children, className = '' }) {
+  return (
+    <div className={`block block-rounded ${className}`}>
+      <div className="bg-white">
+        {toolbar ? <div style={{ padding: 15 }}>{toolbar}</div> : null}
+        {children}
+      </div>
+    </div>
+  )
+}
+
 export function Page({ children }) {
   return <div className="v2board-page">{children}</div>
 }

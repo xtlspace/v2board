@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { Button, Input, Modal, Select, Drawer, Space, message, Descriptions, Popconfirm, Dropdown, Menu } from 'antd'
 import { PlusOutlined, FilterOutlined } from '@ant-design/icons'
 import { api } from '../api/client'
-import { Block, DataTable } from '../components/ui'
+import { DataTable, TableBlock } from '../components/ui'
 import { commissionStatus, money, orderStatus, periodLabels, time } from '../utils'
 
 const filterKeys = [
@@ -224,9 +224,8 @@ export default function Order() {
   ]
 
   return (
-    <Block
-      title="订单管理"
-      options={
+    <TableBlock
+      toolbar={
         <Space>
           <Button type={filters.length ? 'primary' : 'default'} icon={<FilterOutlined />} onClick={() => { setDraftFilters(filters.length ? filters : []); setFilterOpen(true) }}>
             过滤器
@@ -370,6 +369,6 @@ export default function Order() {
           </Descriptions>
         ) : null}
       </Modal>
-    </Block>
+    </TableBlock>
   )
 }

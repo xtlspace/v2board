@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Button, Input, Modal, Select, message, Popconfirm, Switch } from 'antd'
 import { api } from '../api/client'
-import { Block, DataTable } from '../components/ui'
+import { DataTable, TableBlock } from '../components/ui'
 import { time } from '../utils'
 
 const { TextArea } = Input
@@ -88,11 +88,9 @@ export default function Notice() {
   ]
 
   return (
-    <Block
-      title="公告管理"
-      options={
+    <TableBlock
+      toolbar={
         <Button
-          type="primary"
           onClick={() => {
             setRecord({ title: '', content: '', tags: [], img_url: '' })
             setOpen(true)
@@ -136,6 +134,6 @@ export default function Notice() {
           <Input value={record.img_url} placeholder="请输入图片URL" onChange={(e) => setRecord({ ...record, img_url: e.target.value })} />
         </div>
       </Modal>
-    </Block>
+    </TableBlock>
   )
 }
