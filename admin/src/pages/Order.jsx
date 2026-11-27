@@ -57,6 +57,18 @@ export default function Order() {
 
   const [detailOpen, setDetailOpen] = useState(false)
   const [detail, setDetail] = useState(null)
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 767.98px)').matches)
+
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 767.98px)')
+    const handler = (event) => setIsMobile(event.matches)
+    if (query.addEventListener) query.addEventListener('change', handler)
+    else query.addListener(handler)
+    return () => {
+      if (query.removeEventListener) query.removeEventListener('change', handler)
+      else query.removeListener(handler)
+    }
+  }, [])
 
   const load = (page = pagination, activeFilters = filters) => {
     setLoading(true)
@@ -245,6 +257,10 @@ export default function Order() {
     { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 142, align: 'right', render: (v) => time(v, 'YYYY/MM/DD HH:mm') }
   ]
 
+  const mobileColumns = columns
+    .filter((column) => column.key === 'trade_no' || column.key === 'status')
+    .map((column) => ({ ...column, width: column.key === 'trade_no' ? 190 : 130 }))
+
   return (
     <TableBlock
       toolbar={
@@ -260,9 +276,9 @@ export default function Order() {
     >
       <DataTable
         dataSource={rows}
-        columns={columns}
+        columns={isMobile ? mobileColumns : columns}
         loading={loading}
-        scroll={{ x: 1142 }}
+        scroll={{ x: isMobile ? 320 : 1142 }}
         pagination={{
           ...pagination,
           showSizeChanger: true,
