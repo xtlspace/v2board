@@ -152,6 +152,18 @@ export default function ServerManage() {
   const [dragIndex, setDragIndex] = useState(null)
   const [dropTarget, setDropTarget] = useState(null)
   const [sortSaving, setSortSaving] = useState(false)
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 767.98px)').matches)
+
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 767.98px)')
+    const handler = (event) => setIsMobile(event.matches)
+    if (query.addEventListener) query.addEventListener('change', handler)
+    else query.addListener(handler)
+    return () => {
+      if (query.removeEventListener) query.removeEventListener('change', handler)
+      else query.removeListener(handler)
+    }
+  }, [])
 
   const load = () => {
     setLoading(true)
@@ -848,10 +860,20 @@ export default function ServerManage() {
     .filter((item) => item.id !== record.id)
     .map((item) => ({ value: item.id, label: item.name }))
 
+  const mobileColumns = [
+    ...columns.filter((column) => column.key === 'id').map((column) => ({ ...column, width: 65 })),
+    ...columns.filter((column) => column.key === 'name').map((column) => ({ ...column, width: 150 })),
+    ...columns.filter((column) => column.key === 'online').map((column) => ({ ...column, width: 70 })),
+    ...columns
+      .filter((column) => column.key === 'action')
+      .map(({ fixed, ...column }) => ({ ...column, width: 80, align: 'left' })),
+    ...columns.filter((column) => !['id', 'name', 'online', 'action'].includes(column.key))
+  ]
+
   return (
     <div className="block block-bottom">
       <div className="bg-white">
-        <div className="v2board-table-action" style={{ padding: 15 }}>
+        <div style={{ padding: 15 }}>
           <Button icon={<PlusOutlined />} onClick={openCreate} />
           <Input
             placeholder="输入任意关键字搜索"
@@ -872,7 +894,7 @@ export default function ServerManage() {
 
         <DataTable
           dataSource={sortMode ? sortRows : displayRows}
-          columns={sortMode ? sortColumns : columns}
+          columns={sortMode ? sortColumns : isMobile ? mobileColumns : columns}
           loading={loading}
           pagination={false}
           scroll={{ x: 1200 }}
