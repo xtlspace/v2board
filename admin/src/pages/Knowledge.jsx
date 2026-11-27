@@ -6,9 +6,14 @@ import MarkdownIt from 'markdown-it'
 import 'react-markdown-editor-lite/lib/index.css'
 import { api } from '../api/client'
 import { DataTable, TableBlock } from '../components/ui'
-import { i18nText, time } from '../utils'
+import { time } from '../utils'
 
 const mdParser = new MarkdownIt()
+
+const knowledgeLanguages = {
+  'zh-CN': '简体中文',
+  'en-US': 'English'
+}
 
 export default function Knowledge() {
   const [rows, setRows] = useState([])
@@ -262,7 +267,7 @@ export default function Knowledge() {
             value={record.language}
             placeholder="请选择知识语言"
             onChange={(value) => setRecord({ ...record, language: value })}
-            options={Object.keys(i18nText).map((key) => ({ value: key, label: i18nText[key] }))}
+            options={Object.keys(knowledgeLanguages).map((key) => ({ value: key, label: knowledgeLanguages[key] }))}
           />
         </div>
         <div className="form-group">
