@@ -300,11 +300,12 @@ export default function User() {
   }
 
   const columns = [
-    { title: 'ID', dataIndex: 'id', key: 'id', sorter: true },
+    { title: 'ID', dataIndex: 'id', key: 'id', width: 89, sorter: true },
     {
       title: '邮箱',
       dataIndex: 'email',
       key: 'email',
+      width: 227,
       ellipsis: true,
       render: (v, row) => (
         <span>
@@ -313,12 +314,13 @@ export default function User() {
         </span>
       )
     },
-    { title: '状态', dataIndex: 'banned', key: 'banned', sorter: true, render: (v) => <span className={`badge badge-${v ? 'danger' : 'success'}`}>{v ? '封禁' : '正常'}</span> },
-    { title: '订阅', dataIndex: 'plan_name', key: 'plan_id', ellipsis: true, sorter: true, render: (v) => v || '-' },
+    { title: '状态', dataIndex: 'banned', key: 'banned', width: 107, sorter: true, render: (v) => <span className={`badge badge-${v ? 'danger' : 'success'}`}>{v ? '封禁' : '正常'}</span> },
+    { title: '订阅', dataIndex: 'plan_name', key: 'plan_id', width: 117, ellipsis: true, sorter: true, render: (v) => v || '-' },
     {
       title: '权限组',
       dataIndex: 'group_id',
       key: 'group_id',
+      width: 136,
       ellipsis: true,
       sorter: true,
       render: (v) => {
@@ -330,13 +332,15 @@ export default function User() {
       title: '已用(G)',
       dataIndex: 'total_used',
       key: 'total_used',
+      width: 133,
       sorter: true,
       render: (v, row) => <span className={`badge badge-${Number(v) > Number(row.transfer_enable) ? 'danger' : 'success'}`}>{v}</span>
     },
-    { title: '流量(G)', dataIndex: 'transfer_enable', key: 'transfer_enable', sorter: true },
+    { title: '流量(G)', dataIndex: 'transfer_enable', key: 'transfer_enable', width: 133, sorter: true },
     {
       title: '设备数',
       key: 'alive_ip',
+      width: 125,
       render: (_, row) => (
         <span title={row.ips || ''}>
           {row.alive_ip || 0} / {row.device_limit !== null && row.device_limit !== undefined ? row.device_limit : '∞'}
@@ -347,6 +351,7 @@ export default function User() {
       title: '到期时间',
       dataIndex: 'expired_at',
       key: 'expired_at',
+      width: 177,
       sorter: true,
       render: (v) => (
         <span className={`badge badge-${v && v * 1000 < Date.now() ? 'danger' : 'success'}`}>
@@ -354,13 +359,14 @@ export default function User() {
         </span>
       )
     },
-    { title: '余额', dataIndex: 'balance', key: 'balance', sorter: true },
-    { title: '佣金', dataIndex: 'commission_balance', key: 'commission_balance', sorter: true },
+    { title: '余额', dataIndex: 'balance', key: 'balance', width: 107, sorter: true },
+    { title: '佣金', dataIndex: 'commission_balance', key: 'commission_balance', width: 107, sorter: true },
     {
       title: '操作',
       key: 'action',
       align: 'right',
       fixed: 'right',
+      width: 78,
       render: (_, row) => (
         <Dropdown
           trigger={['click']}
@@ -515,7 +521,7 @@ export default function User() {
         dataSource={rows}
         columns={columns}
         loading={loading}
-        scroll={{ x: 1560 }}
+        scroll={{ x: 1536 }}
         pagination={{
           ...pagination,
           showSizeChanger: true,
