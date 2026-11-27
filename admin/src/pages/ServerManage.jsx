@@ -1,6 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Button, Input, Select, Switch, Space, message, Drawer, Tag, Badge, Tooltip, Dropdown, Menu } from 'antd'
-import { PlusOutlined, DownOutlined, MenuOutlined, UserOutlined, QuestionCircleOutlined } from '@ant-design/icons'
+import {
+  PlusOutlined,
+  CaretDownOutlined,
+  EditOutlined,
+  CopyOutlined,
+  DeleteOutlined,
+  MenuOutlined,
+  UserOutlined,
+  QuestionCircleOutlined
+} from '@ant-design/icons'
 import { api } from '../api/client'
 import { DataTable } from '../components/ui'
 import { copyText } from '../utils'
@@ -470,15 +479,40 @@ export default function ServerManage() {
           overlay={
             <Menu
               items={[
-                { key: 'edit', label: '编辑', onClick: () => openEdit(row) },
-                { key: 'copy', label: '复制', onClick: () => copyNode(row.id) },
-                { key: 'delete', label: '删除', danger: true, onClick: () => drop(row.id) }
+                {
+                  key: 'edit',
+                  label: (
+                    <span>
+                      <EditOutlined /> 编辑
+                    </span>
+                  ),
+                  onClick: () => openEdit(row)
+                },
+                {
+                  key: 'copy',
+                  label: (
+                    <span>
+                      <CopyOutlined /> 复制
+                    </span>
+                  ),
+                  onClick: () => copyNode(row.id)
+                },
+                {
+                  key: 'delete',
+                  label: (
+                    <span>
+                      <DeleteOutlined /> 删除
+                    </span>
+                  ),
+                  danger: true,
+                  onClick: () => drop(row.id)
+                }
               ]}
             />
           }
         >
           <a onClick={(e) => e.preventDefault()}>
-            操作 <DownOutlined />
+            操作 <CaretDownOutlined />
           </a>
         </Dropdown>
       )

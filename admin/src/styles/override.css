@@ -231,3 +231,8 @@ body.v2board-dark #page-container canvas {
 .v2board-sort-row.v2board-drop-after > td {
   border-bottom: 2px dashed #4080ff !important;
 }
+
+/* 订阅管理拖动排序行 */
+.v2board-plan-sort-row {
+  cursor: default;
+}
