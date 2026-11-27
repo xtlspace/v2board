@@ -65,3 +65,18 @@ Route::get('/' . config('v2board.secure_path', config('v2board.frontend_admin_pa
         'ip_lookup_url' => config('v2board.ip_lookup_url', 'https://iplark.com/')
     ]);
 });
+
+// 新版管理面板（源码位于 admin/，构建产物输出到 public/assets/admin-next）
+// 预览地址：/{secure_path}/next，验收后可切换为默认入口，旧面板保持不变。
+Route::get('/' . config('v2board.secure_path', config('v2board.frontend_admin_path', hash('crc32b', config('app.key')))) . '/next/{any?}', function () {
+    return view('admin_next', [
+        'title' => config('v2board.app_name', 'V2Board'),
+        'theme_sidebar' => config('v2board.frontend_theme_sidebar', 'light'),
+        'theme_header' => config('v2board.frontend_theme_header', 'dark'),
+        'theme_color' => config('v2board.frontend_theme_color', 'default'),
+        'background_url' => config('v2board.frontend_background_url'),
+        'version' => config('app.version'),
+        'logo' => config('v2board.logo'),
+        'secure_path' => config('v2board.secure_path', config('v2board.frontend_admin_path', hash('crc32b', config('app.key'))))
+    ]);
+})->where('any', '.*');

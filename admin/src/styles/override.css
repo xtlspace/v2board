@@ -1,0 +1,103 @@
+/* 在原编译 CSS 之上做少量必要修正，保持与原面板一致的观感 */
+
+#root {
+  min-height: 100vh;
+}
+
+.v2board-config-row:last-child {
+  border-bottom: 0 !important;
+}
+
+/* 侧边栏菜单过长时允许滚动（原面板依赖 SimpleBar） */
+#sidebar .content-side.content-side-full {
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: calc(100% - 90px);
+  padding-bottom: 10px;
+}
+
+#sidebar .v2board-copyright {
+  pointer-events: none;
+}
+
+.v2board-config-row .ant-select,
+.v2board-config-row .ant-input-affix-wrapper,
+.v2board-config-row textarea,
+.v2board-config-row input {
+  text-align: left;
+}
+
+.v2board-config-row > div:last-child {
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+}
+
+.v2board-config-row > div:last-child > * {
+  max-width: 360px;
+  width: 100%;
+}
+
+.v2board-config-row > div:last-child > .ant-space,
+.v2board-config-row > div:last-child > .ant-btn {
+  width: auto;
+}
+
+.v2board-config-row > div:last-child > .ant-switch {
+  width: 44px !important;
+  min-width: 44px;
+  max-width: none;
+  flex: 0 0 auto;
+}
+
+#sidebar .content-side.content-side-full {
+  padding-bottom: 50px;
+}
+
+.v2board-auth-box .form-control-alt {
+  height: 45px;
+}
+
+.bg-primary-light {
+  background: #e7f1ff;
+}
+
+.v2board-ticket-messages .v2board-bubble-user {
+  background: #f0f3f8 !important;
+  color: #495057;
+}
+
+.v2board-ticket-messages .v2board-bubble-me {
+  background: #e7f1ff !important;
+  color: #343a40;
+}
+
+.v2board-ticket-messages .rounded {
+  border-radius: 6px;
+}
+
+/* 暗色模式：仅反转主容器，弹窗保持原色，避免表单不可读 */
+body.v2board-dark #page-container {
+  filter: invert(0.92) hue-rotate(180deg);
+  background-color: #0f1115;
+}
+
+body.v2board-dark #page-container img,
+body.v2board-dark #page-container .anticon svg,
+body.v2board-dark #page-container .si,
+body.v2board-dark #page-container .fa,
+body.v2board-dark #page-container .far,
+body.v2board-dark #page-container .fas,
+body.v2board-dark #page-container canvas {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+.v2board-page .block + .block {
+  margin-top: 1rem;
+}
+
+@media (max-width: 991.98px) {
+  #page-container.sidebar-o-xs #sidebar {
+    transform: translateX(0);
+  }
+}
