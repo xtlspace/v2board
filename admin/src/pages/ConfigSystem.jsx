@@ -22,7 +22,6 @@ export default function ConfigSystem() {
   const [config, setConfig] = useState({})
   const [plans, setPlans] = useState([])
   const [emailTemplates, setEmailTemplates] = useState([])
-  const [themeTemplates, setThemeTemplates] = useState([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('site')
   const timerRef = useRef(null)
@@ -32,14 +31,12 @@ export default function ConfigSystem() {
     Promise.all([
       api.get('/config/fetch'),
       api.get('/plan/fetch'),
-      api.get('/config/getEmailTemplate'),
-      api.get('/config/getThemeTemplate')
-    ]).then(([configRes, planRes, emailRes, themeRes]) => {
+      api.get('/config/getEmailTemplate')
+    ]).then(([configRes, planRes, emailRes]) => {
       setLoading(false)
       if (configRes.code === 200) setConfig(configRes.data || {})
       if (planRes.code === 200) setPlans(planRes.data || [])
       if (emailRes.code === 200) setEmailTemplates(emailRes.data || [])
-      if (themeRes.code === 200) setThemeTemplates((themeRes.data || []).filter((t) => !String(t).startsWith('.')))
     })
   }
 
@@ -395,34 +392,28 @@ export default function ConfigSystem() {
           },
           {
             key: 'frontend',
-            label: '个性化',
+            label: '管理后台外观',
             children: (
               <div>
-                <ConfigRow title="边栏风格" description="前台边栏颜色风格。">
+                <ConfigRow title="边栏风格" description="管理后台侧边栏颜色风格，刷新后生效。">
                   {select('frontend', 'frontend_theme_sidebar', frontend, [
                     { value: 'light', label: '浅色' },
                     { value: 'dark', label: '深色' }
                   ])}
                 </ConfigRow>
-                <ConfigRow title="头部风格" description="前台头部颜色风格。">
+                <ConfigRow title="头部风格" description="管理后台顶部栏颜色风格，刷新后生效。">
                   {select('frontend', 'frontend_theme_header', frontend, [
                     { value: 'light', label: '浅色' },
                     { value: 'dark', label: '深色' }
                   ])}
                 </ConfigRow>
-                <ConfigRow title="主题色" description="前台主题配色。">
+                <ConfigRow title="主题色" description="管理后台主题配色，刷新后生效。前台主题配色请在“主题配置”中修改。">
                   {select('frontend', 'frontend_theme_color', frontend, [
                     { value: 'default', label: '默认(蓝色)' },
                     { value: 'green', label: '奶绿色' },
                     { value: 'black', label: '黑色' },
                     { value: 'darkblue', label: '暗蓝色' }
                   ])}
-                </ConfigRow>
-                <ConfigRow title="背景" description="请输入背景图片URL。">
-                  {input('frontend', 'frontend_background_url', frontend, '请输入背景图片URL')}
-                </ConfigRow>
-                <ConfigRow title="前台主题" description="可选主题目录来自 public/theme。">
-                  {select('frontend', 'frontend_theme', frontend, themeTemplates.map((t) => ({ value: t, label: t })))}
                 </ConfigRow>
               </div>
             )
