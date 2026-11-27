@@ -147,17 +147,18 @@ export default function Order() {
       title: '# 订单号',
       dataIndex: 'trade_no',
       key: 'trade_no',
+      width: 230,
       render: (v, row) => (
-        <a onClick={() => openDetail(row.id)}>
-          {String(v).substr(0, 3)}...{String(v).substr(-3)}
+        <a onClick={() => openDetail(row.id)} style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+          {v}
         </a>
       )
     },
-    { title: '类型', dataIndex: 'type', key: 'type', render: (v) => typeText[v] || v },
-    { title: '订阅计划', dataIndex: 'plan_name', key: 'plan_name', render: (v) => v || '-' },
-    { title: '支付接口', dataIndex: 'payment_name', key: 'payment_name', render: (v) => v || '-' },
-    { title: '周期', dataIndex: 'period', key: 'period', render: (v) => <span className="badge badge-light">{periodLabels[v] || v}</span> },
-    { title: '支付金额', dataIndex: 'total_amount', key: 'total_amount', align: 'right', render: (v) => (v / 100).toFixed(2) },
+    { title: '类型', dataIndex: 'type', key: 'type', width: 65, render: (v) => typeText[v] || v },
+    { title: '订阅计划', dataIndex: 'plan_name', key: 'plan_name', width: 110, render: (v) => v || '-' },
+    { title: '支付接口', dataIndex: 'payment_name', key: 'payment_name', width: 110, render: (v) => v || '-' },
+    { title: '周期', dataIndex: 'period', key: 'period', width: 75, render: (v) => <span className="badge badge-light">{periodLabels[v] || v}</span> },
+    { title: '支付金额', dataIndex: 'total_amount', key: 'total_amount', width: 85, align: 'right', render: (v) => (v / 100).toFixed(2) },
     {
       title: (
         <span>
@@ -169,6 +170,7 @@ export default function Order() {
       ),
       dataIndex: 'status',
       key: 'status',
+      width: 145,
       render: (v, row) => {
         const status = orderStatus[v] || { text: v }
         const badgeStatus = ['error', 'processing', 'default', 'success', 'default'][v] || 'default'
@@ -207,6 +209,7 @@ export default function Order() {
       title: '佣金金额',
       dataIndex: 'commission_balance',
       key: 'commission_balance',
+      width: 85,
       align: 'right',
       render: (v, row) => (row.status === 0 || row.status === 2 ? '-' : v ? (v / 100).toFixed(2) : '-')
     },
@@ -214,6 +217,7 @@ export default function Order() {
       title: '佣金状态',
       dataIndex: 'commission_status',
       key: 'commission_status',
+      width: 95,
       render: (v, row) => {
         if (row.status === 0 || row.status === 2 || !row.commission_balance) return '-'
         if (v === 2) return <span className="badge badge-success">{commissionStatus[v].text}</span>
@@ -238,7 +242,7 @@ export default function Order() {
         )
       }
     },
-    { title: '创建时间', dataIndex: 'created_at', key: 'created_at', align: 'right', render: (v) => time(v, 'YYYY/MM/DD HH:mm') }
+    { title: '创建时间', dataIndex: 'created_at', key: 'created_at', width: 142, align: 'right', render: (v) => time(v, 'YYYY/MM/DD HH:mm') }
   ]
 
   return (
@@ -258,6 +262,7 @@ export default function Order() {
         dataSource={rows}
         columns={columns}
         loading={loading}
+        scroll={{ x: 1142 }}
         pagination={{
           ...pagination,
           showSizeChanger: true,
