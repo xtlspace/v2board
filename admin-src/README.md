@@ -10,7 +10,7 @@
 ## 开发
 
 ```bash
-cd admin
+cd admin-src
 npm install
 npm run dev
 ```
@@ -20,7 +20,7 @@ npm run dev
 ## 构建
 
 ```bash
-cd admin
+cd admin-src
 npm run build
 ```
 
