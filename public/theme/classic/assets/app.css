@@ -1327,5 +1327,6 @@ html[data-header="dark"] .icon-btn:hover { background: rgba(255, 255, 255, .1); 
         max-width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
+        justify-content: center;
     }
 }

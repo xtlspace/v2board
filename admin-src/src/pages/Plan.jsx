@@ -106,7 +106,18 @@ export default function Plan() {
       message.warning('请填写套餐名称、权限组和流量')
       return
     }
+    const invalidPrice = priceKeys.some((key) => {
+      const value = record[key]
+      return value !== null && value !== undefined && value !== '' && !Number.isFinite(Number(value))
+    })
+    if (invalidPrice) {
+      message.warning('价格格式有误')
+      return
+    }
     const params = { ...record }
+    priceKeys.forEach((key) => {
+      params[key] = priceToCents(params[key])
+    })
     if (params.force_update !== true) delete params.force_update
     delete params.count
     setSaving(true)
@@ -191,6 +202,21 @@ export default function Plan() {
     setDropTarget(null)
   }
 
+  const currency = config.currency_symbol || '¥'
+  // 数据库价格以“分”存储，编辑时按“元”显示，保存时再转回分。
+  const priceKeys = [...priceFields, 'onetime_price', 'reset_price']
+  const priceToInput = (value) =>
+    value === null || value === undefined || value === '' ? '' : (Number(value) / 100).toFixed(2)
+  const priceToCents = (value) =>
+    value === '' || value === null || value === undefined ? null : Math.round(Number(value) * 100)
+  const planToForm = (plan) => {
+    const next = { ...plan }
+    priceKeys.forEach((key) => {
+      next[key] = priceToInput(next[key])
+    })
+    return next
+  }
+
   const priceOnChange = (key, value) => {
     const next = { ...record, [key]: value === '' ? null : value }
     if (value !== '') {
@@ -206,13 +232,16 @@ export default function Plan() {
     setRecord(next)
   }
 
-  const currency = config.currency_symbol || '¥'
+  const isEmpty = (value) => value === null || value === undefined || value === ''
+  const hasTransfer = rows.some((row) => !isEmpty(row.transfer_enable))
+  const hasDevice = rows.some((row) => !isEmpty(row.device_limit))
+  const hasGroup = rows.some((row) => groups.some((group) => group.id === Number(row.group_id)))
+  const visiblePrices = tablePrices.filter(([key]) => rows.some((row) => !isEmpty(row[key])))
 
   const columns = [
     {
       title: '排序',
       key: 'sort',
-      width: 70,
       render: (_, row, index) => (
         <span
           className="v2board-drag-handle"
@@ -261,28 +290,32 @@ export default function Plan() {
         </span>
       )
     },
-    { title: '流量', dataIndex: 'transfer_enable', key: 'transfer_enable', render: (v) => `${v} GB` },
-    {
-      title: '设备',
-      dataIndex: 'device_limit',
-      key: 'device_limit',
-      render: (v) => (v === null || v === '' ? '-' : v)
-    },
-    ...tablePrices.map(([key, title]) => ({
+    ...(hasTransfer ? [{ title: '流量', dataIndex: 'transfer_enable', key: 'transfer_enable', render: (v) => `${v} GB` }] : []),
+    ...(hasDevice
+      ? [{
+          title: '设备',
+          dataIndex: 'device_limit',
+          key: 'device_limit',
+          render: (v) => (v === null || v === '' ? '-' : v)
+        }]
+      : []),
+    ...visiblePrices.map(([key, title]) => ({
       title,
       dataIndex: key,
       key,
-      render: (v) => (v === null || v === undefined ? '-' : Number(v).toFixed(2))
+      render: (v) => (v === null || v === undefined ? '-' : `${currency}${(Number(v) / 100).toFixed(2)}`)
     })),
-    {
-      title: '权限组',
-      dataIndex: 'group_id',
-      key: 'group_id',
-      render: (v) => {
-        const group = groups.find((item) => item.id === Number(v))
-        return group ? <Tag>{group.name}</Tag> : '-'
-      }
-    },
+    ...(hasGroup
+      ? [{
+          title: '权限组',
+          dataIndex: 'group_id',
+          key: 'group_id',
+          render: (v) => {
+            const group = groups.find((item) => item.id === Number(v))
+            return group ? <Tag>{group.name}</Tag> : '-'
+          }
+        }]
+      : []),
     {
       title: '操作',
       key: 'action',
@@ -302,7 +335,7 @@ export default function Plan() {
                     </span>
                   ),
                   onClick: () => {
-                    setRecord({ ...emptyPlan(), ...row, force_update: false })
+                    setRecord({ ...emptyPlan(), ...planToForm(row), force_update: false })
                     setOpen(true)
                   }
                 },
@@ -348,7 +381,7 @@ export default function Plan() {
           columns={columns}
           loading={loading}
           pagination={false}
-          scroll={{ x: 1300 }}
+          scroll={{ x: 'max-content' }}
           rowClassName={(row, index) => {
             let className = 'v2board-sort-row v2board-plan-sort-row'
             if (dragIndex === index) className += ' v2board-sort-dragging'
@@ -415,6 +448,7 @@ export default function Plan() {
               <div className="form-group">
                 <label htmlFor="example-text-input-alt">{title}</label>
                 <Input
+                  addonAfter={currency}
                   value={record[key] !== null && record[key] !== undefined ? record[key] : ''}
                   onChange={(e) => priceOnChange(key, e.target.value)}
                 />
