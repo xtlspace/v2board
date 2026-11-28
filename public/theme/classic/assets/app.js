@@ -5,19 +5,21 @@ import { defineRoute, resolve, startRouter, currentLocation, navigate } from './
 import { renderShell } from './layout.js';
 import { button, card, errorBlock, loadingBlock } from './lib/ui.js';
 
-import * as login from './pages/login.js';
-import * as register from './pages/register.js';
-import * as forget from './pages/forget.js';
-import * as dashboard from './pages/dashboard.js';
-import * as plan from './pages/plan.js';
-import * as order from './pages/order.js';
-import * as node from './pages/node.js';
-import * as dialer from './pages/dialer.js';
-import * as ticket from './pages/ticket.js';
-import * as knowledge from './pages/knowledge.js';
-import * as traffic from './pages/traffic.js';
-import * as invite from './pages/invite.js';
-import * as profile from './pages/profile.js';
+// 页面模块带版本号，避免浏览器/CDN 继续使用旧缓存。
+// 修改 pages 下的主题脚本时，请同步递增此处版本和 config/app.php 的 app.version。
+import * as login from './pages/login.js?v=1.7.5.2685.2235';
+import * as register from './pages/register.js?v=1.7.5.2685.2235';
+import * as forget from './pages/forget.js?v=1.7.5.2685.2235';
+import * as dashboard from './pages/dashboard.js?v=1.7.5.2685.2235';
+import * as plan from './pages/plan.js?v=1.7.5.2685.2235';
+import * as order from './pages/order.js?v=1.7.5.2685.2235';
+import * as node from './pages/node.js?v=1.7.5.2685.2235';
+import * as dialer from './pages/dialer.js?v=1.7.5.2685.2235';
+import * as ticket from './pages/ticket.js?v=1.7.5.2685.2235';
+import * as knowledge from './pages/knowledge.js?v=1.7.5.2685.2235';
+import * as traffic from './pages/traffic.js?v=1.7.5.2685.2235';
+import * as invite from './pages/invite.js?v=1.7.5.2685.2235';
+import * as profile from './pages/profile.js?v=1.7.5.2685.2235';
 
 defineRoute({ path: '/login', guest: true, title: '登入', page: login });
 defineRoute({ path: '/register', guest: true, title: '注册', page: register });
