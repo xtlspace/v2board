@@ -57,7 +57,7 @@ export async function mount(el) {
         }
     });
 
-    const tableBox = h('div', {});
+    const tableBox = h('div', { class: 'node-status-table' });
 
     const renderTable = () => {
         const rows = servers.filter(server => {
@@ -70,9 +70,9 @@ export async function mount(el) {
             columns: [
                 {
                     title: t('节点名称'),
-                    render: server => h('div', {},
-                        h('div', {}, server.name),
-                        server.tags ? h('div', { class: 'tag-list mt-8' },
+                    render: server => h('div', { class: 'node-name-cell' },
+                        h('span', { class: 'node-name' }, server.name),
+                        server.tags ? h('span', { class: 'tag-list node-tags' },
                             String(server.tags).split(',').filter(Boolean).map(name => tag(name, ''))
                         ) : null
                     )

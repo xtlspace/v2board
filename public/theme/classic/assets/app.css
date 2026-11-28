@@ -1237,3 +1237,34 @@ html[data-header="dark"] .icon-btn:hover { background: rgba(255, 255, 255, .1); 
     .btn-group { width: 100%; }
     .btn-group .btn { flex: 1 1 auto; }
 }
+
+/* ---------- node status page ---------- */
+.node-status-table .table {
+    font-family: var(--font);
+}
+
+.node-name-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: nowrap;
+}
+
+.node-name-cell .node-name {
+    flex: 0 0 auto;
+}
+
+.node-name-cell .node-tags {
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
+@media (max-width: 767px) {
+    .node-name-cell {
+        display: block;
+    }
+
+    .node-name-cell .node-tags {
+        margin-top: 8px;
+    }
+}
