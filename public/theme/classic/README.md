@@ -119,4 +119,4 @@ node public/theme/classic/preview-server.js
 - 二维码使用 `api.qrserver.com` 生成；若站点要求完全离线，可替换 `lib/ui.js` 的 `qrImage()` 为本地二维码库。
 - Stripe 使用 Stripe.js v3 的 `createToken` + 后端 `Sources/Charges`，与现有 `StripeCredit` 支付插件匹配；未配置 Stripe 时选择该方式会提示。
 - 邮件模板、支付回调等仍由后端负责，本主题不涉及。
-- 管理面板仍是原编译版 `public/assets/admin`，未在本次改造范围内。
+- 管理面板为独立 React 源码工程，位于仓库 `admin/`，与前台主题互不影响。

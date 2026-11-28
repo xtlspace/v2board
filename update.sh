@@ -544,12 +544,14 @@ if [[ "$NO_SMOKE" -eq 0 ]]; then
     echo "正在检查后台页面"
     curl -fsS --max-time 10 -k -b "$COOKIE" -H "Host: $SMOKE_HOST" \
         "$SMOKE_BASE_URL/$secure_path" -o "$BACKUP_DIR/smoke-admin.html"
-    grep -q 'umi.js' "$BACKUP_DIR/smoke-admin.html" || fail "后台页面未正常返回"
+    grep -q 'admin-theme' "$BACKUP_DIR/smoke-admin.html" || fail "后台页面未正常返回"
 
     echo "正在检查前端资源"
+    admin_js="$(grep -oE '/assets/admin-next/assets/index-[^" ]+\.js' "$BACKUP_DIR/smoke-admin.html" | head -1 || true)"
+    [[ -n "$admin_js" ]] || fail "未找到后台 JS 资源"
     curl -fsS --max-time 20 -k -b "$COOKIE" -H "Host: $SMOKE_HOST" \
-        "$SMOKE_BASE_URL/assets/admin/umi.js" -o "$BACKUP_DIR/smoke-umi.js"
-    grep -q 'serverV2node' "$BACKUP_DIR/smoke-umi.js" || fail "umi.js 内容异常"
+        "$SMOKE_BASE_URL$admin_js" -o "$BACKUP_DIR/smoke-admin.js"
+    grep -q 'serverV2node' "$BACKUP_DIR/smoke-admin.js" || fail "后台 JS 内容异常"
 
     node_id="$(run_www "$PHP_BIN" artisan tinker --execute="echo (int) DB::table('v2_server_v2node')->value('id');" 2>/dev/null | tail -1 || true)"
     if [[ -n "$server_token" && -n "$node_id" && "$node_id" != "0" ]]; then
@@ -581,8 +583,3 @@ find "$BACKUP_ROOT" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' 2>/dev/nu
 
 echo
 echo "更新完成，备份目录: $BACKUP_DIR"
-if grep -q 'strcasecmp' app/Http/Routes/V1/ServerRoute.php 2>/dev/null     && ! grep -q '/server/shadowsocks/save' public/assets/admin/umi.js 2>/dev/null; then
-    echo "路由兼容与旧协议前端清理已包含在当前代码中"
-else
-    echo "注意: 当前代码未包含大写 UniProxy 兼容或旧协议前端清理"
-fi

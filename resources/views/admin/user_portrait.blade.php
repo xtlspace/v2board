@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no">
     <title>{{$title}} - 用户画像</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <script src="/assets/admin/vendor/echarts.min.js?v={{$version}}"></script>
+    <script src="/assets/admin-theme/vendor/echarts.min.js?v={{$version}}"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #f0f2f5; color: #333; }
@@ -1090,7 +1090,7 @@ function ensureChinaMap() {
     if (typeof echarts === 'undefined') {
         return Promise.reject(new Error('echarts not loaded'));
     }
-    chinaMapPromise = fetch('/assets/admin/vendor/china.json?v={{$version}}')
+    chinaMapPromise = fetch('/assets/admin-theme/vendor/china.json?v={{$version}}')
         .then(function(response) {
             if (!response.ok) throw new Error('map http error');
             return response.json();

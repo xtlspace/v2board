@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// 构建产物输出到后端 public/assets/admin-next，与旧面板 public/assets/admin 并行。
+// 构建产物输出到后端 public/assets/admin-next。
 export default defineConfig({
   base: '/assets/admin-next/',
   plugins: [react()],

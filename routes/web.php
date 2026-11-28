@@ -38,20 +38,6 @@ Route::get('/', function (Request $request) {
     return view('theme::' . config('v2board.frontend_theme', 'default') . '.dashboard', $renderParams);
 });
 
-//TODO:: 兼容
-Route::get('/' . config('v2board.secure_path', config('v2board.frontend_admin_path', hash('crc32b', config('app.key')))), function () {
-    return view('admin_next', [
-        'title' => config('v2board.app_name', 'V2Board'),
-        'theme_sidebar' => config('v2board.frontend_theme_sidebar', 'light'),
-        'theme_header' => config('v2board.frontend_theme_header', 'dark'),
-        'theme_color' => config('v2board.frontend_theme_color', 'default'),
-        'background_url' => config('v2board.frontend_background_url'),
-        'version' => config('app.version'),
-        'logo' => config('v2board.logo'),
-        'secure_path' => config('v2board.secure_path', config('v2board.frontend_admin_path', hash('crc32b', config('app.key'))))
-    ]);
-});
-
 if (!empty(config('v2board.subscribe_path'))) {
     Route::get(config('v2board.subscribe_path'), 'V1\\Client\\ClientController@subscribe')->middleware('client');
 }
@@ -66,8 +52,7 @@ Route::get('/' . config('v2board.secure_path', config('v2board.frontend_admin_pa
     ]);
 });
 
-// 新版管理面板（源码位于 admin/，构建产物输出到 public/assets/admin-next）
-// 默认后台入口与 SPA 路由都由该视图承载，旧面板资源仍保留在 public/assets/admin/ 便于回退。
+// 管理面板（源码位于 admin/，构建产物输出到 public/assets/admin-next）
 Route::get('/' . config('v2board.secure_path', config('v2board.frontend_admin_path', hash('crc32b', config('app.key')))) . '/{any?}', function () {
     return view('admin_next', [
         'title' => config('v2board.app_name', 'V2Board'),
