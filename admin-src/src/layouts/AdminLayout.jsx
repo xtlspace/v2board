@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Dropdown, Menu, Spin } from 'antd'
+import { Dropdown, Menu, Spin, message } from 'antd'
 import { menu, titleFor } from '../nav'
 import { settings } from '../settings'
 import { api, clearToken } from '../api/client'
@@ -57,6 +57,24 @@ export default function AdminLayout() {
     setShowNav(false)
   }
 
+  // 以当前管理员身份进入用户面板。先同步打开新标签页，避免异步请求后被浏览器拦截。
+  const openUserPanel = () => {
+    const win = window.open('', '_blank')
+    api.post('/user/loginAsSelf').then((res) => {
+      if (res.code === 200 && res.data && res.data.auth_data) {
+        window.localStorage.setItem('authorization', res.data.auth_data)
+        if (win) {
+          win.location.href = '/'
+        } else {
+          window.location.href = '/'
+        }
+        return
+      }
+      if (win) win.close()
+      if (res.code !== 403) message.warning(res.message || '无法进入用户面板')
+    })
+  }
+
   return (
     <div
       id="page-container"
@@ -75,7 +93,12 @@ export default function AdminLayout() {
       <nav id="sidebar">
         <div className="smini-hidden bg-header-dark">
           <div className="content-header justify-content-lg-center bg-black-10">
-            <a className="link-fx font-size-lg text-white" href="javascript:void(0);" onClick={() => go('/dashboard')}>
+            <a
+              className="link-fx font-size-lg text-white"
+              href="javascript:void(0);"
+              title="进入用户面板"
+              onClick={openUserPanel}
+            >
               <span className="text-white-75">{settings.title || 'V2Board'}</span>
             </a>
             <div className="d-lg-none">

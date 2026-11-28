@@ -86,6 +86,7 @@ export async function mount(el) {
                 {
                     title: t('操作'),
                     width: '150px',
+                    sticky: 'right',
                     className: 'align-right',
                     cellClass: 'align-right',
                     render: ticket => h('div', { class: 'cell-actions end' },

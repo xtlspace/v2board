@@ -26,14 +26,9 @@ export async function mount(el) {
 
     let upload = 0;
     let download = 0;
-    let deducted = 0;
     rows.forEach(row => {
-        const u = Number(row.u || 0);
-        const d = Number(row.d || 0);
-        const rate = Number(row.server_rate || 1);
-        upload += u;
-        download += d;
-        deducted += (u + d) * rate;
+        upload += Number(row.u || 0);
+        download += Number(row.d || 0);
     });
 
     const summary = h('div', { class: 'stat-grid mb-16' },
@@ -59,14 +54,10 @@ export async function mount(el) {
 
     const detail = table({
         columns: [
-            { title: t('记录时间'), width: '170px', className: 'nowrap', cellClass: 'nowrap', render: row => formatDate(row.record_at, true) },
-            { title: t('实际上行'), width: '130px', render: row => formatBytes(row.u) },
-            { title: t('实际下行'), width: '130px', render: row => formatBytes(row.d) },
-            { title: t('扣费倍率'), width: '110px', render: row => `${row.server_rate || '1'}x` },
-            {
-                title: t('合计'),
-                render: row => h('span', { class: 'strong' }, formatBytes((Number(row.u || 0) + Number(row.d || 0)) * Number(row.server_rate || 1)))
-            }
+            { title: t('记录时间'), width: '30%', className: 'nowrap', cellClass: 'nowrap', render: row => formatDate(row.record_at, true) },
+            { title: t('实际上行'), width: '24%', className: 'align-right', cellClass: 'align-right nowrap', render: row => formatBytes(row.u) },
+            { title: t('实际下行'), width: '24%', className: 'align-right', cellClass: 'align-right nowrap', render: row => formatBytes(row.d) },
+            { title: t('扣费倍率'), width: '22%', className: 'align-right', cellClass: 'align-right nowrap', render: row => `${row.server_rate || '1'}x` }
         ],
         rows,
         rowKey: 'record_at',
@@ -84,7 +75,6 @@ export async function mount(el) {
         alert('info', '', t('公式：(实际上行 + 实际下行) x 扣费倍率 = 扣除流量')),
         card({
             title: t('流量明细'),
-            extra: h('span', { class: 'small faint' }, `${t('合计')}: ${formatBytes(deducted)}`),
             flush: true,
             body: detail
         })

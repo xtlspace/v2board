@@ -105,20 +105,19 @@ class StatController extends Controller
         $servers = [
             'v2node' => ServerV2node::where('parent_id', null)->get()->toArray()
         ];
-        $startAt = strtotime('-1 day', strtotime(date('Y-m-d')));
-        $endAt = strtotime(date('Y-m-d'));
+        $startAt = strtotime(date('Y-m-01'));
+        $endAt = time();
         $statistics = StatServer::select([
             'server_id',
             'server_type',
-            'u',
-            'd',
-            DB::raw('(u+d) as total')
+            DB::raw('SUM(u+d) as total')
         ])
             ->where('record_at', '>=', $startAt)
             ->where('record_at', '<', $endAt)
             ->where('record_type', 'd')
-            ->limit(15)
+            ->groupBy('server_id', 'server_type')
             ->orderBy('total', 'DESC')
+            ->limit(15)
             ->get()
             ->toArray();
         foreach ($statistics as $k => $v) {
@@ -218,42 +217,32 @@ class StatController extends Controller
 
     public function getUserLastRank()
     {
-        $startAt = strtotime('-1 day', strtotime(date('Y-m-d')));
-        $endAt = strtotime(date('Y-m-d'));
+        $startAt = strtotime(date('Y-m-01'));
+        $endAt = time();
         $statistics = StatUser::select([
             'user_id',
-            'server_rate',
-            'u',
-            'd',
-            DB::raw('(u+d) as total')
+            DB::raw('SUM((u+d) * server_rate) as total')
         ])
             ->where('record_at', '>=', $startAt)
             ->where('record_at', '<', $endAt)
             ->where('record_type', 'd')
-            ->limit(30)
+            ->groupBy('user_id')
             ->orderBy('total', 'DESC')
+            ->limit(15)
             ->get()
             ->toArray();
         $data = [];
-        $idIndexMap = [];
-        foreach ($statistics as $k => $v) {
-            $id = $statistics[$k]['user_id'];
+        foreach ($statistics as $statistic) {
+            $id = $statistic['user_id'];
             $user = User::where('id', $id)->first();
-            $statistics[$k]['email'] = empty($user) ? "null" : $user['email'] . '(' . $id . ')';
-            $statistics[$k]['total'] = $statistics[$k]['total'] * $statistics[$k]['server_rate'] / 1073741824;
-            if (isset($idIndexMap[$id])) {
-
-                $index = $idIndexMap[$id];
-                $data[$index]['total'] += $statistics[$k]['total'];
-            } else {
-                unset($statistics[$k]['server_rate']);
-                $data[] = $statistics[$k];
-                $idIndexMap[$id] = count($data) - 1;
-            }
+            $data[] = [
+                'user_id' => $id,
+                'email' => empty($user) ? 'null' : $user['email'] . '(' . $id . ')',
+                'total' => $statistic['total'] / 1073741824
+            ];
         }
-        array_multisort(array_column($data, 'total'), SORT_DESC, $data);
         return [
-            'data' => array_slice($data, 0, 15)
+            'data' => $data
         ];
     }
 

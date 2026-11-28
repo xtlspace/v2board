@@ -63,7 +63,7 @@ export default function Notice() {
       render: (v, row) => <Switch size="small" checked={!!v} onChange={() => toggle(row.id)} />
     },
     { title: '标题', dataIndex: 'title', key: 'title' },
-    { title: '创建时间', dataIndex: 'created_at', key: 'created_at', render: (v) => time(v, 'YYYY/MM/DD HH:mm') },
+    { title: '更新时间', dataIndex: 'updated_at', key: 'updated_at', render: (v) => time(v, 'YYYY/MM/DD HH:mm') },
     {
       title: '操作',
       key: 'action',

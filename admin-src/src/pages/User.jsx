@@ -62,10 +62,23 @@ export default function User() {
   const [rows, setRows] = useState([])
   const [groups, setGroups] = useState([])
   const [plans, setPlans] = useState([])
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 })
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 15, total: 0 })
   const [filters, setFilters] = useState([])
   const [sort, setSort] = useState({ sort: 'created_at', sort_type: 'DESC' })
   const [loading, setLoading] = useState(false)
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 767.98px)').matches)
+  const [jumpPage, setJumpPage] = useState(null)
+
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 767.98px)')
+    const handler = (event) => setIsMobile(event.matches)
+    if (query.addEventListener) query.addEventListener('change', handler)
+    else query.addListener(handler)
+    return () => {
+      if (query.removeEventListener) query.removeEventListener('change', handler)
+      else query.removeListener(handler)
+    }
+  }, [])
 
   const [filterOpen, setFilterOpen] = useState(false)
   const [draftFilters, setDraftFilters] = useState([])
@@ -108,7 +121,7 @@ export default function User() {
     const initial = userId ? [{ key: 'id', condition: '=', value: userId }] : []
     setFilters(initial)
     setDraftFilters(initial)
-    load({ current: 1, pageSize: 10 }, initial)
+    load({ current: 1, pageSize: pagination.pageSize }, initial)
     Promise.all([api.get('/server/group/fetch'), api.get('/plan/fetch')]).then(([groupRes, planRes]) => {
       if (groupRes.code === 200) setGroups(groupRes.data || [])
       if (planRes.code === 200) setPlans(planRes.data || [])
@@ -300,13 +313,11 @@ export default function User() {
   }
 
   const columns = [
-    { title: 'ID', dataIndex: 'id', key: 'id', width: 89, sorter: true },
+    { title: 'ID', dataIndex: 'id', key: 'id', sorter: true },
     {
       title: '邮箱',
       dataIndex: 'email',
       key: 'email',
-      width: 227,
-      ellipsis: true,
       render: (v, row) => (
         <span>
           <span className={`badge ${Date.now() / 1000 - 600 > (row.t || 0) ? 'badge-secondary' : 'badge-success'} mr-1`} />
@@ -314,14 +325,13 @@ export default function User() {
         </span>
       )
     },
-    { title: '状态', dataIndex: 'banned', key: 'banned', width: 107, sorter: true, render: (v) => <span className={`badge badge-${v ? 'danger' : 'success'}`}>{v ? '封禁' : '正常'}</span> },
-    { title: '订阅', dataIndex: 'plan_name', key: 'plan_id', width: 117, ellipsis: true, sorter: true, render: (v) => v || '-' },
+    { title: '状态', dataIndex: 'banned', key: 'banned', sorter: true, render: (v) => <span className={`badge badge-${v ? 'danger' : 'success'}`}>{v ? '封禁' : '正常'}</span> },
+    { title: '订阅', dataIndex: 'plan_name', key: 'plan_id', sorter: true, render: (v) => v || '-' },
     {
       title: '权限组',
       dataIndex: 'group_id',
       key: 'group_id',
-      width: 136,
-      ellipsis: true,
+     
       sorter: true,
       render: (v) => {
         const group = groups.find((item) => item.id === Number(v))
@@ -332,15 +342,13 @@ export default function User() {
       title: '已用(G)',
       dataIndex: 'total_used',
       key: 'total_used',
-      width: 133,
       sorter: true,
       render: (v, row) => <span className={`badge badge-${Number(v) > Number(row.transfer_enable) ? 'danger' : 'success'}`}>{v}</span>
     },
-    { title: '流量(G)', dataIndex: 'transfer_enable', key: 'transfer_enable', width: 133, sorter: true },
+    { title: '流量(G)', dataIndex: 'transfer_enable', key: 'transfer_enable', sorter: true },
     {
       title: '设备数',
       key: 'alive_ip',
-      width: 125,
       render: (_, row) => (
         <span title={row.ips || ''}>
           {row.alive_ip || 0} / {row.device_limit !== null && row.device_limit !== undefined ? row.device_limit : '∞'}
@@ -351,7 +359,6 @@ export default function User() {
       title: '到期时间',
       dataIndex: 'expired_at',
       key: 'expired_at',
-      width: 177,
       sorter: true,
       render: (v) => (
         <span className={`badge badge-${v && v * 1000 < Date.now() ? 'danger' : 'success'}`}>
@@ -359,14 +366,13 @@ export default function User() {
         </span>
       )
     },
-    { title: '余额', dataIndex: 'balance', key: 'balance', width: 107, sorter: true },
-    { title: '佣金', dataIndex: 'commission_balance', key: 'commission_balance', width: 107, sorter: true },
+    { title: '余额', dataIndex: 'balance', key: 'balance', sorter: true },
+    { title: '佣金', dataIndex: 'commission_balance', key: 'commission_balance', sorter: true },
     {
       title: '操作',
       key: 'action',
       align: 'right',
       fixed: 'right',
-      width: 78,
       render: (_, row) => (
         <Dropdown
           trigger={['click']}
@@ -494,6 +500,7 @@ export default function User() {
 
   return (
     <TableBlock
+      className="v2board-user-table"
       toolbar={
         <Space>
           <Button type={filters.length ? 'primary' : 'default'} icon={<FilterOutlined />} onClick={() => { setDraftFilters(filters.length ? filters : []); setFilterOpen(true) }}>
@@ -521,23 +528,73 @@ export default function User() {
         dataSource={rows}
         columns={columns}
         loading={loading}
-        scroll={{ x: 1536 }}
-        pagination={{
-          ...pagination,
-          showSizeChanger: true,
-          pageSizeOptions: [10, 50, 100, 150],
-          showTotal: (total) => `共 ${total} 条`,
-          onChange: (current, pageSize) => load({ current, pageSize })
-        }}
-        onChange={(_, __, sorter) => {
+        scroll={{ x: 'max-content' }}
+        pagination={
+          isMobile
+            ? false
+            : {
+                ...pagination,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                pageSizeOptions: [15, 50, 100],
+                showTotal: (total) => `共 ${total} 条`,
+                onChange: (current, pageSize) => load({ current, pageSize })
+              }
+        }
+        onChange={(nextPagination, _, sorter, extra) => {
+          if (!extra || extra.action !== 'sort') return
           const nextSort = {
             sort: sorter && sorter.columnKey ? sorter.columnKey : 'created_at',
             sort_type: sorter && sorter.order === 'ascend' ? 'ASC' : 'DESC'
           }
           setSort(nextSort)
-          load(pagination, filters, nextSort)
+          load({ current: 1, pageSize: nextPagination.pageSize || pagination.pageSize }, filters, nextSort)
         }}
       />
+
+      {isMobile ? (
+        <div className="v2board-mobile-pager">
+          <div className="v2board-mobile-pager-row">
+            <Button disabled={pagination.current <= 1} onClick={() => load({ current: pagination.current - 1, pageSize: pagination.pageSize })}>
+              上一页
+            </Button>
+            <span>
+              第 {pagination.current} / {Math.max(1, Math.ceil((pagination.total || 0) / pagination.pageSize))} 页
+            </span>
+            <Button
+              disabled={pagination.current >= Math.max(1, Math.ceil((pagination.total || 0) / pagination.pageSize))}
+              onClick={() => load({ current: pagination.current + 1, pageSize: pagination.pageSize })}
+            >
+              下一页
+            </Button>
+          </div>
+          <div className="v2board-mobile-pager-row">
+            <span>共 {pagination.total || 0} 条</span>
+            <span>每页</span>
+            <Select
+              value={pagination.pageSize}
+              options={[15, 50, 100].map((size) => ({ value: size, label: `${size} 条` }))}
+              onChange={(pageSize) => load({ current: 1, pageSize })}
+              style={{ width: 96 }}
+            />
+            <span>跳至</span>
+            <InputNumber
+              min={1}
+              max={Math.max(1, Math.ceil((pagination.total || 0) / pagination.pageSize))}
+              value={jumpPage}
+              onChange={setJumpPage}
+              onPressEnter={() => {
+                const page = Number(jumpPage)
+                if (page >= 1 && page <= Math.ceil((pagination.total || 0) / pagination.pageSize)) {
+                  load({ current: page, pageSize: pagination.pageSize })
+                }
+              }}
+              style={{ width: 72 }}
+            />
+            <span>页</span>
+          </div>
+        </div>
+      ) : null}
 
       <Drawer title="过滤器" open={filterOpen} onClose={() => setFilterOpen(false)} width={420}
         footer={

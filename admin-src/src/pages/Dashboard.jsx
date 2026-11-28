@@ -4,17 +4,6 @@ import { Row, Col, Alert, Skeleton } from 'antd'
 import { api } from '../api/client'
 import EChart from '../components/EChart'
 
-function QuickLink({ icon, title, onClick }) {
-  return (
-    <a className="block block-bordered block-link-pop text-center mb-0" onClick={onClick}>
-      <div className="block-content block-content-full text-center">
-        <i className={`fa-2x si ${icon} text-primary d-none d-sm-inline-block mb-3`} />
-        <div className="font-w600 text-uppercase">{title}</div>
-      </div>
-    </a>
-  )
-}
-
 export default function Dashboard() {
   const navigate = useNavigate()
   const [stat, setStat] = useState({})
@@ -130,25 +119,6 @@ export default function Dashboard() {
         </div>
       ) : null}
 
-      <div className="mb-0 block border-bottom d-none d-sm-block">
-        <div className="block-content block-content-full">
-          <div className="row no-gutters border">
-            <div className="col-sm-6 col-xl-3">
-              <QuickLink icon="si-equalizer" title="系统设置" onClick={() => navigate('/config/system')} />
-            </div>
-            <div className="col-sm-6 col-xl-3">
-              <QuickLink icon="si-list" title="订单管理" onClick={() => navigate('/order')} />
-            </div>
-            <div className="col-sm-6 col-xl-3">
-              <QuickLink icon="si-bag" title="订阅管理" onClick={() => navigate('/plan')} />
-            </div>
-            <div className="col-sm-6 col-xl-3">
-              <QuickLink icon="si-users" title="用户管理" onClick={() => navigate('/user')} />
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div className="row no-gutters">
         <div className="col-lg-12">
           <div className="block border-bottom mb-0 v2board-stats-bar">
@@ -223,9 +193,9 @@ export default function Dashboard() {
         <div className="row mt-xl-3 w-100">
           {[
             ['今日节点流量排行', serverToday, 'server_name'],
-            ['昨日节点流量排行', serverLast, 'server_name'],
+            ['本月节点流量排行', serverLast, 'server_name'],
             ['今日用户流量排行', userToday, 'email'],
-            ['昨日用户流量排行', userLast, 'email']
+            ['本月用户流量排行', userLast, 'email']
           ].map(([title, rows, key]) => {
             const option = barOption(rows, key)
             return (

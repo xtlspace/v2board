@@ -98,10 +98,7 @@ export async function mount(el) {
 
     const nodes = [
         h('div', { class: 'flex-between flex-wrap' },
-            h('div', {},
-                h('h1', { class: 'page-title' }, t('节点状态')),
-                h('div', { class: 'page-desc' }, t('节点五分钟内节点在线情况'))
-            ),
+            h('div', {}),
             Number(window.settings && window.settings.dialer_proxy_enable) === 1
                 ? h('div', { class: 'btn-group' },
                     button(t('链式代理'), {

@@ -334,7 +334,10 @@ export function table(options = {}) {
     const wrap = h('div', { class: 'table-wrap' });
     const tableEl = h('table', { class: 'table' });
     const thead = h('thead', {}, h('tr', {}, columns.map(column =>
-        h('th', { class: column.className || '', style: column.width ? { width: column.width } : {} }, column.title)
+        h('th', {
+            class: [column.className, column.sticky ? `sticky-${column.sticky}` : ''].filter(Boolean).join(' '),
+            style: column.width ? { width: column.width } : {}
+        }, column.title)
     )));
     const tbody = h('tbody');
 
@@ -347,7 +350,9 @@ export function table(options = {}) {
             const tr = h('tr', { dataset: { key: typeof rowKey === 'function' ? rowKey(row) : row[rowKey] } },
                 columns.map(column => {
                     const content = typeof column.render === 'function' ? column.render(row, index) : row[column.key];
-                    return h('td', { class: column.cellClass || '' }, toNode(content));
+                    return h('td', {
+                        class: [column.cellClass, column.sticky ? `sticky-${column.sticky}` : ''].filter(Boolean).join(' ')
+                    }, toNode(content));
                 })
             );
             tbody.appendChild(tr);

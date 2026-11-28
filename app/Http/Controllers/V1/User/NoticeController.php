@@ -32,7 +32,8 @@ class NoticeController extends Controller
     
         $pageSize = min(max($pageSize, 1), 100);
     
-        $model = Notice::orderBy('created_at', 'DESC')
+        $model = Notice::orderBy('updated_at', 'DESC')
+            ->orderBy('created_at', 'DESC')
             ->where('show', 1);
     
         $total = $model->count();

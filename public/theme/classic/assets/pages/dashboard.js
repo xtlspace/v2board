@@ -223,10 +223,14 @@ function quickLinks(stat) {
 
 const NOTICE_DISMISS_KEY = 'classic_notice_dismissed';
 
+function noticeTime(notice) {
+    return Number(notice.updated_at || notice.created_at || 0);
+}
+
 function noticeSignature(notice) {
     const source = [
         notice.id,
-        notice.updated_at || notice.created_at || '',
+        noticeTime(notice),
         notice.title || '',
         notice.content || '',
         notice.tags || ''
@@ -236,7 +240,7 @@ function noticeSignature(notice) {
         hash ^= source.charCodeAt(index);
         hash = Math.imul(hash, 16777619);
     }
-    return `${notice.id}|${notice.updated_at || notice.created_at || 0}|${(hash >>> 0).toString(36)}`;
+    return `${notice.id}|${noticeTime(notice)}|${(hash >>> 0).toString(36)}`;
 }
 
 function readDismissedNotices() {
@@ -435,7 +439,7 @@ function showNotice(notice) {
     controller = modal({
         title: notice.title || t('公告详情'),
         body: h('div', {},
-            h('div', { class: 'small faint mb-12' }, formatDate(notice.created_at, true)),
+            h('div', { class: 'small faint mb-12' }, formatDate(noticeTime(notice), true)),
             h('div', { class: 'notice-content' }, raw(notice.content || ''))
         ),
         footer: [
@@ -494,7 +498,9 @@ export async function mount(el) {
 
     const subscribe = subscribeResult.value;
     const stat = statResult.status === 'fulfilled' && statResult.value ? statResult.value.data : null;
-    const notices = noticeResult.status === 'fulfilled' && noticeResult.value ? (noticeResult.value.data || []) : [];
+    const notices = noticeResult.status === 'fulfilled' && noticeResult.value
+        ? (noticeResult.value.data || []).slice().sort((a, b) => noticeTime(b) - noticeTime(a))
+        : [];
 
     const reload = async () => {
         clearCaches();

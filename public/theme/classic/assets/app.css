@@ -525,6 +525,21 @@ html[data-header="dark"] .icon-btn:hover { background: rgba(255, 255, 255, .1); 
 .table .cell-actions .btn-sm { padding: 0 8px; }
 .table .nowrap { white-space: nowrap; }
 
+/* 固定列：横向滚动时吸附在表格右侧 */
+.table th.sticky-right,
+.table td.sticky-right {
+    position: sticky;
+    right: 0;
+    z-index: 1;
+    box-shadow: -1px 0 0 var(--border);
+}
+.table th.sticky-right {
+    z-index: 2;
+    background: #fafafa;
+}
+.table td.sticky-right { background: #fff; }
+.table tbody tr:hover td.sticky-right { background: #fafbfe; }
+
 .pagination { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--border); }
 .pagination .page-info { margin-right: auto; font-size: 12px; color: var(--muted); }
 .page-btn {
@@ -1159,8 +1174,10 @@ html[data-header="dark"] .icon-btn:hover { background: rgba(255, 255, 255, .1); 
 .tg-id { font-size: 13px; color: var(--muted); }
 .profile-pair { align-items: stretch; }
 .profile-pair > .card { height: 100%; }
-.rule-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.rule-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); flex-wrap: nowrap; }
 .rule-row:last-child { border-bottom: 0; }
+.rule-main { display: flex; align-items: center; gap: 8px; flex: 1 1 auto; min-width: 0; flex-wrap: wrap; }
+.rule-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
 .rule-arrow { color: var(--faint); }
 .dialer-rules { padding: 4px 24px 8px; }
 .dialer-rules .rule-row .tag { font-size: 14px; line-height: 22px; padding: 1px 10px; }
@@ -1195,6 +1212,8 @@ html[data-header="dark"] .icon-btn:hover { background: rgba(255, 255, 255, .1); 
     .kb-row { padding: 12px 16px; }
     .kb-card .card-head { padding: 14px 16px; }
     .dialer-rules { padding: 4px 16px 8px; }
+    .dialer-rules .rule-main { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .dialer-rules .rule-main::-webkit-scrollbar { display: none; }
     .reset-link { font-size: 11px; }
 }
 
@@ -1260,11 +1279,53 @@ html[data-header="dark"] .icon-btn:hover { background: rgba(255, 255, 255, .1); 
 }
 
 @media (max-width: 767px) {
+    .node-status-table .table {
+        table-layout: fixed;
+    }
+
+    .node-status-table .table thead {
+        display: none;
+    }
+
+    .node-status-table .table th,
+    .node-status-table .table td {
+        padding: 10px 8px;
+    }
+
+    .node-status-table .table th:nth-child(2),
+    .node-status-table .table td:nth-child(2) {
+        width: 48px;
+    }
+
+    .node-status-table .table th:nth-child(3),
+    .node-status-table .table td:nth-child(3) {
+        width: 112px;
+    }
+
     .node-name-cell {
-        display: block;
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .node-name-cell .node-name {
+        flex: 1 1 auto;
+        min-width: 0;
+        word-break: break-word;
     }
 
     .node-name-cell .node-tags {
-        margin-top: 8px;
+        flex: 0 0 35%;
+        max-width: 35%;
+        flex-direction: column;
+        flex-wrap: nowrap;
+        align-items: flex-start;
+        margin-top: 0;
+    }
+
+    .node-name-cell .node-tags .tag {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 }

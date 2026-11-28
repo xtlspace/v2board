@@ -70,32 +70,35 @@ function dialerCard(dialer, onChanged) {
     } else {
         rules.forEach(rule => {
             body.appendChild(h('div', { class: 'rule-row' },
-                h('span', { class: 'tag tag-primary' }, nodeName(inNodes, rule.in_node_id)),
-                h('span', { class: 'rule-arrow' }, '→'),
-                h('span', { class: 'tag tag-success' }, nodeName(outNodes, rule.out_node_id)),
-                h('span', { style: { flex: '1 1 auto' } }),
-                button('', { size: 'sm', iconName: 'edit', title: t('编辑'), onClick: () => openEditor(rule) }),
-                button('', {
-                    size: 'sm',
-                    iconName: 'trash',
-                    title: t('删除'),
-                    onClick: async () => {
-                        const ok = await confirmDialog({
-                            title: t('删除'),
-                            content: t('确认删除该规则？'),
-                            okText: t('删除'),
-                            danger: true
-                        });
-                        if (!ok) return;
-                        try {
-                            await api.post('/user/dialerProxy/delete', { id: rule.id });
-                            toast(t('操作成功'));
-                            onChanged();
-                        } catch (error) {
-                            toast(error.message || t('请求失败'), 'error');
+                h('div', { class: 'rule-main' },
+                    h('span', { class: 'tag tag-primary' }, nodeName(inNodes, rule.in_node_id)),
+                    h('span', { class: 'rule-arrow' }, '→'),
+                    h('span', { class: 'tag tag-success' }, nodeName(outNodes, rule.out_node_id))
+                ),
+                h('div', { class: 'rule-actions' },
+                    button('', { size: 'sm', iconName: 'edit', title: t('编辑'), onClick: () => openEditor(rule) }),
+                    button('', {
+                        size: 'sm',
+                        iconName: 'trash',
+                        title: t('删除'),
+                        onClick: async () => {
+                            const ok = await confirmDialog({
+                                title: t('删除'),
+                                content: t('确认删除该规则？'),
+                                okText: t('删除'),
+                                danger: true
+                            });
+                            if (!ok) return;
+                            try {
+                                await api.post('/user/dialerProxy/delete', { id: rule.id });
+                                toast(t('操作成功'));
+                                onChanged();
+                            } catch (error) {
+                                toast(error.message || t('请求失败'), 'error');
+                            }
                         }
-                    }
-                })
+                    })
+                )
             ));
         });
     }
