@@ -30,3 +30,7 @@ workerman.log
 
 # 配置缓存重建锁
 /storage/framework/config-cache.lock
+
+# 本地环境与历史记录
+/.user.ini
+/opencode.v2board.json
